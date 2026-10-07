@@ -642,13 +642,6 @@ endif(BuildMPEngine)
 
 if(BuildMPDed)
 	set(MPDedLibraries ${MPEngineAndDedLibraries})
-find_package(SQLite3 QUIET)
-if (SQLite3_FOUND)
-	list(APPEND MPDedLibraries SQLite::SQLite3)
-else()
-	# rely on system sqlite3 library name
-	list(APPEND MPDedLibraries sqlite3)
-endif()
 	set(MPDedIncludeDirectories ${MPEngineAndDedIncludeDirectories})
 	set(MPDedFiles ${MPEngineAndDedFiles})
 	set(MPDedDefines ${MPSharedDefines} "_CONSOLE" "DEDICATED")
