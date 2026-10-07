@@ -6,9 +6,12 @@
 
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
+#include <cctype>
 #include <string>
 #include <map>
 #include <vector>
+#include <fstream>
 
 // Version variable for NXRP. Update as needed.
 const char *NXRP_VERSION = "0.1.0";
@@ -21,55 +24,74 @@ static void nxrp_accounts_path(char *out, size_t outlen) {
 		Q_strncpyz(out, "nxrp_accounts.json", outlen);
 	}
 }
+// New plain-text account format per block:
+// Username: name
+// Password: pass
+// Exp: 0
+// Level: 1
+// Credits: 0
+//
+// One blank line between accounts.
 
-// Very small JSON-ish parser for {"user":"pass",...}
-static bool nxrp_load_accounts(std::map<std::string,std::string> &out) {
+struct NXAccount {
+	std::string username;
+	std::string password;
+	int exp = 0;
+	int level = 1;
+	int credits = 0;
+};
+
+static inline std::string trim(const std::string &s) {
+	size_t a = 0; while (a < s.size() && isspace((unsigned char)s[a])) ++a;
+	size_t b = s.size(); while (b > a && isspace((unsigned char)s[b-1])) --b;
+	return s.substr(a, b - a);
+}
+
+static bool nxrp_load_accounts(std::vector<NXAccount> &out) {
 	char path[MAX_OSPATH]; nxrp_accounts_path(path, sizeof(path));
-	FILE *f = fopen(path, "r");
-	if (!f) return true; // treat missing file as empty
-	fseek(f, 0, SEEK_END);
-	long sz = ftell(f);
-	fseek(f, 0, SEEK_SET);
-	std::vector<char> buf(sz + 1);
-	if (sz > 0) fread(buf.data(), 1, sz, f);
-	buf[sz] = '\0';
-	fclose(f);
+	std::ifstream f(path);
+	if (!f.is_open()) return true; // missing file -> empty
 
-	const char *p = buf.data();
-	while (true) {
-		// find next "username"
-		const char *q = strchr(p, '"');
-		if (!q) break;
-		const char *q2 = strchr(q + 1, '"');
-		if (!q2) break;
-		std::string user(q + 1, q2);
-		const char *colon = strchr(q2 + 1, ':');
-		if (!colon) break;
-		const char *r = strchr(colon + 1, '"');
-		if (!r) break;
-		const char *r2 = strchr(r + 1, '"');
-		if (!r2) break;
-		std::string pass(r + 1, r2);
-		out[user] = pass;
-		p = r2 + 1;
+	NXAccount cur;
+	bool inAccount = false;
+	std::string line;
+	while (std::getline(f, line)) {
+		line = trim(line);
+		if (line.empty()) {
+			if (inAccount) {
+				out.push_back(cur);
+				cur = NXAccount(); inAccount = false;
+			}
+			continue;
+		}
+		size_t colon = line.find(':');
+		if (colon == std::string::npos) continue;
+		std::string key = trim(line.substr(0, colon));
+		std::string val = trim(line.substr(colon + 1));
+		if (key == "Username") { cur.username = val; inAccount = true; }
+		else if (key == "Password") cur.password = val;
+		else if (key == "Exp") cur.exp = atoi(val.c_str());
+		else if (key == "Level") cur.level = atoi(val.c_str());
+		else if (key == "Credits") cur.credits = atoi(val.c_str());
 	}
+	if (inAccount) out.push_back(cur);
 	return true;
 }
 
-static bool nxrp_save_accounts(const std::map<std::string,std::string> &in) {
+static bool nxrp_save_accounts(const std::vector<NXAccount> &in) {
 	char path[MAX_OSPATH]; nxrp_accounts_path(path, sizeof(path));
-	FILE *f = fopen(path, "w");
-	if (!f) return false;
-	fputs("{", f);
-	bool first = true;
-	for (const auto &kv : in) {
-		if (!first) fputs(",", f);
-		first = false;
-		// escape not implemented; expect simple usernames/passwords
-		fprintf(f, "\"%s\":\"%s\"", kv.first.c_str(), kv.second.c_str());
+	std::ofstream f(path, std::ios::trunc);
+	if (!f.is_open()) return false;
+	for (size_t i = 0; i < in.size(); ++i) {
+		const NXAccount &a = in[i];
+		f << "Username: " << a.username << "\n";
+		f << "Password: " << a.password << "\n";
+		f << "Exp: " << a.exp << "\n";
+		f << "Level: " << a.level << "\n";
+		f << "Credits: " << a.credits << "\n";
+		if (i + 1 < in.size()) f << "\n";
 	}
-	fputs("}", f);
-	fclose(f);
+	f.close();
 	return true;
 }
 
@@ -88,14 +110,18 @@ qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	std::map<std::string,std::string> accounts;
+	std::vector<NXAccount> accounts;
 	nxrp_load_accounts(accounts);
 	std::string us(user);
-	if (accounts.find(us) != accounts.end()) {
+	for (const auto &a : accounts) if (a.username == us) {
 		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Username already exists\"" );
 		return qtrue;
 	}
-	accounts[us] = pass;
+	NXAccount na;
+	na.username = us;
+	na.password = pass;
+	na.exp = 0; na.level = 1; na.credits = 0;
+	accounts.push_back(na);
 	if (!nxrp_save_accounts(accounts)) {
 		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Failed to save account\"" );
 		return qtrue;
@@ -112,18 +138,19 @@ qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	std::map<std::string,std::string> accounts;
+	std::vector<NXAccount> accounts;
 	nxrp_load_accounts(accounts);
 	std::string us(user);
-	auto it = accounts.find(us);
-	if (it == accounts.end()) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Login failed: unknown user\"" );
-		return qtrue;
+	for (const auto &a : accounts) {
+		if (a.username == us) {
+			if (a.password == pass) {
+				SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Login successful\"" );
+			} else {
+				SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Login failed: incorrect password\"" );
+			}
+			return qtrue;
+		}
 	}
-	if (it->second != pass) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Login failed: incorrect password\"" );
-		return qtrue;
-	}
-	SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Login successful\"" );
+	SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Login failed: unknown user\"" );
 	return qtrue;
 }
