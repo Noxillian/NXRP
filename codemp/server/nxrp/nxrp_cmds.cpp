@@ -185,7 +185,7 @@ qboolean SV_nxrp_HandleNxAccount( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 	// check stored username on client
-	const char *username = (cl->nxrp_username && cl->nxrp_username[0]) ? cl->nxrp_username : nullptr;
+	const char *username = (cl && cl->nxrp_username[0]) ? cl->nxrp_username : nullptr;
 	if (!username) {
 		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You are not logged in\\n\"" );
 		return qtrue;

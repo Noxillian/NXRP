@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include "server.h"
+#include "../server.h"
 
 // Ensure the client is logged in; if not, a message is sent and false is returned.
 bool NXRP_EnsureLoggedIn(client_t* cl);
