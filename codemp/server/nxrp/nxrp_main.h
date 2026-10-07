@@ -15,6 +15,7 @@ qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor );
 qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor );
 qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor );
 qboolean SV_nxrp_HandleNxAccount( client_t *cl, const char *chatCursor );
+qboolean SV_nxrp_HandleNxNoclip( client_t *cl, const char *chatCursor );
 
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );
