@@ -11,5 +11,7 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 
 // additional handlers declared in nxrp_cmds.cpp
 qboolean SV_nxrp_HandleNxInfo( client_t *cl, const char *chatCursor );
+qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor );
+qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor );
 
 #endif // NXRP_MAIN_H
