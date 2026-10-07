@@ -122,6 +122,12 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 			if ( !Q_stricmp( subcmd, "info" ) ) {
 				return SV_nxrp_HandleNxInfo( cl, chatCursor );
 			}
+				if ( !Q_stricmp( subcmd, "account" ) ) {
+					return SV_nxrp_HandleNxAccount( cl, chatCursor );
+				}
+				if ( !Q_stricmp( subcmd, "giveall" ) ) {
+					return SV_nxrp_HandleNxGiveAll( cl, chatCursor );
+				}
 			if ( !Q_stricmp( subcmd, "register" ) ) {
 				return SV_nxrp_HandleNxRegister( cl, chatCursor );
 			}

@@ -13,5 +13,7 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 qboolean SV_nxrp_HandleNxInfo( client_t *cl, const char *chatCursor );
 qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor );
 qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor );
+qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor );
+qboolean SV_nxrp_HandleNxAccount( client_t *cl, const char *chatCursor );
 
 #endif // NXRP_MAIN_H
