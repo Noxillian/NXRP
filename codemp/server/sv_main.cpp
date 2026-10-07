@@ -825,44 +825,6 @@ void SVC_RemoteCommand( netadr_t from, msg_t *msg ) {
 
 	Com_EndRedirect ();
 
-	// If the rcon command was valid, remember the address briefly so in-game
-	// clients from the same IP can be treated as rcon-authenticated for a
-	// short window. This allows players who used rcon from their client
-	// machine to use commands gated to rcon.
-	if ( valid ) {
-		// record into global recent rcon sources ring
-		extern void SV_RecordRconSource(netadr_t adr);
-		SV_RecordRconSource(from);
-	}
-}
-
-// Return qtrue if client comes from a recently rcon-authenticated address
-// Global ring buffer of recent rcon source addresses
-struct RconSource { netadr_t adr; int expire; };
-static const int kMaxRconSources = 8;
-static RconSource g_rconSources[kMaxRconSources];
-static int g_rconIndex = 0;
-
-void SV_RecordRconSource(netadr_t adr) {
-	g_rconSources[g_rconIndex].adr = adr;
-	g_rconSources[g_rconIndex].expire = svs.time + 60 * 1000; // 60s
-	g_rconIndex = (g_rconIndex + 1) % kMaxRconSources;
-}
-
-qboolean SV_ClientIsRconAuthed(client_t *cl) {
-	if (!cl) return qfalse;
-	for (int i = 0; i < kMaxRconSources; ++i) {
-		if (g_rconSources[i].expire >= svs.time) {
-			if (NET_CompareBaseAdr(cl->netchan.remoteAddress, g_rconSources[i].adr)) {
-				return qtrue;
-			}
-		}
-	}
-	// fallback: last redirect address
-	if (NET_CompareBaseAdr(cl->netchan.remoteAddress, svs.redirectAddress)) {
-		return qtrue;
-	}
-	return qfalse;
 }
 
 /*

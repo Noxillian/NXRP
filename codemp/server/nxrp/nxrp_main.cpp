@@ -36,12 +36,12 @@ qboolean SV_Nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 					return qtrue;
 				}
 
-				// Only allow spawn if the player is considered rcon-authenticated
-				// (recent rcon source match).
-				if ( !SV_ClientIsRconAuthed(cl) ) {
-					SV_SendServerCommand( cl, "print \"You must be rcon-authenticated to use !nx spawn\\n\"\n" );
-					return qtrue;
-				}
+			// Only allow spawn if the player's base address matches the last
+			// rcon redirect address (practical per-player check).
+			if ( !NET_CompareBaseAdr( cl->netchan.remoteAddress, svs.redirectAddress ) ) {
+				SV_SendServerCommand( cl, "print \"You must be rcon-authenticated to use !nx spawn\\n\"\n" );
+				return qtrue;
+			}
 
 				char cmdBuf[128];
 				Com_sprintf( cmdBuf, sizeof(cmdBuf), "npc spawn %s", arg );
