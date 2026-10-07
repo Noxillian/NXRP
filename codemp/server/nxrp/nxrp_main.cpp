@@ -20,6 +20,7 @@ void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 static qboolean SV_nxrp_HandleHello( client_t *cl );
 static qboolean SV_nxrp_HandleNxSpawn( client_t *cl, const char *chatCursor );
 static qboolean SV_nxrp_HandleNxNpc( client_t *cl, const char *chatCursor );
+static qboolean SV_nxrp_HandleNxInfo( client_t *cl, const char *chatCursor );
 
 qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *chatCursor ) {
 	if ( !commandName ) return qfalse;
@@ -116,6 +117,10 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 				// unknown !nx npc subcommand: show usage
 				SV_SendServerCommand( cl, "print \"Usage: !nx npc list\\n\"\n" );
 				return qtrue;
+			}
+
+			if ( !Q_stricmp( subcmd, "info" ) ) {
+				return SV_nxrp_HandleNxInfo( cl, chatCursor );
 			}
 		}
 		return qtrue; // handled even if unknown subcommand to avoid falling through
