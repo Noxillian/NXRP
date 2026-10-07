@@ -2421,8 +2421,8 @@ static qboolean SV_HandleEconomyChatCommand( client_t *cl ) {
 		chatCursor++;
 	}
 
-	/* NXRP extension: allow custom chat commands handled in codemp/server/nxrp */
-	if ( SV_Nxrp_HandleChat( cl, commandName, chatCursor ) ) {
+	/* nxrp extension: allow custom chat commands handled in codemp/server/nxrp */
+	if ( SV_nxrp_HandleChat( cl, commandName, chatCursor ) ) {
 		return qtrue;
 	}
 

@@ -7,6 +7,6 @@
 
 #include "../server.h"
 
-qboolean SV_Nxrp_HandleChat( client_t *cl, const char *commandName, const char *chatCursor );
+qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *chatCursor );
 
 #endif // NXRP_MAIN_H
