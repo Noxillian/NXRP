@@ -107,8 +107,10 @@ qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 	ofs << "  \"password\": \"" << escape(pass) << "\",\n";
 	ofs << "  \"level\": 1,\n";
 	ofs << "  \"exp\": 0,\n";
-	ofs << "  \"credits\": 0\n";
+	ofs << "  \"credits\": 0,\n";
+	ofs << "  \"isAdmin\": false\n";
 	ofs << "}\n";
+
 	ofs.close();
 
 	SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Registration successful\"" );
