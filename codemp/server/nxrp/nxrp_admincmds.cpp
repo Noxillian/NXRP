@@ -14,7 +14,7 @@ static void NXRP_GrantKnownForce(client_t* cl, int fpwr) {
 	if (fpwr < 0 || fpwr >= NUM_FORCE_POWERS) return;
 	playerState_t* ps = cl->gentity->playerState;
 	ps->fd.forcePowersKnown |= (1 << fpwr);
-	ps->fd.forcePower = 500;
+	ps->fd.forcePower = 100;
 }
 
 // Handler: !nx noclip
@@ -193,12 +193,36 @@ qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 		// code that requires cheats will accept the direct state changes.
 		if (cl && cl->gentity && cl->gentity->playerState) {
 			playerState_t* ps = cl->gentity->playerState;
-			// give full pool
-			ps->fd.forcePower = 100;
+		// give full pool (raise to 500 so clients receive a large usable pool)
+		ps->fd.forcePower = 500;
 			for (int fp = 0; fp < NUM_FORCE_POWERS; ++fp) {
 				NXRP_GrantKnownForce(cl, fp);
 				ps->fd.forcePowerLevel[fp] = FORCE_LEVEL_3;
+
+			// Give the player a lightsaber and set it as their current weapon.
+			// Also update the player's userinfo to request a red saber blade.
+			// Steps: set the WP_SABER bit, set weapon to WP_SABER, give ammo,
+			// then update per-client userinfo and notify the game VM.
+			ps->stats[STAT_WEAPONS] |= (1 << WP_SABER);
+			ps->weapon = WP_SABER;
+			ps->weaponstate = WEAPON_READY;
+			Spin_GiveWeaponAmmo(cl, WP_SABER);
+
+			// Update the client's userinfo to set saber1 and color1 (red).
+			char userinfo[MAX_INFO_STRING];
+			SV_GetUserinfo(cl - svs.clients, userinfo, sizeof(userinfo));
+			Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
+			// color1 is numeric in clients; the default mapping uses 0.. but
+			// UI default '4' corresponds to blue. For red, set the enum name
+			// string "red" in the userinfo so client/game parsing can translate.
+			Info_SetValueForKey(userinfo, "color1", "red");
+			SV_SetUserinfo(cl - svs.clients, userinfo);
+			GVM_ClientUserinfoChanged(cl - svs.clients);
 			}
+
+			// Ensure the game VM processes the updated playerState so the client
+			// can immediately use the newly granted powers.
+			GVM_RunFrame(sv.time);
 		}
 
 		if (!cheatsWereEnabled) {
@@ -207,17 +231,6 @@ qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 		}
 	}
 
-	// Grant all force powers and set their levels so the player can use them.
-	// Use a local helper to mark known powers so we don't rely on server
-	// internal helpers in sv_ccmds.cpp.
-	if (cl && cl->gentity && cl->gentity->playerState) {
-		playerState_t* ps = cl->gentity->playerState;
-		// give full pool
-		ps->fd.forcePower = 100;
-		for (int fp = 0; fp < NUM_FORCE_POWERS; ++fp) {
-			NXRP_GrantKnownForce(cl, fp);
-			ps->fd.forcePowerLevel[fp] = FORCE_LEVEL_3;
-		}
-	}
+	// Levels were applied above while sv_cheats was enabled; nothing more to do.
 	return qtrue;
 }
