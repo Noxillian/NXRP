@@ -5,7 +5,7 @@
 #ifndef NXRP_MAIN_H
 #define NXRP_MAIN_H
 
-#include "server.h"
+#include "../server.h"
 
 qboolean SV_Nxrp_HandleChat( client_t *cl, const char *commandName, const char *chatCursor );
 

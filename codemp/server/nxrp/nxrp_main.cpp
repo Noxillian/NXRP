@@ -3,7 +3,6 @@
  */
 
 #include "server/nxrp/nxrp_main.h"
-#include "server.h"
 
 qboolean SV_Nxrp_HandleChat( client_t *cl, const char *commandName, const char *chatCursor ) {
 	if ( !commandName ) return qfalse;
