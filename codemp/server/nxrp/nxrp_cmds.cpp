@@ -10,6 +10,6 @@ const char *NXRP_VERSION = "0.1.0";
 // Handler for: !nx info
 qboolean SV_nxrp_HandleNxInfo( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
-	SV_SendServerCommand( cl, "print "^5[^6N^7X^5] NXRP version: %s\\n"\n", NXRP_VERSION );
+	SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] NXRP version: %s\\n\"\n", NXRP_VERSION );
 	return qtrue;
 }
