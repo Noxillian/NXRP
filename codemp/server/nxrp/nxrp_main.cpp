@@ -22,7 +22,7 @@ void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 // Forward declarations for the extracted command handlers
 static qboolean SV_nxrp_HandleHello( client_t *cl );
 static qboolean SV_nxrp_HandleNxSpawn( client_t *cl, const char *chatCursor );
-static qboolean SV_nxrp_HandleNxNoclip( client_t *cl, const char *chatCursor );
+qboolean SV_nxrp_HandleNxNoclip( client_t *cl, const char *chatCursor );
 qboolean SV_nxrp_HandleNxInfo( client_t *cl, const char *chatCursor );
 
 qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *chatCursor ) {
@@ -187,11 +187,16 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 					return qtrue;
 				}
 
+				// Use the entity's reported current origin/angles where available.
+				// The project uses r.currentOrigin / r.currentAngles for many game
+				// systems; prefer those fields if present on the gentity type.
 				vec3_t origin;
 				vec3_t angles;
 				for (int i = 0; i < 3; ++i) {
-					origin[i] = cl->gentity->currentOrigin[i];
-					angles[i] = cl->gentity->currentAngles[i];
+					// Prefer the entity render-space currentOrigin where available and
+					// fall back to the entity state trajectory base for angles.
+					origin[i] = cl->gentity->r.currentOrigin[i];
+					angles[i] = cl->gentity->s.apos.trBase[i];
 				}
 
 				// spawn immediately

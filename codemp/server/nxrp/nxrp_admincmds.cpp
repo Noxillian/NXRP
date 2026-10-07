@@ -173,7 +173,13 @@ qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 		if (cl->gentity && cl->gentity->playerState) {
 			playerState_t* ps = cl->gentity->playerState;
 			// Set all weapon bits up to LAST_USEABLE_WEAPON and include melee.
-			ps->stats[STAT_WEAPONS] = ((1 << (LAST_USEABLE_WEAPON + 1)) - (1 << WP_NONE));
+			// Avoid wide left-shifts that may overflow int by building the mask
+			// incrementally.
+			unsigned int weaponMask = 0u;
+			for (int w = WP_NONE + 1; w <= LAST_USEABLE_WEAPON; ++w) {
+				weaponMask |= (1u << w);
+			}
+			ps->stats[STAT_WEAPONS] = (int)weaponMask;
 			ps->weapon = FIRST_USEABLE_WEAPON;
 			ps->weaponstate = WEAPON_READY;
 
