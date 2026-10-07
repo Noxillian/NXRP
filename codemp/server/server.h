@@ -149,6 +149,10 @@ typedef struct clientSnapshot_s {
 	int				messageSize;		// used to rate drop packets
 } clientSnapshot_t;
 
+// Returns qtrue if the given client is considered authenticated via rcon
+// recently (an rcon command was issued from the same IP). Implemented in sv_main.cpp.
+qboolean SV_ClientIsRconAuthed(client_t *cl);
+
 typedef enum {
 	CS_FREE,		// can be reused for a new connection
 	CS_ZOMBIE,		// client has been disconnected, but don't reuse
