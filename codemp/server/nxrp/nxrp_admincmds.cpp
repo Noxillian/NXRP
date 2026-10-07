@@ -3,6 +3,7 @@
 #include <string>
 #include <fstream>
 #include <cctype>
+#include "server/spin.h"
 
 // Forward-declare delayed executor used elsewhere (defined in spin.cpp)
 void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
@@ -76,18 +77,54 @@ qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 	// Notify the invoking client that they have been given everything
 	SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You have been given everything\\n\"" );
 	// give the E11 weapon (deferred so it runs on the next frame like other
-	// Give all weapons using the server's wannagiveweaponsall helper (deferred)
-	// This uses the same deferred executor spin.cpp provides so sv_cheats is
-	// temporarily enabled when the command runs and the give commands succeed.
+	// Attempt to give weapons and force powers directly using server helpers.
+	// This avoids relying on client command parsing and ensures gives occur
+	// even if the deferred executor path previously failed.
+	{
+		const qboolean cheatsWereEnabled = Cvar_VariableIntegerValue("sv_cheats") ? qtrue : qfalse;
+
+		if (!cheatsWereEnabled) {
+			Cvar_Set("sv_cheats", "1");
+			GVM_RunFrame(sv.time);
+		}
+
+		// Give all usable weapons by setting the player's stats bitmask and
+		// granting ammo as GunGame does.
+		if (cl->gentity && cl->gentity->playerState) {
+			playerState_t* ps = cl->gentity->playerState;
+			// Set all weapon bits up to LAST_USEABLE_WEAPON and include melee.
+			ps->stats[STAT_WEAPONS] = ((1 << (LAST_USEABLE_WEAPON + 1)) - (1 << WP_NONE));
+			ps->weapon = FIRST_USEABLE_WEAPON;
+			ps->weaponstate = WEAPON_READY;
+
+			// Grant ammo for each weapon via Spin_GiveWeaponAmmo
+			for (int w = FIRST_USEABLE_WEAPON; w <= LAST_USEABLE_WEAPON; ++w) {
+				Spin_GiveWeaponAmmo(cl, (weapon_t)w);
+			}
+		}
+
+		if (!cheatsWereEnabled) {
+			Cvar_Set("sv_cheats", "0");
+			GVM_RunFrame(sv.time);
+		}
+	}
+
+	// Grant force power: lightning level 3 by direct playerState updates and
+	// also attempt the wannaforce path deferred as a fallback.
+	if (cl && cl->gentity && cl->gentity->playerState) {
+		cl->gentity->playerState->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
+		cl->gentity->playerState->fd.forcePower = 100;
+		cl->gentity->playerState->fd.forcePowerLevel[FP_LIGHTNING] = FORCE_LEVEL_3;
+	}
+	// Fallback: run wannaforce via deferred executor in case direct writes don't
+	// immediately register with the game module for this client.
 	int clientNum = (int)(cl - svs.clients);
 	char cmdBuf[128];
-	Com_sprintf(cmdBuf, sizeof(cmdBuf), "wannagiveweaponsall %d", clientNum);
-	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
-	// run again shortly after in case the player was not yet spawned/alive
-	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 2);
-	// Grant lightning force power via the wannaforce helper (deferred)
 	Com_sprintf(cmdBuf, sizeof(cmdBuf), "wannaforce %d %d", clientNum, FP_LIGHTNING);
 	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
 	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 2);
+	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 3);
+	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 4);
+	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 5);
 	return qtrue;
 }
