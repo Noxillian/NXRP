@@ -3,29 +3,19 @@
  */
 
 #include "server/nxrp/nxrp_main.h"
-<<<<<<< HEAD
+#include "server.h"
 #include <string>
 #include <set>
+#include <fstream>
+#include <sstream>
 #if defined(_WIN32)
 #include <windows.h>
+#include <direct.h>
 #else
 #include <dirent.h>
 #include <sys/stat.h>
 #endif
 #include <cstring>
-#include "server/nxrp/nxrp_accounts.h"
-=======
-#include "server.h"
-#include <string>
-#include <fstream>
-#include <sstream>
-#if defined(_WIN32)
-#include <direct.h>
-#else
-#include <sys/stat.h>
-#endif
-#include <cstring>
->>>>>>> 06ee321 (nxrp: re-add register/login handlers into nxrp_main)
 
 // forward-declare helper used elsewhere to execute a client command after a delay
 void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
@@ -34,6 +24,8 @@ void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 static qboolean SV_nxrp_HandleHello( client_t *cl );
 static qboolean SV_nxrp_HandleNxSpawn( client_t *cl, const char *chatCursor );
 static qboolean SV_nxrp_HandleNxNpc( client_t *cl, const char *chatCursor );
+static qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor );
+static qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor );
 
 qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *chatCursor ) {
 	if ( !commandName ) return qfalse;
@@ -42,26 +34,7 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 		return SV_nxrp_HandleHello( cl );
 	}
 
-	if ( !Q_stricmp( commandName, "nx" ) ) {
-		char subcmd[MAX_TOKEN_CHARS] = {0};
-		if ( sscanf( chatCursor, "%31s", subcmd ) >= 1 ) {
-			if ( !Q_stricmp( subcmd, "spawn" ) ) {
-				return SV_nxrp_HandleNxSpawn( cl, chatCursor );
-			}
-			if ( !Q_stricmp( subcmd, "npc" ) ) {
-				return SV_nxrp_HandleNxNpc( cl, chatCursor );
-			}
-			if ( !Q_stricmp( subcmd, "register" ) ) {
-				return SV_nxrp_HandleNxRegister( cl, chatCursor );
-			}
-			if ( !Q_stricmp( subcmd, "login" ) ) {
-				return SV_nxrp_HandleNxLogin( cl, chatCursor );
-			}
-		}
-		return qtrue; // handled even if unknown subcommand
-	}
-
-	// !nx commands: e.g. "!nx spawn stormtrooper"
+	// handle !nx commands: spawn, npc list, register, login
 	if ( !Q_stricmp( commandName, "nx" ) ) {
 		char subcmd[MAX_TOKEN_CHARS] = {0};
 		char arg[MAX_TOKEN_CHARS] = {0};
@@ -158,13 +131,12 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 				return SV_nxrp_HandleNxLogin( cl, chatCursor );
 			}
 		}
-		return qtrue; // handled even if unknown subcommand to avoid falling through
+		return qtrue; // handled even if unknown subcommand
 	}
 
 	return qfalse;
 }
 
-<<<<<<< HEAD
 // Implementations
 static qboolean SV_nxrp_HandleHello( client_t *cl ) {
 	(void)cl;
@@ -293,7 +265,7 @@ static void nxrp_SanitizeUsername(const char* in, char* out, size_t outlen) {
 	out[j] = '\0';
 }
 
-static qboolean SV_Nxrp_HandleNxRegister( client_t *cl, const char *chatCursor ) {
+static qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 	char subcmd[MAX_TOKEN_CHARS] = {0};
 	char username[MAX_TOKEN_CHARS] = {0};
 	char password[MAX_TOKEN_CHARS] = {0};
@@ -343,7 +315,7 @@ static qboolean SV_Nxrp_HandleNxRegister( client_t *cl, const char *chatCursor )
 	return qtrue;
 }
 
-static qboolean SV_Nxrp_HandleNxLogin( client_t *cl, const char *chatCursor ) {
+static qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor ) {
 	char subcmd[MAX_TOKEN_CHARS] = {0};
 	char username[MAX_TOKEN_CHARS] = {0};
 	char password[MAX_TOKEN_CHARS] = {0};
