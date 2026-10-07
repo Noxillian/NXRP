@@ -107,7 +107,7 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 
 				char cmdBuf[128];
 				Com_sprintf( cmdBuf, sizeof(cmdBuf), "npc spawn %s", arg );
-				SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] ^3Spawning NPC\\n\"\n" );
+				SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] ^3Spawning NPC/n\\n\"\n" );
 				SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
 				return qtrue;
 			}
