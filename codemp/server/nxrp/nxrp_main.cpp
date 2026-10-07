@@ -20,6 +20,7 @@ void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 static qboolean SV_nxrp_HandleHello( client_t *cl );
 static qboolean SV_nxrp_HandleNxSpawn( client_t *cl, const char *chatCursor );
 static qboolean SV_nxrp_HandleNxNpc( client_t *cl, const char *chatCursor );
+qboolean SV_nxrp_HandleNxInfo( client_t *cl, const char *chatCursor );
 
 qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *chatCursor ) {
 	if ( !commandName ) return qfalse;
@@ -102,20 +103,30 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 					}
 
 					if ( names.empty() ) {
-						SV_SendServerCommand( cl, "print \"No NPC types found (ext_data/NPCs)\\n\"\n" );
+					SV_SendServerCommand( cl, "print \"No NPC types found (ext_data/NPCs)\\n\"" );
 						return qtrue;
 					}
 
-					SV_SendServerCommand( cl, "print \"Available NPC types:\\n\"\n" );
+					SV_SendServerCommand( cl, "print \"Available NPC types:\\n\"" );
 					for ( const auto &nm : names ) {
-						SV_SendServerCommand( cl, "print \"  %s\\n\"\n", nm.c_str() );
+						SV_SendServerCommand( cl, "print \"  %s\\n\"", nm.c_str() );
 					}
 
 					return qtrue;
 				}
 				// unknown !nx npc subcommand: show usage
-				SV_SendServerCommand( cl, "print \"Usage: !nx npc list\\n\"\n" );
+				SV_SendServerCommand( cl, "print \"Usage: !nx npc list\\n\"" );
 				return qtrue;
+			}
+
+			if ( !Q_stricmp( subcmd, "info" ) ) {
+				return SV_nxrp_HandleNxInfo( cl, chatCursor );
+			}
+			if ( !Q_stricmp( subcmd, "register" ) ) {
+				return SV_nxrp_HandleNxRegister( cl, chatCursor );
+			}
+			if ( !Q_stricmp( subcmd, "login" ) ) {
+				return SV_nxrp_HandleNxLogin( cl, chatCursor );
 			}
 		}
 		return qtrue; // handled even if unknown subcommand to avoid falling through
@@ -128,7 +139,7 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 static qboolean SV_nxrp_HandleHello( client_t *cl ) {
 	(void)cl;
 	// Broadcast a simple message to all clients.
-	SV_SendServerCommand( NULL, "chat \"hello there\"\n" );
+	SV_SendServerCommand( NULL, "chat \"hello there\"" );
 	return qtrue;
 }
 
@@ -140,13 +151,13 @@ static qboolean SV_nxrp_HandleNxSpawn( client_t *cl, const char *chatCursor ) {
 	}
 
 	if ( arg[0] == '\0' ) {
-		SV_SendServerCommand( cl, "chat \"Usage: !nx spawn <npc_type>\"\n" );
+		SV_SendServerCommand( cl, "chat \"Usage: !nx spawn <npc_type>\"" );
 		return qtrue;
 	}
 
 	char cmdBuf[128];
 	Com_sprintf( cmdBuf, sizeof(cmdBuf), "npc spawn %s", arg );
-	SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] ^3Spawning NPC\\n\"\n" );
+	SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] ^3Spawning NPC\\n\"" );
 	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
 	return qtrue;
 }
