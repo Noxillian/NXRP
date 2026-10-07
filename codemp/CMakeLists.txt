@@ -683,7 +683,6 @@ if(BuildMPDed)
 		"${MPDir}/server/nxrp/nxrp_cmds.cpp"
 		"${MPDir}/server/nxrp/nxrp_admincmds.cpp"
 		"${MPDir}/server/nxrp/nxrp_events.cpp"
-		# wrapper removed; SV_NXRPFrame implemented directly in nxrp_events.cpp
 		# nxrp_accounts_sql.cpp removed while SQLite support is disabled
 		)
 	source_group("server/nxrp" FILES ${MPDedNxrpFiles})

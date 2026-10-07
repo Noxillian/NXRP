@@ -14,10 +14,7 @@ static void NXRP_GrantKnownForce(client_t* cl, int fpwr) {
 	if (fpwr < 0 || fpwr >= NUM_FORCE_POWERS) return;
 	playerState_t* ps = cl->gentity->playerState;
 	ps->fd.forcePowersKnown |= (1 << fpwr);
-	// Give a large force pool and set the granted power to max level so
-	// the client/game code recognizes it immediately.
-	ps->fd.forcePower = 500;
-	ps->fd.forcePowerLevel[fpwr] = FORCE_LEVEL_3;
+	ps->fd.forcePower = 100;
 }
 
 // Handler: !nx noclip
@@ -26,7 +23,7 @@ qboolean SV_nxrp_HandleNxNoclip( client_t *cl, const char *chatCursor ) {
 
 	// Require logged-in admin to use this command
 	if (!cl || cl->state != CS_ACTIVE || !cl->nxrp_username[0]) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You must be logged in to use this command\n\"");
+		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You must be logged in to use this command\\n\"");
 		return qtrue;
 	}
 
@@ -37,7 +34,7 @@ qboolean SV_nxrp_HandleNxNoclip( client_t *cl, const char *chatCursor ) {
 		if (std::isalnum((unsigned char)c) || c == '_') safe.push_back((char)std::tolower((unsigned char)c));
 	}
 	if (safe.empty()) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Invalid stored username\n\"");
+		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Invalid stored username\\n\"");
 		return qtrue;
 	}
 
@@ -47,7 +44,7 @@ qboolean SV_nxrp_HandleNxNoclip( client_t *cl, const char *chatCursor ) {
 
 	std::ifstream ifs(filepath);
 	if (!ifs.is_open()) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Account file not found\n\"");
+		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Account file not found\\n\"");
 		return qtrue;
 	}
 
@@ -57,14 +54,14 @@ qboolean SV_nxrp_HandleNxNoclip( client_t *cl, const char *chatCursor ) {
 	const std::string key = "\"isAdmin\"";
 	size_t k = content.find(key);
 	if (k == std::string::npos) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Admin flag missing\n\"");
+		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Admin flag missing\\n\"");
 		return qtrue;
 	}
 	size_t colon = content.find(':', k + key.size());
-	if (colon == std::string::npos) { SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Admin flag parse error\n\""); return qtrue; }
+	if (colon == std::string::npos) { SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Admin flag parse error\\n\""); return qtrue; }
 	size_t pos = colon + 1;
 	while (pos < content.size() && isspace((unsigned char)content[pos])) pos++;
-	if (pos >= content.size()) { SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Admin flag parse error\n\""); return qtrue; }
+	if (pos >= content.size()) { SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Admin flag parse error\\n\""); return qtrue; }
 	bool isAdmin = false;
 	if (content.compare(pos, 4, "true") == 0) isAdmin = true;
 	else if (content.compare(pos, 5, "false") == 0) isAdmin = false;
@@ -80,7 +77,7 @@ qboolean SV_nxrp_HandleNxNoclip( client_t *cl, const char *chatCursor ) {
 	}
 
 	if (!isAdmin) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You are not an admin\n\"");
+		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You are not an admin\\n\"");
 		return qtrue;
 	}
 
