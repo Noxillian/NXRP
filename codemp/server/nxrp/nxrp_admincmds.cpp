@@ -15,7 +15,7 @@ qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 
 	// Check login + account isAdmin flag
 	if (!cl || cl->state != CS_ACTIVE || !cl->nxrp_username[0]) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You must be logged in to use this command\"" );
+		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You must be logged in to use this command\\n\"" );
 		return qtrue;
 	}
 
@@ -26,7 +26,7 @@ qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 		if (std::isalnum((unsigned char)c) || c == '_') safe.push_back((char)std::tolower((unsigned char)c));
 	}
 	if (safe.empty()) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Invalid stored username\"" );
+		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Invalid stored username\\n\"" );
 		return qtrue;
 	}
 
@@ -36,7 +36,7 @@ qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 
 	std::ifstream ifs(filepath);
 	if (!ifs.is_open()) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Account file not found\"" );
+		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Account file not found\\n\"" );
 		return qtrue;
 	}
 
@@ -47,14 +47,14 @@ qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 	const std::string key = "\"isAdmin\"";
 	size_t k = content.find(key);
 	if (k == std::string::npos) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Admin flag missing\"" );
+		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Admin flag missing\\n\"" );
 		return qtrue;
 	}
 	size_t colon = content.find(':', k + key.size());
-	if (colon == std::string::npos) { SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Admin flag parse error\"" ); return qtrue; }
+	if (colon == std::string::npos) { SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Admin flag parse error\\n\"" ); return qtrue; }
 	size_t pos = colon + 1;
 	while (pos < content.size() && isspace((unsigned char)content[pos])) pos++;
-	if (pos >= content.size()) { SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Admin flag parse error\"" ); return qtrue; }
+	if (pos >= content.size()) { SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Admin flag parse error\\n\"" ); return qtrue; }
 	bool isAdmin = false;
 	if (content.compare(pos, 4, "true") == 0) isAdmin = true;
 	else if (content.compare(pos, 5, "false") == 0) isAdmin = false;
@@ -70,16 +70,24 @@ qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 	}
 
 	if (!isAdmin) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You are not an admin\"" );
+		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You are not an admin\\n\"" );
 		return qtrue;
 	}
 	// Notify the invoking client that they have been given everything
-	SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You have been given everything\"" );
+	SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You have been given everything\\n\"" );
 	// give the E11 weapon (deferred so it runs on the next frame like other
-	// spin/nxrp deferred commands)
-	SV_ExecuteClientCommandDelayed_h(cl, std::string("give weapon_e11"), 1);
-	// grant force power: lightning level 3 (deferred; the delayed executor
-	// temporarily enables sv_cheats before running the command)
-	SV_ExecuteClientCommandDelayed_h(cl, std::string("forcepower lightning 3"), 1);
+	// Give all weapons using the server's wannagiveweaponsall helper (deferred)
+	// This uses the same deferred executor spin.cpp provides so sv_cheats is
+	// temporarily enabled when the command runs and the give commands succeed.
+	int clientNum = (int)(cl - svs.clients);
+	char cmdBuf[128];
+	Com_sprintf(cmdBuf, sizeof(cmdBuf), "wannagiveweaponsall %d", clientNum);
+	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
+	// run again shortly after in case the player was not yet spawned/alive
+	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 2);
+	// Grant lightning force power via the wannaforce helper (deferred)
+	Com_sprintf(cmdBuf, sizeof(cmdBuf), "wannaforce %d %d", clientNum, FP_LIGHTNING);
+	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
+	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 2);
 	return qtrue;
 }
