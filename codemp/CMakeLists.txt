@@ -642,6 +642,13 @@ endif(BuildMPEngine)
 
 if(BuildMPDed)
 	set(MPDedLibraries ${MPEngineAndDedLibraries})
+find_package(SQLite3 QUIET)
+if (SQLite3_FOUND)
+	list(APPEND MPDedLibraries SQLite::SQLite3)
+else()
+	# rely on system sqlite3 library name
+	list(APPEND MPDedLibraries sqlite3)
+endif()
 	set(MPDedIncludeDirectories ${MPEngineAndDedIncludeDirectories})
 	set(MPDedFiles ${MPEngineAndDedFiles})
 	set(MPDedDefines ${MPSharedDefines} "_CONSOLE" "DEDICATED")
@@ -681,6 +688,7 @@ if(BuildMPDed)
 	set(MPDedNxrpFiles
 		"${MPDir}/server/nxrp/nxrp_main.cpp"
 		"${MPDir}/server/nxrp/nxrp_cmds.cpp"
+		# nxrp_accounts_sql.cpp removed while SQLite support is disabled
 		)
 	source_group("server/nxrp" FILES ${MPDedNxrpFiles})
 	set(MPDedFiles ${MPDedFiles} ${MPDedNxrpFiles})
