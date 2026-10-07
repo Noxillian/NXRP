@@ -4,7 +4,6 @@
  */
 
 #include "server/nxrp/nxrp_main.h"
-#include "server.h"
 #include <string>
 #include <set>
 #if defined(_WIN32)
