@@ -181,13 +181,13 @@ qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor ) {
 qboolean SV_nxrp_HandleNxAccount( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!cl || cl->state != CS_ACTIVE) {
-	SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You must be an active player to use this command\\n\"" );
+		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You must be an active player to use this command\\n\"" );
 		return qtrue;
 	}
 	// check stored username on client
 	const char *username = (cl->nxrp_username && cl->nxrp_username[0]) ? cl->nxrp_username : nullptr;
 	if (!username) {
-	SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You are not logged in\\n\"" );
+		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You are not logged in\\n\"" );
 		return qtrue;
 	}
 

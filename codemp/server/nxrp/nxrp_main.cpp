@@ -4,6 +4,7 @@
  */
 
 #include "server/nxrp/nxrp_main.h"
+#include "server/nxrp/nxrp_utils.h"
 #include <string>
 #include <set>
 #include <fstream>
@@ -44,10 +45,7 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 		if ( sscanf( chatCursor, "%31s %31s", subcmd, arg ) >= 1 ) {
 			if ( !Q_stricmp( subcmd, "spawn" ) ) {
 			// Require logged-in admin to spawn NPCs
-			if (!cl || cl->state != CS_ACTIVE || !cl->nxrp_username[0]) {
-				SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] You must be logged in to use this command\\n\"" );
-				return qtrue;
-			}
+			if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 
 			if ( !Q_stricmp( subcmd, "nox" ) ) {
 				// Require logged-in admin to use this command
@@ -56,60 +54,8 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 					return qtrue;
 				}
 
-				// check account isAdmin flag
-				{
-					std::string user = cl->nxrp_username;
-					std::string safe;
-					for (char c : user) {
-						if (std::isalnum((unsigned char)c) || c == '_') safe.push_back((char)std::tolower((unsigned char)c));
-					}
-					if (safe.empty()) {
-						SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Invalid stored username\\n\"" );
-						return qtrue;
-					}
-
-					const char *home = Cvar_VariableString("fs_homepath");
-					std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_accounts" : std::string("nxrp_accounts");
-					std::string filepath = dir + "/" + safe + ".json";
-
-					std::ifstream ifs(filepath);
-					if (!ifs.is_open()) {
-						SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Account file not found\\n\"" );
-						return qtrue;
-					}
-
-					std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
-					ifs.close();
-
-					const std::string key = "\"isAdmin\"";
-					size_t k = content.find(key);
-					if (k == std::string::npos) {
-						SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Admin flag missing\\n\"" );
-						return qtrue;
-					}
-					size_t colon = content.find(':', k + key.size());
-					if (colon == std::string::npos) { SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Admin flag parse error\\n\"" ); return qtrue; }
-					size_t pos = colon + 1;
-					while (pos < content.size() && isspace((unsigned char)content[pos])) pos++;
-					if (pos >= content.size()) { SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Admin flag parse error\\n\"" ); return qtrue; }
-					bool isAdmin = false;
-					if (content.compare(pos, 4, "true") == 0) isAdmin = true;
-					else if (content.compare(pos, 5, "false") == 0) isAdmin = false;
-					else {
-						if (content[pos] == '"') {
-							size_t qend = content.find('"', pos + 1);
-							if (qend != std::string::npos) {
-								std::string tok = content.substr(pos + 1, qend - (pos + 1));
-								if (!tok.empty() && (tok == "true" || tok == "1")) isAdmin = true;
-							}
-						}
-					}
-
-					if (!isAdmin) {
-						SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] You are not an admin\\n\"" );
-						return qtrue;
-					}
-				}
+				// require admin via helper
+				if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
 				// Simple admin command actions
 				SV_SendServerCommand( cl, "print \"nox\\n\"" );
@@ -188,10 +134,7 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 
 			if ( !Q_stricmp( subcmd, "npcspawn" ) ) {
 				// Require logged-in admin to persist NPC spawns
-				if (!cl || cl->state != CS_ACTIVE || !cl->nxrp_username[0]) {
-					SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] You must be logged in to use this command\\n\"" );
-					return qtrue;
-				}
+				if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 
 				// check account isAdmin flag
 				{
