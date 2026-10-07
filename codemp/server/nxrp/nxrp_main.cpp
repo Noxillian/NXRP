@@ -7,10 +7,14 @@
 #include <set>
 #if defined(_WIN32)
 #include <windows.h>
+#include <direct.h>
 #else
 #include <dirent.h>
+#include <sys/stat.h>
 #endif
 #include <cstring>
+#include <fstream>
+#include <sstream>
 
 // forward-declare helper used elsewhere to execute a client command after a delay
 void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
@@ -19,6 +23,8 @@ void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 static qboolean SV_nxrp_HandleHello( client_t *cl );
 static qboolean SV_nxrp_HandleNxSpawn( client_t *cl, const char *chatCursor );
 static qboolean SV_nxrp_HandleNxNpc( client_t *cl, const char *chatCursor );
+static qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor );
+static qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor );
 
 qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *chatCursor ) {
 	if ( !commandName ) return qfalse;
@@ -35,6 +41,12 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 			}
 			if ( !Q_stricmp( subcmd, "npc" ) ) {
 				return SV_nxrp_HandleNxNpc( cl, chatCursor );
+			}
+			if ( !Q_stricmp( subcmd, "register" ) ) {
+				return SV_nxrp_HandleNxRegister( cl, chatCursor );
+			}
+			if ( !Q_stricmp( subcmd, "login" ) ) {
+				return SV_nxrp_HandleNxLogin( cl, chatCursor );
 			}
 		}
 		return qtrue; // handled even if unknown subcommand
@@ -144,5 +156,154 @@ static qboolean SV_nxrp_HandleNxNpc( client_t *cl, const char *chatCursor ) {
 	}
 
 	SV_SendServerCommand( cl, "print \"Usage: !nx npc list\\n\"\n" );
+	return qtrue;
+}
+
+// Helper: create directory if it doesn't exist (simple, best-effort)
+static void SV_nxrp_EnsureDirExists(const char* path) {
+#if defined(_WIN32)
+	// _mkdir returns 0 on success, -1 on error. If it exists, errno is EEXIST.
+	_mkdir(path);
+#else
+	mkdir(path, 0755);
+#endif
+}
+
+// Helper: sanitize username for filename (allow letters, digits, underscore)
+static void SV_nxrp_SanitizeUsername(const char* in, char* out, size_t outlen) {
+	size_t j = 0;
+	for ( size_t i = 0; in[i] && j + 1 < outlen; ++i ) {
+		char c = in[i];
+		if ( (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || (c == '_') ) {
+			out[j++] = c;
+		} else if ( c == ' ' || c == '-' ) {
+			out[j++] = '_';
+		}
+	}
+	out[j] = '\0';
+}
+
+// Writes a simple JSON account file: {"username":"...","password":"...","acc-group":"player","exp":0,"level":1}
+static bool SV_nxrp_WriteAccountFile(const char* dirpath, const char* username, const char* password) {
+	char filename[MAX_OSPATH];
+	char safe[MAX_TOKEN_CHARS];
+	SV_nxrp_SanitizeUsername(username, safe, sizeof(safe));
+	Com_sprintf(filename, sizeof(filename), "%s/%s.json", dirpath, safe);
+
+	std::ofstream ofs(filename, std::ios::out | std::ios::trunc);
+	if ( !ofs.is_open() ) return false;
+	ofs << "{\n";
+	ofs << "  \"username\": \"" << username << "\",\n";
+	ofs << "  \"password\": \"" << password << "\",\n";
+	ofs << "  \"acc-group\": \"player\",\n";
+	ofs << "  \"exp\": 0,\n";
+	ofs << "  \"level\": 1\n";
+	ofs << "}\n";
+	ofs.close();
+	return true;
+}
+
+// Reads the password field from the account file; returns true on success and fills outPassword
+static bool SV_nxrp_ReadAccountPassword(const char* dirpath, const char* username, std::string &outPassword) {
+	char filename[MAX_OSPATH];
+	char safe[MAX_TOKEN_CHARS];
+	SV_nxrp_SanitizeUsername(username, safe, sizeof(safe));
+	Com_sprintf(filename, sizeof(filename), "%s/%s.json", dirpath, safe);
+
+	std::ifstream ifs(filename);
+	if ( !ifs.is_open() ) return false;
+	std::stringstream ss;
+	ss << ifs.rdbuf();
+	std::string content = ss.str();
+	ifs.close();
+
+	// Very small JSON parse: find "password" : "..."
+	size_t p = content.find("\"password\"");
+	if ( p == std::string::npos ) return false;
+	size_t colon = content.find(':', p);
+	if ( colon == std::string::npos ) return false;
+	size_t firstQuote = content.find('"', colon);
+	if ( firstQuote == std::string::npos ) return false;
+	size_t secondQuote = content.find('"', firstQuote + 1);
+	if ( secondQuote == std::string::npos ) return false;
+	outPassword = content.substr(firstQuote + 1, secondQuote - firstQuote - 1);
+	return true;
+}
+
+static qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor ) {
+	char subcmd[MAX_TOKEN_CHARS] = {0};
+	char username[MAX_TOKEN_CHARS] = {0};
+	char password[MAX_TOKEN_CHARS] = {0};
+	if ( sscanf( chatCursor, "%31s %31s %31s", subcmd, username, password ) < 3 ) {
+		SV_SendServerCommand( cl, "print \"Usage: !nx register <username> <password>\\n\"\n" );
+		return qtrue;
+	}
+
+	// Determine storage directory: use fs_homepath/fs_game if available
+	const char* home = Cvar_VariableString("fs_homepath");
+	const char* game = Cvar_VariableString("fs_game");
+	char dirpath[MAX_OSPATH];
+	if ( home && home[0] ) {
+		Com_sprintf(dirpath, sizeof(dirpath), "%s/%s/nxrp/nx_accounts", home, game);
+	} else {
+		// fallback to fs_basepath
+		const char* base = Cvar_VariableString("fs_basepath");
+		Com_sprintf(dirpath, sizeof(dirpath), "%s/%s/nxrp/nx_accounts", base, game);
+	}
+
+	// Ensure directory exists (best-effort)
+	SV_nxrp_EnsureDirExists(dirpath);
+
+	// Check if account file already exists
+	char safe[MAX_TOKEN_CHARS];
+	SV_nxrp_SanitizeUsername(username, safe, sizeof(safe));
+	char filepath[MAX_OSPATH];
+	Com_sprintf(filepath, sizeof(filepath), "%s/%s.json", dirpath, safe);
+	std::ifstream check(filepath);
+	if ( check.is_open() ) {
+		check.close();
+		SV_SendServerCommand( cl, "print \"Account already exists\n\"\n" );
+		return qtrue;
+	}
+
+	if ( SV_nxrp_WriteAccountFile(dirpath, username, password) ) {
+		SV_SendServerCommand( cl, "print \"Account created successfully\n\"\n" );
+	} else {
+		SV_SendServerCommand( cl, "print \"Failed to create account (filesystem error)\n\"\n" );
+	}
+	return qtrue;
+}
+
+static qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor ) {
+	char subcmd[MAX_TOKEN_CHARS] = {0};
+	char username[MAX_TOKEN_CHARS] = {0};
+	char password[MAX_TOKEN_CHARS] = {0};
+	if ( sscanf( chatCursor, "%31s %31s %31s", subcmd, username, password ) < 3 ) {
+		SV_SendServerCommand( cl, "print \"Usage: !nx login <username> <password>\\n\"\n" );
+		return qtrue;
+	}
+
+	const char* home = Cvar_VariableString("fs_homepath");
+	const char* game = Cvar_VariableString("fs_game");
+	char dirpath[MAX_OSPATH];
+	if ( home && home[0] ) {
+		Com_sprintf(dirpath, sizeof(dirpath), "%s/%s/nxrp/nx_accounts", home, game);
+	} else {
+		const char* base = Cvar_VariableString("fs_basepath");
+		Com_sprintf(dirpath, sizeof(dirpath), "%s/%s/nxrp/nx_accounts", base, game);
+	}
+
+	std::string storedPassword;
+	if ( !SV_nxrp_ReadAccountPassword(dirpath, username, storedPassword) ) {
+		SV_SendServerCommand( cl, "print \"Login failed: account not found\n\"\n" );
+		return qtrue;
+	}
+
+	if ( storedPassword == password ) {
+		SV_SendServerCommand( cl, "print \"Login successful\n\"\n" );
+		// TODO: associate session state with client_t if needed
+	} else {
+		SV_SendServerCommand( cl, "print \"Login failed: incorrect password\n\"\n" );
+	}
 	return qtrue;
 }
