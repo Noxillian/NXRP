@@ -680,6 +680,7 @@ if(BuildMPDed)
 	# NXRP server extension
 	set(MPDedNxrpFiles
 		"${MPDir}/server/nxrp/nxrp_main.cpp"
+		"${MPDir}/server/nxrp/nxrp_cmds.cpp"
 		)
 	source_group("server/nxrp" FILES ${MPDedNxrpFiles})
 	set(MPDedFiles ${MPDedFiles} ${MPDedNxrpFiles})
