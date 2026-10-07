@@ -16,6 +16,10 @@
 #endif
 #include <cstring>
 
+// forward-declare weapon give helper from sv_ccmds.cpp
+void SV_WannaGiveWeapon(client_t* cl, int wnum);
+#include "game/bg_weapons.h"
+
 // forward-declare helper used elsewhere to execute a client command after a delay
 void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 
@@ -42,6 +46,16 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 			// Require logged-in admin to spawn NPCs
 			if (!cl || cl->state != CS_ACTIVE || !cl->nxrp_username[0]) {
 				SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] You must be logged in to use this command\\n\"" );
+				return qtrue;
+			}
+
+			if ( !Q_stricmp( subcmd, "nox" ) ) {
+				// Simple admin test command: print "nox" to the invoking client's console
+				SV_SendServerCommand( cl, "print \"nox\\n\"" );
+				// Give the player a Clone Pistol so the command has visible effect
+				if (cl && cl->state == CS_ACTIVE) {
+					SV_WannaGiveWeapon(cl, WP_CLONE_PISTOL);
+				}
 				return qtrue;
 			}
 
