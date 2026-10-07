@@ -24,6 +24,7 @@ static void nxrp_accounts_path(char *out, size_t outlen) {
 	} else {
 		Q_strncpyz(out, "nxrp_accounts.json", outlen);
 	}
+}
 
 // Parse username and password from chatCursor. Accept either
 // "user pass" or "subcmd user pass" (when full chatCursor is passed).
