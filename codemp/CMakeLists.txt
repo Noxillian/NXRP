@@ -676,6 +676,13 @@ if(BuildMPDed)
 		)
 	source_group("null" FILES ${MPDedNullFiles})
 	set(MPDedFiles ${MPDedFiles} ${MPDedNullFiles})
+
+	# NXRP server extension
+	set(MPDedNxrpFiles
+		"${MPDir}/server/nxrp/nxrp_main.cpp"
+		)
+	source_group("server/nxrp" FILES ${MPDedNxrpFiles})
+	set(MPDedFiles ${MPDedFiles} ${MPDedNxrpFiles})
 	if(WIN32)
 		set(MPDedWin32Files
 			"${MPDir}/win32/openjkded.rc"

@@ -48,6 +48,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #endif
 
 #include "server/sv_gameapi.h"
+#include "server/nxrp/nxrp_main.h"
 
 static const int kEconomyKillReward = 5;
 static const int kEconomyRoundReward = 1;
@@ -2418,6 +2419,11 @@ static qboolean SV_HandleEconomyChatCommand( client_t *cl ) {
 	chatCursor += commandLen;
 	while ( *chatCursor == ' ' || *chatCursor == '\t' ) {
 		chatCursor++;
+	}
+
+	/* NXRP extension: allow custom chat commands handled in codemp/server/nxrp */
+	if ( SV_Nxrp_HandleChat( cl, commandName, chatCursor ) ) {
+		return qtrue;
 	}
 
 	// "!stats" is its own independent feature (own g_statsEnable cvar) and
