@@ -14,6 +14,5 @@ void NXRP_OnNPCKilled(client_t *killer, const char *npcName) {
 	}
 	const char *nName = npcName && npcName[0] ? npcName : "NPC";
 
-	// Broadcast to all clients
 	SV_SendServerCommand(NULL, "print \"^5[^6N^7X^5] %s defeated %s\\n\"", pName, nName);
 }

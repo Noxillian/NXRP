@@ -57,7 +57,6 @@ qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	// sanitize username for filename
 	std::string safe;
 	safe.reserve(user.size());
 	for (char c : user) {
@@ -68,7 +67,7 @@ qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	// determine accounts directory and ensure it exists
+
 	const char *home = Cvar_VariableString("fs_homepath");
 	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_accounts" : std::string("nxrp_accounts");
 #if defined(_WIN32)
@@ -79,14 +78,14 @@ qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 
 	std::string filepath = dir + "/" + safe + ".json";
 
-	// if account file exists, reject
+
 	std::ifstream ifs(filepath);
 	if (ifs.good()) {
 		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Username already exists\\n\"" );
 		return qtrue;
 	}
 
-	// write JSON file
+
 	auto escape = [](const std::string &s){
 		std::string out; out.reserve(s.size()*2);
 		for (char c : s) {
@@ -125,7 +124,6 @@ qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	// sanitize username for filename
 	std::string safe;
 	safe.reserve(user.size());
 	for (char c : user) {
@@ -145,7 +143,7 @@ qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor ) {
 		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Login failed: unknown user\n\"" );
 		return qtrue;
 	}
-	// read entire file
+
 	std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
 	ifs.close();
 
@@ -163,12 +161,11 @@ qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor ) {
 	size_t qend = content.find('"', quote + 1);
 	if (qend == std::string::npos) { SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Login failed\n\"" ); return qtrue; }
 	std::string stored = content.substr(quote + 1, qend - (quote + 1));
-	// stored is escaped; compare naively
+
 	if (stored == pass) {
 		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Login successful\n\"" );
 		// mark client as logged in by storing username in their session info
 		if (cl && cl->state == CS_ACTIVE) {
-			// store username into client's economics/economyHandle or a safe custom field if available
 			Q_strncpyz(cl->nxrp_username, user.c_str(), sizeof(cl->nxrp_username));
 		}
 	} else {
@@ -184,14 +181,12 @@ qboolean SV_nxrp_HandleNxAccount( client_t *cl, const char *chatCursor ) {
 		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You must be an active player to use this command\\n\"" );
 		return qtrue;
 	}
-	// check stored username on client
 	const char *username = (cl && cl->nxrp_username[0]) ? cl->nxrp_username : nullptr;
 	if (!username) {
 		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You are not logged in\\n\"" );
 		return qtrue;
 	}
 
-	// build file path
 	std::string user = username;
 	std::string safe;
 	for (char c : user) if (std::isalnum((unsigned char)c) || c == '_') safe.push_back((char)std::tolower((unsigned char)c));

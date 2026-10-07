@@ -17,6 +17,7 @@
 #endif
 #include <cstring>
 
+#pragma once
 // forward-declare weapon give helper from sv_ccmds.cpp
 void SV_WannaGiveWeapon(client_t* cl, int wnum);
 #include "game/bg_weapons.h"
@@ -37,27 +38,21 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 		return SV_nxrp_HandleHello( cl );
 	}
 
-	// !nx commands: e.g. "!nx spawn stormtrooper"
 	if ( !Q_stricmp( commandName, "nx" ) ) {
 		char subcmd[MAX_TOKEN_CHARS] = {0};
 		char arg[MAX_TOKEN_CHARS] = {0};
 
 		if ( sscanf( chatCursor, "%31s %31s", subcmd, arg ) >= 1 ) {
 			if ( !Q_stricmp( subcmd, "spawn" ) ) {
-			// Require logged-in admin to spawn NPCs
 			if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 
 			if ( !Q_stricmp( subcmd, "nox" ) ) {
-				// Require logged-in admin to use this command
 				if (!cl || cl->state != CS_ACTIVE || !cl->nxrp_username[0]) {
 					SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] You must be logged in to use this command\\n\"" );
 					return qtrue;
 				}
 
-				// require admin via helper
 				if (!NXRP_IsClientAdmin(cl)) return qtrue;
-
-				// Simple admin command actions
 				SV_SendServerCommand( cl, "print \"nox\\n\"" );
 				if (cl && cl->state == CS_ACTIVE) {
 					SV_WannaGiveWeapon(cl, WP_CLONE_PISTOL);
@@ -65,7 +60,6 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 				return qtrue;
 			}
 
-			// check account isAdmin flag
 			{
 				std::string user = cl->nxrp_username;
 				std::string safe;
@@ -133,10 +127,8 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 			}
 
 			if ( !Q_stricmp( subcmd, "npcspawn" ) ) {
-				// Require logged-in admin to persist NPC spawns
 				if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 
-				// check account isAdmin flag
 				{
 					std::string user = cl->nxrp_username;
 					std::string safe;
@@ -204,24 +196,21 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 					return qtrue;
 				}
 
-				// Use the entity's reported current origin/angles where available.
-				// The project uses r.currentOrigin / r.currentAngles for many game
-				// systems; prefer those fields if present on the gentity type.
+
 				vec3_t origin;
 				vec3_t angles;
 				for (int i = 0; i < 3; ++i) {
-					// Prefer the entity render-space currentOrigin where available and
-					// fall back to the entity state trajectory base for angles.
+
 					origin[i] = cl->gentity->r.currentOrigin[i];
 					angles[i] = cl->gentity->s.apos.trBase[i];
 				}
 
-				// spawn immediately
+
 				char cmdBuf[128];
 				Com_sprintf( cmdBuf, sizeof(cmdBuf), "npc spawn %s", arg );
 				SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 0);
 
-				// persist entry for current map
+
 				const char *home2 = Cvar_VariableString("fs_homepath");
 				std::string dir2 = (home2 && home2[0]) ? std::string(home2) + "/nxrp_npcs" : std::string("nxrp_npcs");
 #if defined(_WIN32)
@@ -296,16 +285,14 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 				return SV_nxrp_HandleNxLogin( cl, chatCursor );
 			}
 		}
-		return qtrue; // handled even if unknown subcommand to avoid falling through
+		return qtrue;
 	}
 
 	return qfalse;
 }
 
-// Implementations
 static qboolean SV_nxrp_HandleHello( client_t *cl ) {
 	(void)cl;
-	// Broadcast a simple message to all clients.
 	SV_SendServerCommand( NULL, "chat \"hello there\"" );
 	return qtrue;
 }
