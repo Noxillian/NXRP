@@ -30,6 +30,31 @@ qboolean NXRP_HandleNxNoclip( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxInfo( client_t *cl, const char *chatCursor );
 static qboolean NXRP_HandleNpcSpawn( client_t *cl, const char *chatCursor );
 
+enum NXRP_SubCmd {
+	NXRP_SUB_UNKNOWN = 0,
+	NXRP_SUB_SPAWN,
+	NXRP_SUB_INFO,
+	NXRP_SUB_TEST,
+	NXRP_SUB_ACCOUNT,
+	NXRP_SUB_GIVEALL,
+	NXRP_SUB_NOCLIP,
+	NXRP_SUB_REGISTER,
+	NXRP_SUB_LOGIN
+};
+
+static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
+	if ( !s || !s[0] )					return NXRP_SUB_UNKNOWN;
+	if ( !Q_stricmp( s, "spawn" ) )		return NXRP_SUB_SPAWN;
+	if ( !Q_stricmp( s, "info" ) )		return NXRP_SUB_INFO;
+	if ( !Q_stricmp( s, "test" ) )		return NXRP_SUB_TEST;
+	if ( !Q_stricmp( s, "account" ) )	return NXRP_SUB_ACCOUNT;
+	if ( !Q_stricmp( s, "giveall" ) )	return NXRP_SUB_GIVEALL;
+	if ( !Q_stricmp( s, "noclip" ) )	return NXRP_SUB_NOCLIP;
+	if ( !Q_stricmp( s, "register" ) )	return NXRP_SUB_REGISTER;
+	if ( !Q_stricmp( s, "login" ) )		return NXRP_SUB_LOGIN;
+	return NXRP_SUB_UNKNOWN;
+}
+
 qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const char *chatCursor ) {
 	if ( !commandName ) return qfalse;
 
@@ -38,42 +63,38 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 		char arg[MAX_TOKEN_CHARS] = {0};
 
 		if ( sscanf( chatCursor, "%31s %31s", subcmd, arg ) >= 1 ) {
-			if ( !Q_stricmp( subcmd, "spawn" ) ) {
-				// check login only; actual spawn action is handled elsewhere
+			NXRP_SubCmd sc = NXRP_ParseSubcmd( subcmd );
+
+			if ( sc == NXRP_SUB_SPAWN ) {
 				if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+				if (!NXRP_IsClientAdmin(cl)) return qtrue;
+			}
+
+			switch ( sc ) {
+			case NXRP_SUB_SPAWN:
 				if ( arg[0] == '\0' ) {
 					NXRP_PrintConsoleToPlayer(cl, "Usage: !nx spawn <npc_type>");
 					return qtrue;
 				}
-
-
-				// delegate actual spawn handling to the spawn handler
 				return NXRP_HandleNpcSpawn(cl, chatCursor);
-			}
-
-			// 'npcspawn' command removed - handled by 'spawn' if needed
-			if ( !Q_stricmp( subcmd, "info" ) ) {
+			case NXRP_SUB_INFO:
 				return NXRP_HandleNxInfo( cl, chatCursor );
-			}
-			if ( !Q_stricmp( subcmd, "test" ) ) {
+			case NXRP_SUB_TEST:
 				if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 				NXRP_PrintConsoleToPlayer(cl, "Test");
 				return qtrue;
-			}
-			if ( !Q_stricmp( subcmd, "account" ) ) {
+			case NXRP_SUB_ACCOUNT:
 				return NXRP_HandleNxAccount( cl, chatCursor );
-			}
-			if ( !Q_stricmp( subcmd, "giveall" ) ) {
+			case NXRP_SUB_GIVEALL:
 				return NXRP_HandleNxGiveAll( cl, chatCursor );
-			}
-			if ( !Q_stricmp( subcmd, "noclip" ) ) {
+			case NXRP_SUB_NOCLIP:
 				return NXRP_HandleNxNoclip( cl, chatCursor );
-			}
-			if ( !Q_stricmp( subcmd, "register" ) ) {
+			case NXRP_SUB_REGISTER:
 				return NXRP_HandleNxRegister( cl, chatCursor );
-			}
-			if ( !Q_stricmp( subcmd, "login" ) ) {
+			case NXRP_SUB_LOGIN:
 				return NXRP_HandleNxLogin( cl, chatCursor );
+			default:
+				break;
 			}
 		}
 		return qtrue;
@@ -82,11 +103,9 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 	return qfalse;
 }
 
-// Provide a C-linkage shim so C code can call the handler using the old name.
-extern "C" qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *chatCursor );
+extern "C" qboolean NXRP_HandleChat( client_t *cl, const char *commandName, const char *chatCursor );
 
-// Define the shim that forwards the old C symbol to the C++ handler.
-extern "C" qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *chatCursor ) {
+extern "C" qboolean NXRP_HandleChat( client_t *cl, const char *commandName, const char *chatCursor ) {
 	return NXRP_HandleChatCommands(cl, commandName, chatCursor);
 }
 
