@@ -2590,12 +2590,6 @@ static void SV_WannaForce_f(void) {
 
 }
 
-// Public wrapper so other server modules can grant a force power to a client.
-// Calls the internal static helper above.
-void SV_WannaForceForClient(client_t* cl, int fpwr) {
-	SV_WannaForce(cl, fpwr);
-}
-
 
 /*
 ==================
