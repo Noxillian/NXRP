@@ -322,7 +322,7 @@ static qboolean SV_nxrp_HandleNxSpawn( client_t *cl, const char *chatCursor ) {
 
 	char cmdBuf[128];
 	Com_sprintf( cmdBuf, sizeof(cmdBuf), "npc spawn %s", arg );
-	SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] ^3Spawning NPC\\n\"" );
+	SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] ^3Spawning NPC\n\"" );
 	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
 	return qtrue;
 }

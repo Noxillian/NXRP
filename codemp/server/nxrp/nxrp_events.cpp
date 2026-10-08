@@ -17,7 +17,7 @@ void NXRP_OnNPCKilled(client_t *killer, const char *npcName) {
 	SV_SendServerCommand(NULL, "print \"^5[^6N^7X^5] %s defeated %s\\n\"", pName, nName);
 }
 
-// Called when a player spawns/enters the world. Broadcasts a chat message
+// Called when a player first spawns/enters the world. Broadcasts a chat message
 // containing the player's name so admins/scripts can observe spawns.
 void NXRP_OnPlayerSpawned(client_t *cl) {
 	const char *pName = "Unknown";
