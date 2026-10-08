@@ -63,6 +63,16 @@ qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 			Cbuf_AddText(cmdBuf);
 			Com_sprintf(cmdBuf, sizeof(cmdBuf), "wannaforce %d %d\n", clientNum, FP_TELEPATHY);
 			Cbuf_AddText(cmdBuf);
+
+			// Also set the force power levels immediately to ensure level 3 is
+			// applied for the powers we are granting. The underlying wannaforce
+			// helper marks powers known but does not adjust levels.
+			if (cl->gentity && cl->gentity->playerState) {
+				playerState_t* _ps = cl->gentity->playerState;
+				_ps->fd.forcePowerLevel[FP_PUSH] = FORCE_LEVEL_3;
+				_ps->fd.forcePowerLevel[FP_LIGHTNING] = FORCE_LEVEL_3;
+				_ps->fd.forcePowerLevel[FP_TELEPATHY] = FORCE_LEVEL_3;
+			}
 		}
 
 
