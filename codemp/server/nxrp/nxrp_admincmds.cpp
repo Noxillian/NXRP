@@ -41,97 +41,38 @@ qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
-	SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You have been given everything\\n\"" );
+	SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You have been given a red lightsaber\\n\"" );
 
+	if (cl && cl->gentity && cl->gentity->playerState) {
+		playerState_t* ps = cl->gentity->playerState;
 
-	{
-		const qboolean cheatsWereEnabled = Cvar_VariableIntegerValue("sv_cheats") ? qtrue : qfalse;
+		ps->stats[STAT_WEAPONS] |= (1 << WP_SABER);
+		ps->weapon = WP_SABER;
+		ps->weaponstate = WEAPON_READY;
+		ps->fd.saberAnimLevel = MB_SS_RED;
+		ps->fd.forcePowerLevel[MB_FORCE_SABER_DEFENCE] = 1;
+		ps->fd.forcePowerLevel[MB_FORCE_SABER_OFFENCE] = 1;
+		ps->fd.forcePowerLevel[MB_FORCE_SABER_THROW]   = 1;
+		ps->fd.forcePowerLevel[MB_FORCE_PUSH] = 1;
+		ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = 1;
 
-		if (!cheatsWereEnabled) {
-			Cvar_Set("sv_cheats", "1");
-			GVM_RunFrame(sv.time);
-		}
-
-		// Also attempt server-side wannaforce commands for specific powers as an
-		// explicit path into the existing server helper (wannaforce -> SV_WannaForce).
-		if (cl && svs.clients) {
-			int clientNum = (int)(cl - svs.clients);
-			char cmdBuf[128];
-			Com_sprintf(cmdBuf, sizeof(cmdBuf), "wannaforce %d %d\n", clientNum, FP_PUSH);
-			Cbuf_AddText(cmdBuf);
-			Com_sprintf(cmdBuf, sizeof(cmdBuf), "wannaforce %d %d\n", clientNum, FP_LIGHTNING);
-			Cbuf_AddText(cmdBuf);
-			Com_sprintf(cmdBuf, sizeof(cmdBuf), "wannaforce %d %d\n", clientNum, FP_TELEPATHY);
-			Cbuf_AddText(cmdBuf);
-
-			// Also set the force power levels immediately to ensure level 3 is
-			// applied for the powers we are granting. The underlying wannaforce
-			// helper marks powers known but does not adjust levels.
-			if (cl->gentity && cl->gentity->playerState) {
-				playerState_t* _ps = cl->gentity->playerState;
-				_ps->fd.forcePowerLevel[FP_PUSH] = FORCE_LEVEL_3;
-				_ps->fd.forcePowerLevel[FP_LIGHTNING] = FORCE_LEVEL_3;
-				_ps->fd.forcePowerLevel[FP_TELEPATHY] = FORCE_LEVEL_3;
-			}
-		}
-
-
-		if (cl->gentity && cl->gentity->playerState) {
-			playerState_t* ps = cl->gentity->playerState;
-
-			unsigned int weaponMask = 0u;
-			for (int w = WP_NONE + 1; w <= LAST_USEABLE_WEAPON; ++w) {
-				weaponMask |= (1u << w);
-			}
-			ps->stats[STAT_WEAPONS] = (int)weaponMask;
-			ps->weapon = FIRST_USEABLE_WEAPON;
-			ps->weaponstate = WEAPON_READY;
-
-
-			for (int w = FIRST_USEABLE_WEAPON; w <= LAST_USEABLE_WEAPON; ++w) {
-				Spin_GiveWeaponAmmo(cl, (weapon_t)w);
-			}
-		}
-
-
-		if (cl && cl->gentity && cl->gentity->playerState) {
-			playerState_t* ps = cl->gentity->playerState;
-
+		ps->fd.forcePowersKnown |= (1 << 3);
 		ps->fd.forcePower = 500;
-			for (int fp = 0; fp < NUM_FORCE_POWERS; ++fp) {
-				NXRP_GrantKnownForce(cl, fp);
-				ps->fd.forcePowerLevel[fp] = FORCE_LEVEL_3;
-			}
 
-			// Give the client a lightsaber using the same logic as the spin prize
-			// flow. Force the saber style to red and enable basic saber skills.
-			ps->stats[STAT_WEAPONS] |= (1 << WP_SABER);
-			ps->weapon = WP_SABER;
-			ps->weaponstate = WEAPON_READY;
-			// Set red saber style explicitly
-			ps->fd.saberAnimLevel = MB_SS_RED;
-			ps->fd.forcePowerLevel[MB_FORCE_SABER_DEFENCE] = 3;
-			ps->fd.forcePowerLevel[MB_FORCE_SABER_OFFENCE] = 3;
-			ps->fd.forcePowerLevel[MB_FORCE_SABER_THROW]   = 3;
-			ps->fd.forcePowerLevel[MB_FORCE_PUSH] = 3;
-			ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = 3;
-			SV_WannaGiveWeapon(cl, WP_SABER);
+		SV_WannaGiveWeapon(cl, WP_CLONE_PISTOL);
+		SV_WannaGiveWeapon(cl, WP_SABER);
 
-			char userinfo[MAX_INFO_STRING];
-			SV_GetUserinfo(cl - svs.clients, userinfo, sizeof(userinfo));
-			Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
-			Info_SetValueForKey(userinfo, "color1", "red");
-			SV_SetUserinfo(cl - svs.clients, userinfo);
-			GVM_ClientUserinfoChanged(cl - svs.clients);
+		char userinfo[MAX_INFO_STRING];
+		SV_GetUserinfo(cl - svs.clients, userinfo, sizeof(userinfo));
+		Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
+		Info_SetValueForKey(userinfo, "color1", "red");
+		SV_SetUserinfo(cl - svs.clients, userinfo);
+		GVM_ClientUserinfoChanged(cl - svs.clients);
+
+		SV_ExecuteClientCommandDelayed_h(cl, std::string("setForceLightning 3"), 1);
+		SV_ExecuteClientCommandDelayed_h(cl, std::string("setForceLightning"), 3);
 
 
-			GVM_RunFrame(sv.time);
-		}
-
-		if (!cheatsWereEnabled) {
-			Cvar_Set("sv_cheats", "0");
-			GVM_RunFrame(sv.time);
-		}
 	}
 
 
