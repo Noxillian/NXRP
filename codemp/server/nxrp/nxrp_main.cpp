@@ -268,6 +268,18 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 			if ( !Q_stricmp( subcmd, "info" ) ) {
 				return SV_nxrp_HandleNxInfo( cl, chatCursor );
 			}
+			if ( !Q_stricmp( subcmd, "test" ) ) {
+				if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+
+				// Allow an optional argument specifying which classname to spawn.
+				// Default to a usable button-like entity.
+				const char *which = (arg[0] != '\0') ? arg : "func_usable";
+				char cmdBuf[128];
+				Com_sprintf( cmdBuf, sizeof(cmdBuf), "spawn %s", which );
+				SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Spawning test entity\n\"" );
+				SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
+				return qtrue;
+			}
 				if ( !Q_stricmp( subcmd, "account" ) ) {
 					return SV_nxrp_HandleNxAccount( cl, chatCursor );
 				}
