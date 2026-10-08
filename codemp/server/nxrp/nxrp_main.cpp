@@ -45,6 +45,9 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 					NXRP_PrintConsoleToPlayer(cl, "Usage: !nx spawn <npc_type>");
 					return qtrue;
 				}
+
+// (No C-linkage wrapper required; server C code calls NXRP_HandleChatCommands
+// directly.)
 				// delegate actual spawn handling to the spawn handler
 				return NXRP_HandleNpcSpawn(cl, chatCursor);
 			}

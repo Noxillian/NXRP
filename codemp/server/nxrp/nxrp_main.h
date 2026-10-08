@@ -7,7 +7,9 @@
 
 #include "../server.h"
 
-qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *chatCursor );
+// Primary chat handler called from server code.
+// Use the NXRP_ prefix consistently across the project.
+qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const char *chatCursor );
 
 // additional handlers declared in nxrp_cmds.cpp - renamed to NXRP_ prefix
 qboolean NXRP_HandleNxInfo( client_t *cl, const char *chatCursor );
