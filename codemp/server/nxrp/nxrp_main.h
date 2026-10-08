@@ -19,5 +19,6 @@ qboolean SV_nxrp_HandleNxNoclip( client_t *cl, const char *chatCursor );
 
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );
+void NXRP_OnPlayerSpawned( client_t *cl );
 
 #endif // NXRP_MAIN_H
