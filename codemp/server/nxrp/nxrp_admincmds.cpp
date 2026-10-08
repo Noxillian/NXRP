@@ -14,7 +14,7 @@ void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 extern void SV_WannaGiveWeapon(client_t* cl, int wnum);
 
 // Handler: !nx noclip
-qboolean SV_nxrp_HandleNxNoclip( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_HandleNxNoclip( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
@@ -24,7 +24,7 @@ qboolean SV_nxrp_HandleNxNoclip( client_t *cl, const char *chatCursor ) {
 }
 
 // Handler: !nx giveall
-qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;

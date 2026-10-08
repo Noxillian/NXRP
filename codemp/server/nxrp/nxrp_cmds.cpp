@@ -42,14 +42,14 @@ static bool parse_user_pass(const char *chatCursor, std::string &outUser, std::s
 }
 
 // Handler for: !nx info
-qboolean SV_nxrp_HandleNxInfo( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_HandleNxInfo( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	NXRP_PrintConsoleToPlayer(cl, va("NXRP version: %s", NXRP_VERSION));
 	return qtrue;
 }
 
 // Handler for: !nx register <user> <pass>
-qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 	std::string user, pass;
 	if (!parse_user_pass(chatCursor, user, pass)) {
 		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx register <user> <pass>");
@@ -113,7 +113,7 @@ qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 }
 
 // Handler for: !nx login <user> <pass>
-qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_HandleNxLogin( client_t *cl, const char *chatCursor ) {
 	std::string user, pass;
 	if (!parse_user_pass(chatCursor, user, pass)) {
 		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx login <user> <pass>");
@@ -171,7 +171,7 @@ qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor ) {
 }
 
 // Handler for: !nx account
-qboolean SV_nxrp_HandleNxAccount( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_HandleNxAccount( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!cl || cl->state != CS_ACTIVE) {
 		NXRP_PrintConsoleToPlayer(cl, "You must be an active player to use this command");
