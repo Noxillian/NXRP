@@ -15,7 +15,7 @@ static void NXRP_GrantKnownForce(client_t* cl, int fpwr) {
 	if (fpwr < 0 || fpwr >= NUM_FORCE_POWERS) return;
 	playerState_t* ps = cl->gentity->playerState;
 	ps->fd.forcePowersKnown |= (1 << fpwr);
-	ps->fd.forcePower = 100;
+	ps->fd.forcePower = 500;
 }
 
 // Handler: !nx noclip
@@ -45,6 +45,19 @@ qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 		if (!cheatsWereEnabled) {
 			Cvar_Set("sv_cheats", "1");
 			GVM_RunFrame(sv.time);
+		}
+
+		// Also attempt server-side wannaforce commands for specific powers as an
+		// explicit path into the existing server helper (wannaforce -> SV_WannaForce).
+		if (cl && svs.clients) {
+			int clientNum = (int)(cl - svs.clients);
+			char cmdBuf[128];
+			Com_sprintf(cmdBuf, sizeof(cmdBuf), "wannaforce %d %d\n", clientNum, FP_PUSH);
+			Cbuf_AddText(cmdBuf);
+			Com_sprintf(cmdBuf, sizeof(cmdBuf), "wannaforce %d %d\n", clientNum, FP_LIGHTNING);
+			Cbuf_AddText(cmdBuf);
+			Com_sprintf(cmdBuf, sizeof(cmdBuf), "wannaforce %d %d\n", clientNum, MB_FORCE_DESTRUCTION);
+			Cbuf_AddText(cmdBuf);
 		}
 
 
