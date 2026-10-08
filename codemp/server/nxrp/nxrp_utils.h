@@ -33,9 +33,9 @@ inline void NXRP_PrintConsoleToPlayerFmt(client_t* cl, const char* fmt, ...) {
 	va_end(ap);
 
 	if (cl)
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] %s\\n\"", buf);
+		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] %s\n\"", buf);
 	else
-		SV_SendServerCommand(NULL, "print \"^5[^6N^7X^5] %s\\n\"", buf);
+		SV_SendServerCommand(NULL, "print \"^5[^6N^7X^5] %s\n\"", buf);
 }
 
 // Convenience wrapper for simple literal messages.
