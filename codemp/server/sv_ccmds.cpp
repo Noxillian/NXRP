@@ -2556,9 +2556,7 @@ Helper, give a client a force power
 ==================
 */
 static void SV_WannaForce(client_t* cl, int fpwr) {
-	if (!cl || !cl->gentity || !cl->gentity->playerState) {
-		return;
-	}
+
 	cl->gentity->playerState->fd.forcePowersKnown |= (1 << fpwr);
 	cl->gentity->playerState->fd.forcePower = 100;
 

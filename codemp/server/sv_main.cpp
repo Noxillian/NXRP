@@ -824,7 +824,6 @@ void SVC_RemoteCommand( netadr_t from, msg_t *msg ) {
 	}
 
 	Com_EndRedirect ();
-
 }
 
 /*

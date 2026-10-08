@@ -14,13 +14,13 @@
 #include <fstream>
 #include <sys/stat.h>
 #if defined(_WIN32)
-#include <direct.h>
+	#include <direct.h>
 #endif
 #include <algorithm>
 #include <cctype>
 
 // Version variable for NXRP. Update as needed.
-const char *NXRP_VERSION = "0.1.0";
+const char *NXRP_VERSION = "0.2.0";
 
 // Account storage: per-user JSON files in <fs_homepath>/nxrp_accounts or ./nxrp_accounts
 
@@ -45,7 +45,7 @@ static bool parse_user_pass(const char *chatCursor, std::string &outUser, std::s
 // Handler for: !nx info
 qboolean SV_nxrp_HandleNxInfo( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
-	SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] NXRP version: %s\\n\"", NXRP_VERSION );
+	SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] NXRP version: %s\n\"", NXRP_VERSION );
 	return qtrue;
 }
 
