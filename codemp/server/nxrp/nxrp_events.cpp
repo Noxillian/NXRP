@@ -1,5 +1,10 @@
 #include "server/nxrp/nxrp_main.h"
+#include "server/nxrp/nxrp_utils.h"
 #include <cstdio>
+
+// Ensure the print helper is visible in this translation unit (sometimes the
+// inline header declaration may not be picked up due to include ordering).
+void NXRP_PrintConsoleToPlayer(client_t* cl, const char* text);
 
 // Called when an NPC is killed by a player. This function broadcasts a message
 // to all clients: "<player> defeated <npc>".
