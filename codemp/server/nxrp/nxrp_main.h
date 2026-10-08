@@ -31,5 +31,19 @@ qboolean NXRP_HandleNxNoclip( client_t *cl, const char *chatCursor );
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );
 void NXRP_OnPlayerSpawned( client_t *cl );
+// Additional NXRP event hooks
+void NXRP_OnPlayerConnect(int clientNum, qboolean firstTime, qboolean isBot);
+void NXRP_OnPlayerUserinfoChanged(int clientNum);
+void NXRP_OnPlayerBegin(int clientNum);
+void NXRP_OnPlayerDisconnect(int clientNum);
+void NXRP_OnPlayerKilled(client_t *attacker, client_t *victim, int meansOfDeath);
+void NXRP_OnScoreChanged(client_t *cl, int oldScore, int newScore);
+void NXRP_OnNPCSpawned(const char *npcName);
+void NXRP_OnVehicleDestroyed(int vehicleEntNum, client_t *killer);
+void NXRP_OnRoundStart(void);
+void NXRP_OnRoundEnd(int winningTeam);
+void NXRP_OnRoundRestart(void);
+void NXRP_OnMatchStart(void);
+void NXRP_OnMatchEnd(void);
 
 #endif // NXRP_MAIN_H
