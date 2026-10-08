@@ -48,12 +48,12 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 
 			if ( !Q_stricmp( subcmd, "nox" ) ) {
 				if (!cl || cl->state != CS_ACTIVE || !cl->nxrp_username[0]) {
-					SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] You must be logged in to use this command\\n\"" );
+					NXRP_PrintConsoleToPlayer(cl, "You must be logged in to use this command");
 					return qtrue;
 				}
 
 				if (!NXRP_IsClientAdmin(cl)) return qtrue;
-				SV_SendServerCommand( cl, "print \"nox\\n\"" );
+				NXRP_PrintConsoleToPlayer(cl, "nox");
 				if (cl && cl->state == CS_ACTIVE) {
 					SV_WannaGiveWeapon(cl, WP_CLONE_PISTOL);
 				}
@@ -67,7 +67,7 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 					if (std::isalnum((unsigned char)c) || c == '_') safe.push_back((char)std::tolower((unsigned char)c));
 				}
 				if (safe.empty()) {
-					SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Invalid stored username\\n\"" );
+					NXRP_PrintConsoleToPlayer(cl, "Invalid stored username");
 					return qtrue;
 				}
 
@@ -77,7 +77,7 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 
 				std::ifstream ifs(filepath);
 				if (!ifs.is_open()) {
-					SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Account file not found\\n\"" );
+					NXRP_PrintConsoleToPlayer(cl, "Account file not found");
 					return qtrue;
 				}
 
@@ -87,14 +87,14 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 				const std::string key = "\"isAdmin\"";
 				size_t k = content.find(key);
 				if (k == std::string::npos) {
-					SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Admin flag missing\\n\"" );
+					NXRP_PrintConsoleToPlayer(cl, "Admin flag missing");
 					return qtrue;
 				}
 				size_t colon = content.find(':', k + key.size());
-				if (colon == std::string::npos) { SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Admin flag parse error\\n\"" ); return qtrue; }
+				if (colon == std::string::npos) { NXRP_PrintConsoleToPlayer(cl, "Admin flag parse error"); return qtrue; }
 				size_t pos = colon + 1;
 				while (pos < content.size() && isspace((unsigned char)content[pos])) pos++;
-				if (pos >= content.size()) { SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Admin flag parse error\\n\"" ); return qtrue; }
+				if (pos >= content.size()) { NXRP_PrintConsoleToPlayer(cl, "Admin flag parse error"); return qtrue; }
 				bool isAdmin = false;
 				if (content.compare(pos, 4, "true") == 0) isAdmin = true;
 				else if (content.compare(pos, 5, "false") == 0) isAdmin = false;
@@ -109,19 +109,19 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 				}
 
 				if (!isAdmin) {
-					SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] You are not an admin\\n\"" );
+					NXRP_PrintConsoleToPlayer(cl, "You are not an admin");
 					return qtrue;
 				}
 			}
 
 				if ( arg[0] == '\0' ) {
-					SV_SendServerCommand( cl, "chat \"Usage: !nx spawn <npc_type>\"\n" );
+					NXRP_PrintConsoleToPlayer(cl, "Usage: !nx spawn <npc_type>");
 					return qtrue;
 				}
 
 				char cmdBuf[128];
 				Com_sprintf( cmdBuf, sizeof(cmdBuf), "npc spawn %s", arg );
-				SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] ^3Spawning NPC\\n\"\n" );
+				NXRP_PrintConsoleToPlayer(cl, "^3Spawning NPC");
 				SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
 				return qtrue;
 			}
@@ -136,7 +136,7 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 						if (std::isalnum((unsigned char)c) || c == '_') safe.push_back((char)std::tolower((unsigned char)c));
 					}
 					if (safe.empty()) {
-						SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Invalid stored username\\n\"" );
+					NXRP_PrintConsoleToPlayer(cl, "Invalid stored username");
 						return qtrue;
 					}
 
@@ -146,7 +146,7 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 
 					std::ifstream ifs(filepath);
 					if (!ifs.is_open()) {
-						SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Account file not found\\n\"" );
+					NXRP_PrintConsoleToPlayer(cl, "Account file not found");
 						return qtrue;
 					}
 
@@ -156,18 +156,18 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 					const std::string key = "\"isAdmin\"";
 					size_t k = content.find(key);
 					if (k == std::string::npos) {
-						SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Admin flag missing\\n\"" );
+					NXRP_PrintConsoleToPlayer(cl, "Admin flag missing");
 						return qtrue;
 					}
 					size_t colon = content.find(':', k + key.size());
 					if (colon == std::string::npos) {
-						SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Admin flag parse error\\n\"" );
+						NXRP_PrintConsoleToPlayer(cl, "Admin flag parse error");
 						return qtrue;
 					}
 					size_t pos = colon + 1;
 					while (pos < content.size() && isspace((unsigned char)content[pos])) pos++;
 					if (pos >= content.size()) {
-						SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Admin flag parse error\\n\"" );
+						NXRP_PrintConsoleToPlayer(cl, "Admin flag parse error");
 						return qtrue;
 					}
 					bool isAdmin = false;
@@ -182,17 +182,17 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 					}
 
 					if (!isAdmin) {
-						SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] You are not an admin\\n\"" );
+					NXRP_PrintConsoleToPlayer(cl, "You are not an admin");
 						return qtrue;
 					}
 				}
 
 				if ( arg[0] == '\0' ) {
-					SV_SendServerCommand( cl, "print \"Usage: !nx npcspawn <npc_type>\\n\"" );
+					NXRP_PrintConsoleToPlayer(cl, "Usage: !nx npcspawn <npc_type>");
 					return qtrue;
 				}
 				if (!cl->gentity) {
-					SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] No entity to capture position from\\n\"" );
+					NXRP_PrintConsoleToPlayer(cl, "No entity to capture position from");
 					return qtrue;
 				}
 
@@ -275,7 +275,7 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 				// Use a common map object model that is easy to spot.
 				char cmdBuf[128];
 				Com_sprintf( cmdBuf, sizeof(cmdBuf), "spawn misc_model_static models/map_objects/wall_pipes.md3" );
-				SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Spawning test model in front of you\n\"" );
+				NXRP_PrintConsoleToPlayer(cl, "Spawning test model in front of you");
 				SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
 				return qtrue;
 			}

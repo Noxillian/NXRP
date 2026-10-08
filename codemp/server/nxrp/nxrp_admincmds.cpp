@@ -19,7 +19,7 @@ qboolean SV_nxrp_HandleNxNoclip( client_t *cl, const char *chatCursor ) {
 
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 	SV_ExecuteClientCommandDelayed_h(cl, std::string("noclip"), 1);
-	SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Toggled noclip (cheat command sent)\\n\"");
+	NXRP_PrintConsoleToPlayer(cl, "Toggled noclip");
 	return qtrue;
 }
 
@@ -29,7 +29,7 @@ qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
-	SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You have been given a red lightsaber\\n\"" );
+	NXRP_PrintConsoleToPlayer(cl, "You have been given a Lightsaber");
 
 	if (cl && cl->gentity && cl->gentity->playerState) {
 		playerState_t* ps = cl->gentity->playerState;
