@@ -56,7 +56,7 @@ qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 			Cbuf_AddText(cmdBuf);
 			Com_sprintf(cmdBuf, sizeof(cmdBuf), "wannaforce %d %d\n", clientNum, FP_LIGHTNING);
 			Cbuf_AddText(cmdBuf);
-			Com_sprintf(cmdBuf, sizeof(cmdBuf), "wannaforce %d %d\n", clientNum, MB_FORCE_DESTRUCTION);
+			Com_sprintf(cmdBuf, sizeof(cmdBuf), "wannaforce %d %d\n", clientNum, FP_TELEPATHY);
 			Cbuf_AddText(cmdBuf);
 		}
 
