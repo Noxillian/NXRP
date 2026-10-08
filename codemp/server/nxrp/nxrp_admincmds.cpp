@@ -110,9 +110,11 @@ qboolean SV_nxrp_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 			ps->weaponstate = WEAPON_READY;
 			// Set red saber style explicitly
 			ps->fd.saberAnimLevel = MB_SS_RED;
-			ps->fd.forcePowerLevel[MB_FORCE_SABER_DEFENCE] = 1;
-			ps->fd.forcePowerLevel[MB_FORCE_SABER_OFFENCE] = 1;
-			ps->fd.forcePowerLevel[MB_FORCE_SABER_THROW]   = 1;
+			ps->fd.forcePowerLevel[MB_FORCE_SABER_DEFENCE] = 3;
+			ps->fd.forcePowerLevel[MB_FORCE_SABER_OFFENCE] = 3;
+			ps->fd.forcePowerLevel[MB_FORCE_SABER_THROW]   = 3;
+			ps->fd.forcePowerLevel[MB_FORCE_PUSH] = 3;
+			ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = 3;
 			SV_WannaGiveWeapon(cl, WP_SABER);
 
 			char userinfo[MAX_INFO_STRING];
