@@ -271,12 +271,11 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 			if ( !Q_stricmp( subcmd, "test" ) ) {
 				if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 
-				// Allow an optional argument specifying which classname to spawn.
-				// Default to a visible wall/button entity so players can see and use it.
-				const char *which = (arg[0] != '\0') ? arg : "func_wall";
+				// Spawn a visible static model so it appears in front of the player.
+				// Use a common map object model that is easy to spot.
 				char cmdBuf[128];
-				Com_sprintf( cmdBuf, sizeof(cmdBuf), "spawn %s", which );
-				SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Spawning test entity\n\"" );
+				Com_sprintf( cmdBuf, sizeof(cmdBuf), "spawn misc_model_static models/map_objects/wall_pipes.md3" );
+				SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Spawning test model in front of you\n\"" );
 				SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
 				return qtrue;
 			}
