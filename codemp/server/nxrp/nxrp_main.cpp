@@ -46,13 +46,7 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 					return qtrue;
 				}
 
-// Provide a C-linkage shim so C code can call the handler using the old name.
-extern "C" qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *chatCursor ) {
-	return NXRP_HandleChatCommands(cl, commandName, chatCursor);
-}
 
-// (No C-linkage wrapper required; server C code calls NXRP_HandleChatCommands
-// directly.)
 				// delegate actual spawn handling to the spawn handler
 				return NXRP_HandleNpcSpawn(cl, chatCursor);
 			}
@@ -86,6 +80,14 @@ extern "C" qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, c
 	}
 
 	return qfalse;
+}
+
+// Provide a C-linkage shim so C code can call the handler using the old name.
+extern "C" qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *chatCursor );
+
+// Define the shim that forwards the old C symbol to the C++ handler.
+extern "C" qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *chatCursor ) {
+	return NXRP_HandleChatCommands(cl, commandName, chatCursor);
 }
 
 static qboolean NXRP_HandleNpcSpawn( client_t *cl, const char *chatCursor ) {
