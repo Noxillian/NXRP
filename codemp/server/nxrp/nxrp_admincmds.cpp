@@ -4,8 +4,6 @@
 #include "game/bg_mb2.h"
 #include "game/bg_weapons.h"
 #include <string>
-#include <fstream>
-#include <cctype>
 #include "server/spin.h"
 
 // Forward-declare delayed executor used elsewhere (defined in spin.cpp)

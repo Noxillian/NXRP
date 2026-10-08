@@ -1,16 +1,11 @@
 #include "server/nxrp/nxrp_main.h"
 #include "server/nxrp/nxrp_utils.h"
-#include <cstdio>
+// <cstdio> not required in this TU; va() is provided by the engine headers included elsewhere
 
-// Ensure the print helper is visible in this translation unit (sometimes the
-// inline header declaration may not be picked up due to include ordering).
+// Ensure the print helper is visible in this translation unit
 void NXRP_PrintConsoleToPlayer(client_t* cl, const char* text);
 
-// Called when an NPC is killed by a player. This function broadcasts a message
-// to all clients: "<player> defeated <npc>".
-// Note: The game code (game module) must call this helper at the point where
-// it detects an NPC death caused by a player (e.g., in the relevant g_*.c file).
-
+// Called when an NPC is killed by a player. Work in Progress
 void NXRP_OnNPCKilled(client_t *killer, const char *npcName) {
 	const char *pName = "Unknown";
 	if (killer) {
@@ -22,8 +17,7 @@ void NXRP_OnNPCKilled(client_t *killer, const char *npcName) {
 	NXRP_PrintConsoleToPlayer(NULL, va("%s defeated %s", pName, nName));
 }
 
-// Called when a player first spawns/enters the world. Broadcasts a chat message
-// containing the player's name so admins/scripts can observe spawns.
+// Called when a player first enters the game
 void NXRP_OnPlayerSpawned(client_t *cl) {
 	const char *pName = "Unknown";
 	if (!cl) {

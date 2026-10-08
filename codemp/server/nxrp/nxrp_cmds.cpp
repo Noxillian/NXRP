@@ -5,10 +5,8 @@
 #include "server/nxrp/nxrp_main.h"
 #include "server/nxrp/nxrp_utils.h"
 
-#include <cstdio>
 #include <cstring>
 #include <cstdlib>
-#include <cctype>
 #include <string>
 #include <sstream>
 #include <vector>
@@ -18,7 +16,6 @@
 	#include <direct.h>
 #endif
 #include <algorithm>
-#include <cctype>
 
 // Version variable for NXRP. Update as needed.
 const char *NXRP_VERSION = "0.2.0";
