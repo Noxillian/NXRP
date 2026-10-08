@@ -30,6 +30,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "spin.h"
 #include "shared_ledger.h"
 
+// NXRP events
+#include "server/nxrp/nxrp_main.h"
+
 #include <ctype.h>
 
 // Raw POSIX file I/O + advisory locking for the shared economy accounts
@@ -639,6 +642,9 @@ void SV_ClientEnterWorld( client_t *client, usercmd_t *cmd ) {
 	SV_GunGameClientBegin( client );
 
 	SV_BeginAutoRecordDemos();
+
+	// Notify NXRP listeners that a player has spawned/entered the world.
+	NXRP_OnPlayerSpawned(client);
 }
 
 /*
