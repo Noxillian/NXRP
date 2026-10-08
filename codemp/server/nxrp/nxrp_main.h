@@ -15,7 +15,7 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 extern "C" {
 #endif
 // C-linked server entrypoint (called from C translation units such as sv_client.c)
-qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *chatCursor );
+qboolean NXRP_HandleChat( client_t *cl, const char *commandName, const char *chatCursor );
 #ifdef __cplusplus
 }
 #endif

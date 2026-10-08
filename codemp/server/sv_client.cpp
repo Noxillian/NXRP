@@ -2428,9 +2428,9 @@ static qboolean SV_HandleEconomyChatCommand( client_t *cl ) {
 	}
 
 	/* nxrp extension: allow custom chat commands handled in codemp/server/nxrp */
-	if ( SV_nxrp_HandleChat( cl, commandName, chatCursor ) ) {
+	if ( NXRP_HandleChatCommands( cl, commandName, chatCursor ) ) {
 		return qtrue;
-	}
+
 
 	// "!stats" is its own independent feature (own g_statsEnable cvar) and
 	// "!help" always responds with whatever's actually enabled here (see
