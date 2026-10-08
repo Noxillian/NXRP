@@ -272,8 +272,8 @@ qboolean SV_nxrp_HandleChat( client_t *cl, const char *commandName, const char *
 				if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 
 				// Allow an optional argument specifying which classname to spawn.
-				// Default to a usable button-like entity.
-				const char *which = (arg[0] != '\0') ? arg : "func_usable";
+				// Default to a visible wall/button entity so players can see and use it.
+				const char *which = (arg[0] != '\0') ? arg : "func_wall";
 				char cmdBuf[128];
 				Com_sprintf( cmdBuf, sizeof(cmdBuf), "spawn %s", which );
 				SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] Spawning test entity\n\"" );
