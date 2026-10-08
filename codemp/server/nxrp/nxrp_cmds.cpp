@@ -3,6 +3,7 @@
  */
 
 #include "server/nxrp/nxrp_main.h"
+#include "server/nxrp/nxrp_utils.h"
 
 #include <cstdio>
 #include <cstring>
@@ -14,15 +15,13 @@
 #include <fstream>
 #include <sys/stat.h>
 #if defined(_WIN32)
-#include <direct.h>
+	#include <direct.h>
 #endif
 #include <algorithm>
 #include <cctype>
 
 // Version variable for NXRP. Update as needed.
-const char *NXRP_VERSION = "0.1.0";
-
-// Account storage: per-user JSON files in <fs_homepath>/nxrp_accounts or ./nxrp_accounts
+const char *NXRP_VERSION = "0.2.0";
 
 // Parse username and password from chatCursor. Accept either
 // "user pass" or "subcmd user pass" (when full chatCursor is passed).
@@ -43,17 +42,17 @@ static bool parse_user_pass(const char *chatCursor, std::string &outUser, std::s
 }
 
 // Handler for: !nx info
-qboolean SV_nxrp_HandleNxInfo( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_HandleNxInfo( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
-	SV_SendServerCommand( cl, "print \"^5[^6N^7X^5] NXRP version: %s\\n\"", NXRP_VERSION );
+	NXRP_PrintConsoleToPlayer(cl, va("NXRP version: %s", NXRP_VERSION));
 	return qtrue;
 }
 
 // Handler for: !nx register <user> <pass>
-qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 	std::string user, pass;
 	if (!parse_user_pass(chatCursor, user, pass)) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Usage: !nx register <user> <pass>\\n\"" );
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx register <user> <pass>");
 		return qtrue;
 	}
 
@@ -63,28 +62,25 @@ qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 		if (std::isalnum((unsigned char)c) || c == '_') safe.push_back((char)std::tolower((unsigned char)c));
 	}
 	if (safe.empty()) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Invalid username\\n\"" );
+		NXRP_PrintConsoleToPlayer(cl, "Invalid username");
 		return qtrue;
 	}
-
 
 	const char *home = Cvar_VariableString("fs_homepath");
 	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_accounts" : std::string("nxrp_accounts");
-#if defined(_WIN32)
-	_mkdir(dir.c_str());
-#else
-	mkdir(dir.c_str(), 0755);
-#endif
+	#if defined(_WIN32)
+		_mkdir(dir.c_str());
+	#else
+		mkdir(dir.c_str(), 0755);
+	#endif
 
 	std::string filepath = dir + "/" + safe + ".json";
 
-
 	std::ifstream ifs(filepath);
 	if (ifs.good()) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Username already exists\\n\"" );
+		NXRP_PrintConsoleToPlayer(cl, "Username already exists");
 		return qtrue;
 	}
-
 
 	auto escape = [](const std::string &s){
 		std::string out; out.reserve(s.size()*2);
@@ -98,7 +94,7 @@ qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 
 	std::ofstream ofs(filepath, std::ios::trunc);
 	if (!ofs.is_open()) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Registration failed: cannot create account file\\n\"" );
+		NXRP_PrintConsoleToPlayer(cl, "Registration failed: cannot create account file");
 		return qtrue;
 	}
 	ofs << "{\n";
@@ -112,15 +108,15 @@ qboolean SV_nxrp_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 
 	ofs.close();
 
-	SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Registration successful\\n\"" );
+	NXRP_PrintConsoleToPlayer(cl, "Registration successful");
 	return qtrue;
 }
 
 // Handler for: !nx login <user> <pass>
-qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_HandleNxLogin( client_t *cl, const char *chatCursor ) {
 	std::string user, pass;
 	if (!parse_user_pass(chatCursor, user, pass)) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Usage: !nx login <user> <pass>\n\"" );
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx login <user> <pass>");
 		return qtrue;
 	}
 
@@ -130,7 +126,7 @@ qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor ) {
 		if (std::isalnum((unsigned char)c) || c == '_') safe.push_back((char)std::tolower((unsigned char)c));
 	}
 	if (safe.empty()) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Invalid username\n\"" );
+		NXRP_PrintConsoleToPlayer(cl, "Invalid username");
 		return qtrue;
 	}
 
@@ -140,7 +136,7 @@ qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor ) {
 
 	std::ifstream ifs(filepath);
 	if (!ifs.is_open()) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Login failed: unknown user\n\"" );
+		NXRP_PrintConsoleToPlayer(cl, "Login failed: unknown user");
 		return qtrue;
 	}
 
@@ -151,53 +147,53 @@ qboolean SV_nxrp_HandleNxLogin( client_t *cl, const char *chatCursor ) {
 	std::string key = "\"password\"";
 	size_t k = content.find(key);
 	if (k == std::string::npos) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Login failed\n\"" );
+		NXRP_PrintConsoleToPlayer(cl, "Login failed");
 		return qtrue;
 	}
 	size_t colon = content.find(':', k + key.size());
-	if (colon == std::string::npos) { SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Login failed\n\"" ); return qtrue; }
+	if (colon == std::string::npos) { NXRP_PrintConsoleToPlayer(cl, "Login failed"); return qtrue; }
 	size_t quote = content.find('"', colon);
-	if (quote == std::string::npos) { SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Login failed\n\"" ); return qtrue; }
+	if (quote == std::string::npos) { NXRP_PrintConsoleToPlayer(cl, "Login failed"); return qtrue; }
 	size_t qend = content.find('"', quote + 1);
-	if (qend == std::string::npos) { SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Login failed\n\"" ); return qtrue; }
+	if (qend == std::string::npos) { NXRP_PrintConsoleToPlayer(cl, "Login failed"); return qtrue; }
 	std::string stored = content.substr(quote + 1, qend - (quote + 1));
 
 	if (stored == pass) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Login successful\n\"" );
+		NXRP_PrintConsoleToPlayer(cl, "Login successful");
 		// mark client as logged in by storing username in their session info
 		if (cl && cl->state == CS_ACTIVE) {
 			Q_strncpyz(cl->nxrp_username, user.c_str(), sizeof(cl->nxrp_username));
 		}
 	} else {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Login failed: incorrect password\n\"" );
+		NXRP_PrintConsoleToPlayer(cl, "Login failed: incorrect password");
 	}
 	return qtrue;
 }
 
 // Handler for: !nx account
-qboolean SV_nxrp_HandleNxAccount( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_HandleNxAccount( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!cl || cl->state != CS_ACTIVE) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You must be an active player to use this command\\n\"" );
+		NXRP_PrintConsoleToPlayer(cl, "You must be an active player to use this command");
 		return qtrue;
 	}
 	const char *username = (cl && cl->nxrp_username[0]) ? cl->nxrp_username : nullptr;
 	if (!username) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You are not logged in\\n\"" );
+		NXRP_PrintConsoleToPlayer(cl, "You are not logged in");
 		return qtrue;
 	}
 
 	std::string user = username;
 	std::string safe;
 	for (char c : user) if (std::isalnum((unsigned char)c) || c == '_') safe.push_back((char)std::tolower((unsigned char)c));
-	if (safe.empty()) { SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Invalid stored username\\n\"" ); return qtrue; }
+	if (safe.empty()) { NXRP_PrintConsoleToPlayer(cl, "Invalid stored username"); return qtrue; }
 
 	const char *home = Cvar_VariableString("fs_homepath");
 	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_accounts" : std::string("nxrp_accounts");
 	std::string filepath = dir + "/" + safe + ".json";
 
 	std::ifstream ifs(filepath);
-	if (!ifs.is_open()) { SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Account file not found\\n\"" ); return qtrue; }
+	if (!ifs.is_open()) { NXRP_PrintConsoleToPlayer(cl, "Account file not found"); return qtrue; }
 	std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
 	ifs.close();
 
@@ -215,10 +211,10 @@ qboolean SV_nxrp_HandleNxAccount( client_t *cl, const char *chatCursor ) {
 	std::string exp = extract_number("\"exp\"");
 	std::string credits = extract_number("\"credits\"");
 
-	SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Account info for %s:\\n\"", username );
-	SV_SendServerCommand(cl, "print \"  Username: %s\\n\"", username );
-	SV_SendServerCommand(cl, "print \"  Level: %s\\n\"", level.c_str() );
-	SV_SendServerCommand(cl, "print \"  Exp: %s\\n\"", exp.c_str() );
-	SV_SendServerCommand(cl, "print \"  Credits: %s\\n\"", credits.c_str() );
+	NXRP_PrintConsoleToPlayerFmt(cl, "Account info for %s:", username);
+	NXRP_PrintConsoleToPlayerFmt(cl, "  Username: %s", username);
+	NXRP_PrintConsoleToPlayerFmt(cl, "  Level: %s", level.c_str());
+	NXRP_PrintConsoleToPlayerFmt(cl, "  Exp: %s", exp.c_str());
+	NXRP_PrintConsoleToPlayerFmt(cl, "  Credits: %s", credits.c_str());
 	return qtrue;
 }

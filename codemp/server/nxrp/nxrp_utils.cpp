@@ -5,7 +5,7 @@
 
 bool NXRP_EnsureLoggedIn(client_t* cl) {
 	if (!cl || cl->state != CS_ACTIVE || !cl->nxrp_username[0]) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You must be logged in to use this command\\n\"");
+		NXRP_PrintConsoleToPlayer(cl, "You must be logged in to use this command");
 		return false;
 	}
 	return true;
@@ -13,7 +13,7 @@ bool NXRP_EnsureLoggedIn(client_t* cl) {
 
 bool NXRP_ReadAccountContentForClient(client_t* cl, std::string& outContent, std::string& outSafeUsername) {
 	if (!cl || !cl->nxrp_username[0]) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You must be logged in to use this command\\n\"");
+		NXRP_PrintConsoleToPlayer(cl, "You must be logged in to use this command");
 		return false;
 	}
 
@@ -23,7 +23,7 @@ bool NXRP_ReadAccountContentForClient(client_t* cl, std::string& outContent, std
 		if (std::isalnum((unsigned char)c) || c == '_') safe.push_back((char)std::tolower((unsigned char)c));
 	}
 	if (safe.empty()) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Invalid stored username\\n\"");
+		NXRP_PrintConsoleToPlayer(cl, "Invalid stored username");
 		return false;
 	}
 
@@ -33,7 +33,7 @@ bool NXRP_ReadAccountContentForClient(client_t* cl, std::string& outContent, std
 
 	std::ifstream ifs(filepath);
 	if (!ifs.is_open()) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Account file not found\\n\"");
+		NXRP_PrintConsoleToPlayer(cl, "Account file not found");
 		return false;
 	}
 
@@ -50,14 +50,14 @@ bool NXRP_IsClientAdmin(client_t* cl) {
 	const std::string key = "\"isAdmin\"";
 	size_t k = content.find(key);
 	if (k == std::string::npos) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Admin flag missing\\n\"");
+		NXRP_PrintConsoleToPlayer(cl, "Admin flag missing");
 		return false;
 	}
 	size_t colon = content.find(':', k + key.size());
-	if (colon == std::string::npos) { SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Admin flag parse error\\n\""); return false; }
+	if (colon == std::string::npos) { NXRP_PrintConsoleToPlayer(cl, "Admin flag parse error"); return false; }
 	size_t pos = colon + 1;
 	while (pos < content.size() && isspace((unsigned char)content[pos])) pos++;
-	if (pos >= content.size()) { SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] Admin flag parse error\\n\""); return false; }
+	if (pos >= content.size()) { NXRP_PrintConsoleToPlayer(cl, "Admin flag parse error"); return false; }
 	bool isAdmin = false;
 	if (content.compare(pos, 4, "true") == 0) isAdmin = true;
 	else if (content.compare(pos, 5, "false") == 0) isAdmin = false;
@@ -72,7 +72,7 @@ bool NXRP_IsClientAdmin(client_t* cl) {
 	}
 
 	if (!isAdmin) {
-		SV_SendServerCommand(cl, "print \"^5[^6N^7X^5] You are not an admin\\n\"");
+		NXRP_PrintConsoleToPlayer(cl, "You are not an admin");
 		return false;
 	}
 	return true;
