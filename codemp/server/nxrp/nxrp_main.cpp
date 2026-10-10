@@ -147,7 +147,7 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 				}
 				{
 					// pick a default model path commonly present in JA assets
-					const char* model = "models/map_objects/imp_mine/imp_mine.md3";
+					const char* model = "models/map_objects/cairn/control_panel.md3";
 					int ent = SV_SpawnModelAtClient(cl, model);
 					if (ent >= 0) {
 						NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", model, ent));
