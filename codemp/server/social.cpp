@@ -257,35 +257,6 @@ static qboolean Social_Enabled(void)
 	return (g_socialMode && g_socialMode->integer) ? qtrue : qfalse;
 }
 
-// Public helper: spawn a misc model near a client. Returns entity number or -1.
-int SV_SpawnModelAtClient(client_t* cl, const char* modelPath)
-{
-	if (!cl || !modelPath || !modelPath[0]) return -1;
-	if (!Holo_PlayerIn(cl - svs.clients)) return -1;
-
-	vec3_t at;
-	// place 24 units in front of player
-	vec3_t forward;
-	float yaw = cl->gentity ? cl->gentity->s.angles[YAW] : 0.0f;
-	AngleVectors(cl->gentity ? cl->gentity->s.angles : vec3_origin, forward, NULL, NULL);
-	VectorCopy(cl->gentity ? cl->gentity->r.currentOrigin : vec3_origin, at);
-	at[0] += forward[0] * 24.0f;
-	at[1] += forward[1] * 24.0f;
-	at[2] += 16.0f; // raise slightly off ground
-
-	// default bbox for small prop
-	vec3_t mins = { -16.0f, -16.0f, -8.0f };
-	vec3_t maxs = { 16.0f, 16.0f, 16.0f };
-
-	htAction_t act;
-	memset(&act, 0, sizeof(act));
-	Q_strncpyz(act.extra, modelPath, sizeof(act.extra));
-	for (int i = 0; i < 3; i++) { act.propMins[i] = mins[i]; act.propMaxs[i] = maxs[i]; }
-	act.value = (int)yaw;
-
-	return Holo_SpawnProp(&act, at);
-}
-
 static qboolean Social_IsPlayerEntity(void* ent)
 {
 	if (!ent || !sv.gentities || sv.gentitySize <= 0) {
