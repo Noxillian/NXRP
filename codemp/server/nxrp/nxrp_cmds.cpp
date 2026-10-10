@@ -31,6 +31,26 @@ static bool parse_user_pass(const char *chatCursor, std::string &outUser, std::s
 	if (toks.size() == 2) {
 		outUser = toks[0]; outPass = toks[1]; return true;
 	}
+
+// Handler for: !nxrp pos
+qboolean NXRP_HandleNxrpPos( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
+	if (!cl || cl->state != CS_ACTIVE) {
+		NXRP_PrintConsoleToPlayer(cl, "You must be an active player to use this command");
+		return qtrue;
+	}
+	if (!cl->gentity) {
+		NXRP_PrintConsoleToPlayer(cl, "No game entity available for your client");
+		return qtrue;
+	}
+
+	// Use the entity's current origin
+	vec3_t org;
+	VectorCopy(cl->gentity->r.currentOrigin, org);
+
+	NXRP_PrintConsoleToPlayerFmt(cl, "Position: %.2f, %.2f, %.2f", org[0], org[1], org[2]);
+	return qtrue;
+}
 	if (toks.size() >= 3) {
 		// could be: "register user pass" or "login user pass"
 		outUser = toks[1]; outPass = toks[2]; return true;

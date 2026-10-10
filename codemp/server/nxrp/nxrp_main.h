@@ -27,6 +27,8 @@ qboolean NXRP_HandleNxLogin( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxGiveAll( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxAccount( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxNoclip( client_t *cl, const char *chatCursor );
+// Handler for: !nxrp pos - send player's current XYZ position in a private console message
+qboolean NXRP_HandleNxrpPos( client_t *cl, const char *chatCursor );
 
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );

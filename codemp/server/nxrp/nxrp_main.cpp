@@ -117,6 +117,18 @@ int SV_SpawnModelAtClient(client_t* cl, const char* modelPath)
 qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const char *chatCursor ) {
 	if ( !commandName ) return qfalse;
 
+	// Support a separate !nxrp command set. Currently only implements: !nxrp pos
+	if ( !Q_stricmp( commandName, "nxrp" ) ) {
+		char subcmd[MAX_TOKEN_CHARS] = {0};
+		if ( sscanf( chatCursor, "%31s", subcmd ) >= 1 ) {
+			if ( !Q_stricmp( subcmd, "pos" ) ) {
+				// forward to handler implemented in nxrp_cmds.cpp
+				return NXRP_HandleNxrpPos(cl, chatCursor);
+			}
+		}
+		return qtrue;
+	}
+
 	if ( !Q_stricmp( commandName, "nx" ) ) {
 		char subcmd[MAX_TOKEN_CHARS] = {0};
 		char arg[MAX_TOKEN_CHARS] = {0};
@@ -147,7 +159,8 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 				}
 				{
 					// pick a default model path commonly present in JA assets
-					const char* model = "models/map_objects/cairn/control_panel.md3";
+					// Use a known-working ship model to ensure visibility
+					const char* model = "models/map_objects/ships/swoop.md3";
 					int ent = SV_SpawnModelAtClient(cl, model);
 					if (ent >= 0) {
 						NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", model, ent));
