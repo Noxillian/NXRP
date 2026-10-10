@@ -57,6 +57,12 @@ qboolean NXRP_HandleNxrpPos( client_t *cl, const char *chatCursor ) {
 	}
 	return false;
 }
+	if (toks.size() >= 3) {
+		// could be: "register user pass" or "login user pass"
+		outUser = toks[1]; outPass = toks[2]; return true;
+	}
+	return false;
+}
 
 // Handler for: !nx info
 qboolean NXRP_HandleNxInfo( client_t *cl, const char *chatCursor ) {
