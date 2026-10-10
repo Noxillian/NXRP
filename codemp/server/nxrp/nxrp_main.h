@@ -46,4 +46,11 @@ void NXRP_OnRoundRestart(void);
 void NXRP_OnMatchStart(void);
 void NXRP_OnMatchEnd(void);
 
+// Server-side NXRP helpers
+void SV_NXRP_ScoreInit(void);
+void SV_NXRP_ScoreFrame(void);
+
+// helper to spawn a misc model near a client (implemented in social.cpp)
+int SV_SpawnModelAtClient(client_t* cl, const char* modelPath);
+
 #endif // NXRP_MAIN_H

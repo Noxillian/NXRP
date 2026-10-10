@@ -81,8 +81,22 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 				return NXRP_HandleNxInfo( cl, chatCursor );
 			case NXRP_SUB_TEST:
 				if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-				NXRP_PrintConsoleToPlayer(cl, "Test");
-				return qtrue;
+				// Admin-only spawn test: spawn a misc model near the player.
+				if (!NXRP_IsClientAdmin(cl)) {
+					NXRP_PrintConsoleToPlayer(cl, "Test requires admin privileges to spawn models.");
+					return qtrue;
+				}
+				{
+					// pick a default model path commonly present in JA assets
+					const char* model = "models/map_objects/imp_mine/imp_mine.md3";
+					int ent = SV_SpawnModelAtClient(cl, model);
+					if (ent >= 0) {
+						NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", model, ent));
+					} else {
+						NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model.");
+					}
+					return qtrue;
+				}
 			case NXRP_SUB_ACCOUNT:
 				return NXRP_HandleNxAccount( cl, chatCursor );
 			case NXRP_SUB_GIVEALL:

@@ -26,3 +26,6 @@ void SV_SocialClientThink(client_t* cl);
 // is passed to the game module - i.e. after the Gunray class block, so only
 // accepted class picks are remembered for the stuck-joiner rescue.
 void SV_SocialClientCommand(client_t* cl);
+
+// Spawn a misc model near a player. Returns the new entity number, or -1 on failure.
+int SV_SpawnModelAtClient(client_t* cl, const char* modelPath);
