@@ -189,8 +189,36 @@ qboolean NXRP_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 		SV_WannaGiveWeapon(cl, WP_CLONE_PISTOL);
 		SV_WannaGiveWeapon(cl, WP_SABER);
 
+		// Give a broader set of weapons
+		SV_WannaGiveWeapon(cl, WP_BRYAR_PISTOL);
+		SV_WannaGiveWeapon(cl, WP_MANDO_PISTOL);
+		SV_WannaGiveWeapon(cl, WP_HEAVY_PISTOL);
+		SV_WannaGiveWeapon(cl, WP_BLASTER);
+		SV_WannaGiveWeapon(cl, WP_DISRUPTOR);
+		SV_WannaGiveWeapon(cl, WP_BOWCASTER);
+		SV_WannaGiveWeapon(cl, WP_REPEATER);
+		SV_WannaGiveWeapon(cl, WP_CLONE_RIFLE);
+		SV_WannaGiveWeapon(cl, WP_A280);
+		SV_WannaGiveWeapon(cl, WP_DLT19);
+		SV_WannaGiveWeapon(cl, WP_SHOTGUN);
+		SV_WannaGiveWeapon(cl, WP_MINIGUN);
+		SV_WannaGiveWeapon(cl, WP_ROCKET_LAUNCHER);
+
 		// Give ammo for the weapons we provided so they can be used immediately
 		Spin_GiveWeaponAmmo(cl, WP_CLONE_PISTOL);
+		Spin_GiveWeaponAmmo(cl, WP_BRYAR_PISTOL);
+		Spin_GiveWeaponAmmo(cl, WP_MANDO_PISTOL);
+		Spin_GiveWeaponAmmo(cl, WP_HEAVY_PISTOL);
+		Spin_GiveWeaponAmmo(cl, WP_BLASTER);
+		Spin_GiveWeaponAmmo(cl, WP_DISRUPTOR);
+		Spin_GiveWeaponAmmo(cl, WP_BOWCASTER);
+		Spin_GiveWeaponAmmo(cl, WP_REPEATER);
+		Spin_GiveWeaponAmmo(cl, WP_CLONE_RIFLE);
+		Spin_GiveWeaponAmmo(cl, WP_A280);
+		Spin_GiveWeaponAmmo(cl, WP_DLT19);
+		Spin_GiveWeaponAmmo(cl, WP_SHOTGUN);
+		Spin_GiveWeaponAmmo(cl, WP_MINIGUN);
+		Spin_GiveWeaponAmmo(cl, WP_ROCKET_LAUNCHER);
 
 		char userinfo[MAX_INFO_STRING];
 		SV_GetUserinfo(cl - svs.clients, userinfo, sizeof(userinfo));
