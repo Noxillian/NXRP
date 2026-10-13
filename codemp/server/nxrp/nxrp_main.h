@@ -27,6 +27,8 @@ qboolean NXRP_HandleNxLogin( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxGiveAll( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxAccount( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxNoclip( client_t *cl, const char *chatCursor );
+// Non-admin: report player position
+qboolean NXRP_HandleNxrpPos( client_t *cl, const char *chatCursor );
 // Admin-only: spawn a model with a provided path
 qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor );
 // Admin-only: player-model placeholder command (currently same as NXRP_HandleNxModel)

@@ -121,8 +121,8 @@ qboolean NXRP_HandleNxFFA( client_t *cl, const char *chatCursor ) {
 	char arg[MAX_TOKEN_CHARS] = {0};
 	if (sscanf(chatCursor, "%31s", arg) < 1) {
 		// toggle
-		NXRP_FFA_SetEnabled(!qfalse);
-		NXRP_PrintConsoleToPlayer(cl, "Toggled FFA respawn (toggle)");
+		NXRP_FFA_SetEnabled(!NXRP_FFA_IsEnabled());
+		NXRP_PrintConsoleToPlayer(cl, NXRP_FFA_IsEnabled() ? "FFA respawn enabled" : "FFA respawn disabled");
 		return qtrue;
 	}
 
@@ -133,8 +133,8 @@ qboolean NXRP_HandleNxFFA( client_t *cl, const char *chatCursor ) {
 		NXRP_FFA_SetEnabled(qfalse);
 		NXRP_PrintConsoleToPlayer(cl, "FFA respawn disabled");
 	} else if (!Q_stricmp(arg, "toggle")) {
-		NXRP_FFA_SetEnabled(!qfalse);
-		NXRP_PrintConsoleToPlayer(cl, "Toggled FFA respawn (toggle)");
+		NXRP_FFA_SetEnabled(!NXRP_FFA_IsEnabled());
+		NXRP_PrintConsoleToPlayer(cl, NXRP_FFA_IsEnabled() ? "FFA respawn enabled" : "FFA respawn disabled");
 	} else {
 		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx ffa [on|off|toggle]");
 	}

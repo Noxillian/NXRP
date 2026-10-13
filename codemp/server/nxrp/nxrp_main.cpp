@@ -131,9 +131,7 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 	if ( !commandName ) return qfalse;
 
 	if ( !Q_stricmp( commandName, "nx" ) ) {
-		// Diagnostic: log incoming NXRP chat commands to server console so we
-		// can verify the handler is reached when debugging client-side no-ops.
-		Com_Printf("NXRP_HandleChatCommands: commandName=%s chatCursor=%s\n", commandName, chatCursor ? chatCursor : "<null>");
+		// Remove diagnostic prints in main build; keep parsing logic.
 		char subcmd[MAX_TOKEN_CHARS] = {0};
 		char arg[MAX_TOKEN_CHARS] = {0};
 
