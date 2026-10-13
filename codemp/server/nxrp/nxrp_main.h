@@ -35,6 +35,8 @@ qboolean NXRP_HandleNxPModel( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxSpawn( client_t *cl, const char *chatCursor );
 // Admin-only: test spawn command
 qboolean NXRP_HandleNxTest( client_t *cl, const char *chatCursor );
+// Admin-only: toggle FFA respawn mode (on/off/toggle)
+qboolean NXRP_HandleNxFFA( client_t *cl, const char *chatCursor );
 
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );
@@ -61,6 +63,7 @@ void SV_NXRP_ScoreFrame(void);
 // FFA respawn helpers
 void NXRP_FFA_Init(void);
 void NXRP_FFA_SetEnabled(qboolean enable);
+qboolean NXRP_FFA_IsEnabled(void);
 
 // helper to spawn a misc model near a client (implemented in social.cpp)
 int SV_SpawnModelAtClient(client_t* cl, const char* modelPath);

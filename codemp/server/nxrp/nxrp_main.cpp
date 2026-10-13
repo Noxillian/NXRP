@@ -46,7 +46,8 @@ enum NXRP_SubCmd {
 	NXRP_SUB_LOGIN,
 	NXRP_SUB_POS,
 	NXRP_SUB_MODEL,
-	NXRP_SUB_PMODEL
+	NXRP_SUB_PMODEL,
+	NXRP_SUB_FFA
 };
 
 static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
@@ -62,6 +63,7 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "pos" ) )		return NXRP_SUB_POS;
 	if ( !Q_stricmp( s, "model" ) )		return NXRP_SUB_MODEL;
 	if ( !Q_stricmp( s, "pmodel" ) )		return NXRP_SUB_PMODEL;
+	if ( !Q_stricmp( s, "ffa" ) )		return NXRP_SUB_FFA;
 	return NXRP_SUB_UNKNOWN;
 }
 
@@ -163,6 +165,8 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 				return NXRP_HandleNxRegister( cl, chatCursor );
 			case NXRP_SUB_LOGIN:
 				return NXRP_HandleNxLogin( cl, chatCursor );
+			case NXRP_SUB_FFA:
+				return NXRP_HandleNxFFA( cl, chatCursor );
 			default:
 				break;
 			}

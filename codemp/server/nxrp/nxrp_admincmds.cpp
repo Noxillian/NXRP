@@ -63,20 +63,40 @@ qboolean NXRP_HandleNxTest( client_t *cl, const char *chatCursor ) {
 
 // Admin-only: spawn model at client with provided path
 qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor ) {
-	// Debug/log call entry
-	NXRP_PrintConsoleToPlayerFmt(cl, "NXRP_HandleNxModel called with: %s", chatCursor ? chatCursor : "<null>");
-
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
-	char sub[MAX_TOKEN_CHARS] = {0};
-	char path[512] = {0};
-	if (sscanf(chatCursor, "%31s %511s", sub, path) < 2) {
+	// chatCursor may be of the form: "model <path>" (since the caller passes
+	// the full subcommand text). Accept either that or a bare path.
+	if (!chatCursor) {
 		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx model <model_path>");
 		return qtrue;
 	}
 
-	NXRP_PrintConsoleToPlayerFmt(cl, "NXRP_HandleNxModel: spawning path '%s'", path);
+	// Skip leading spaces
+	const char* p = chatCursor;
+	while (*p == ' ' || *p == '\t') p++;
+
+	// If the first token is "model" or "pmodel", skip it
+	char firstTok[MAX_TOKEN_CHARS] = {0};
+	if (sscanf(p, "%31s", firstTok) == 1) {
+		if (!Q_stricmp(firstTok, "model") || !Q_stricmp(firstTok, "pmodel")) {
+			// advance past the first token
+			const char* q = p;
+			while (*q && *q != ' ' && *q != '\t') q++;
+			while (*q == ' ' || *q == '\t') q++;
+			p = q;
+		}
+	}
+
+	if (!p || !*p) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx model <model_path>");
+		return qtrue;
+	}
+
+	// p now points at the model path string. Limit to 511 chars.
+	char path[512] = {0};
+	Com_sprintf(path, sizeof(path), "%s", p);
 
 	int ent = SV_SpawnModelAtClient(cl, path);
 	if (ent >= 0) {
@@ -90,6 +110,35 @@ qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor ) {
 // Admin-only: pmodel currently same as model
 qboolean NXRP_HandleNxPModel( client_t *cl, const char *chatCursor ) {
 	return NXRP_HandleNxModel(cl, chatCursor);
+}
+
+// Admin-only: toggle FFA respawn mode
+qboolean NXRP_HandleNxFFA( client_t *cl, const char *chatCursor ) {
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	// chatCursor may be "ffa on", "ffa off", or empty to toggle
+	char arg[MAX_TOKEN_CHARS] = {0};
+	if (sscanf(chatCursor, "%31s", arg) < 1) {
+		// toggle
+		NXRP_FFA_SetEnabled(!qfalse);
+		NXRP_PrintConsoleToPlayer(cl, "Toggled FFA respawn (toggle)");
+		return qtrue;
+	}
+
+	if (!Q_stricmp(arg, "on")) {
+		NXRP_FFA_SetEnabled(qtrue);
+		NXRP_PrintConsoleToPlayer(cl, "FFA respawn enabled");
+	} else if (!Q_stricmp(arg, "off")) {
+		NXRP_FFA_SetEnabled(qfalse);
+		NXRP_PrintConsoleToPlayer(cl, "FFA respawn disabled");
+	} else if (!Q_stricmp(arg, "toggle")) {
+		NXRP_FFA_SetEnabled(!qfalse);
+		NXRP_PrintConsoleToPlayer(cl, "Toggled FFA respawn (toggle)");
+	} else {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx ffa [on|off|toggle]");
+	}
+	return qtrue;
 }
 
 // Handler: !nx giveall
@@ -122,11 +171,19 @@ qboolean NXRP_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = 1;
 		ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
 		ps->fd.forcePowerLevel[FP_LIGHTNING] = 3;
+		// Grant force-levitation (force jump) same as lightning: mark known and set level
+		ps->fd.forcePowersKnown |= (1 << FP_LEVITATION);
+		ps->fd.forcePowerLevel[FP_LEVITATION] = 3;
 		ps->fd.forcePowerMax = 300;
-		ps->fd.forcePower = 200;
+		ps->fd.forcePower = 100;
+		ps->fd.forcePowerSelected = FP_LIGHTNING;
+		ps->fd.forcePowersActive |= (1 << FP_LIGHTNING);
 
 		SV_WannaGiveWeapon(cl, WP_CLONE_PISTOL);
 		SV_WannaGiveWeapon(cl, WP_SABER);
+
+		// Give ammo for the weapons we provided so they can be used immediately
+		Spin_GiveWeaponAmmo(cl, WP_CLONE_PISTOL);
 
 		char userinfo[MAX_INFO_STRING];
 		SV_GetUserinfo(cl - svs.clients, userinfo, sizeof(userinfo));
@@ -134,6 +191,9 @@ qboolean NXRP_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 		Info_SetValueForKey(userinfo, "color1", "red");
 		SV_SetUserinfo(cl - svs.clients, userinfo);
 		GVM_ClientUserinfoChanged(cl - svs.clients);
+
+			// Give the player an immediate force jump boost
+			SV_ExecuteClientCommandDelayed_h(cl, std::string("force jump 3"), 1);
 	}
 
 	if (!cheats) {

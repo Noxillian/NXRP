@@ -17,6 +17,10 @@ void NXRP_FFA_Init(void) {
 	if (dll) {
 		gBNewRespawnMode = (qboolean*)Sys_LoadFunction(dll, "bNewRespawnMode");
 	}
+
+qboolean NXRP_FFA_IsEnabled(void) {
+	return gFFA_Enabled;
+}
 }
 
 void NXRP_FFA_SetEnabled(qboolean enable) {
