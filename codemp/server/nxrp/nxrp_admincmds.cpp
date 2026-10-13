@@ -1,6 +1,7 @@
 #include "server/nxrp/nxrp_main.h"
 #include "server/nxrp/nxrp_utils.h"
 #include "server/sv_gameapi.h"
+#include "sys/sys_loadlib.h"
 #include "game/bg_mb2.h"
 #include "game/bg_weapons.h"
 #include <string>
