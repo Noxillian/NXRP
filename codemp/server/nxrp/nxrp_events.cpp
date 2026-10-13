@@ -7,11 +7,16 @@ void NXRP_PrintConsoleToPlayer(client_t* cl, const char* text);
 
 // Score polling state
 static int nxrp_lastScore[MAX_CLIENTS];
+// Kill polling state
+static int nxrp_lastKills[MAX_CLIENTS];
 // Round start tracking - set when round begins (svs.time), reset on intermission
 static int nxrp_roundStartTime = 0;
 
 void SV_NXRP_ScoreInit(void) {
-	for (int i = 0; i < MAX_CLIENTS; i++) nxrp_lastScore[i] = 0;
+	for (int i = 0; i < MAX_CLIENTS; i++) {
+		nxrp_lastScore[i] = 0;
+		nxrp_lastKills[i] = 0;
+	}
 }
 
 void SV_NXRP_ScoreFrame(void) {
@@ -31,6 +36,15 @@ void SV_NXRP_ScoreFrame(void) {
 				if (cl->state == CS_ACTIVE && cl->gentity) {
 					nxrp_roundStartTime = svs.time;
 					NXRP_OnRoundStart();
+
+					// Initialize last-kill counters from current persistent values so
+					// we don't trigger spurrious change events at round start.
+					for (int j = 0; j < sv_maxclients->integer; j++) {
+						client_t* cl2 = &svs.clients[j];
+						if (cl2->state == CS_ACTIVE && cl2->gentity && cl2->gentity->playerState) {
+							nxrp_lastKills[j] = cl2->gentity->playerState->persistant[PERS_KILLED];
+						}
+					}
 					break;
 				}
 			}
@@ -45,6 +59,14 @@ void SV_NXRP_ScoreFrame(void) {
 			NXRP_OnScoreChanged(cl, oldScore, newScore);
 			nxrp_lastScore[i] = newScore;
 		}
+
+		// Track kills (persistant PERS_KILLED) changes as an independent event
+		int newKills = cl->gentity->playerState->persistant[PERS_KILLED];
+		int oldKills = nxrp_lastKills[i];
+		if (newKills != oldKills) {
+			NXRP_OnKillsChanged(cl, oldKills, newKills);
+			nxrp_lastKills[i] = newKills;
+		}
 	}
 }
 
@@ -58,6 +80,11 @@ void NXRP_OnPlayerConnect(int clientNum, qboolean firstTime, qboolean isBot) {
 			if ( cl->nxrp_username[0] ) name = cl->nxrp_username;
 			else if ( cl->name[0] ) name = cl->name;
 		}
+
+void NXRP_OnKillsChanged(client_t *cl, int oldKills, int newKills) {
+	const char *name = cl ? (cl->nxrp_username[0] ? cl->nxrp_username : cl->name) : "Unknown";
+	Com_Printf("Kill archived: %s %d -> %d\n", name, oldKills, newKills);
+}
 	}
 	NXRP_PrintConsoleToPlayer(NULL, va("Player connected: %s", name));
 }
@@ -106,14 +133,14 @@ void NXRP_OnPlayerKilled(client_t *attacker, client_t *victim, int meansOfDeath)
 
 void NXRP_OnScoreChanged(client_t *cl, int oldScore, int newScore) {
 	const char *name = cl ? (cl->nxrp_username[0] ? cl->nxrp_username : cl->name) : "Unknown";
-	NXRP_PrintConsoleToPlayer(NULL, va("Score changed: %s %d -> %d", name, oldScore, newScore));
+	//NXRP_PrintConsoleToPlayer(NULL, va("Score changed: %s %d -> %d", name, oldScore, newScore));
 
 	// If the player's score increased, send them a chat notification
-	if ( cl && newScore > oldScore ) {
-		int delta = newScore - oldScore;
+	//if ( cl && newScore > oldScore ) {
+	//	int delta = newScore - oldScore;
 		// Use server chat to inform the player. Escape quotes via format.
-		SV_SendServerCommand( cl, "chat \"You scored %d point%s! Total: %d\"\n", delta, (delta==1)?"":"s", newScore );
-	}
+		//SV_SendServerCommand( cl, "chat \"You scored %d point%s! Total: %d\"\n", delta, (delta==1)?"":"s", newScore );
+	//}
 }
 
 void NXRP_OnNPCSpawned(const char *npcName) {
