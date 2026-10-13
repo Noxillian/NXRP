@@ -14,6 +14,10 @@ bool NXRP_IsClientAdmin(client_t* cl);
 // Helper: read raw account JSON content
 bool NXRP_ReadAccountContentForClient(client_t* cl, std::string& outContent, std::string& outSafeUsername);
 
+// Spawn a misc model near a client using the game module's spawn helpers.
+// Returns the new entity number, or -1 on failure.
+int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath);
+
 // Print a standardized NXRP console message to a specific player. If cl is
 // NULL the message will be broadcast to all clients by passing NULL to
 // SV_SendServerCommand.
