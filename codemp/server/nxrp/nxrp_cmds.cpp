@@ -100,6 +100,7 @@ qboolean NXRP_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 	ofs << "  \"level\": 1,\n";
 	ofs << "  \"exp\": 0,\n";
 	ofs << "  \"credits\": 0,\n";
+	ofs << "  \"skillpoints\": 0,\n";
 	ofs << "  \"isAdmin\": false\n";
 	ofs << "}\n";
 
@@ -207,14 +208,18 @@ qboolean NXRP_HandleNxAccount( client_t *cl, const char *chatCursor ) {
 	std::string level = extract_number("\"level\"");
 	std::string exp = extract_number("\"exp\"");
 	std::string credits = extract_number("\"credits\"");
+	std::string skillpoints = extract_number("\"skillpoints\"");
 
 	NXRP_PrintConsoleToPlayerFmt(cl, "Account info for %s:", username);
 	NXRP_PrintConsoleToPlayerFmt(cl, "  Username: %s", username);
 	NXRP_PrintConsoleToPlayerFmt(cl, "  Level: %s", level.c_str());
 	NXRP_PrintConsoleToPlayerFmt(cl, "  Exp: %s", exp.c_str());
 	NXRP_PrintConsoleToPlayerFmt(cl, "  Credits: %s", credits.c_str());
+	NXRP_PrintConsoleToPlayerFmt(cl, "  Skill Points: %s", skillpoints.c_str());
 	return qtrue;
 }
+
+// Non-admin commands remain here (info, register, login, account)
 
 // Handler for: !nxrp pos
 qboolean NXRP_HandleNxrpPos( client_t *cl, const char *chatCursor ) {
