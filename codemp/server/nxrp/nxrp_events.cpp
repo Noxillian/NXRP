@@ -4,6 +4,9 @@
 
 // Ensure the print helper is visible in this translation unit
 void NXRP_PrintConsoleToPlayer(client_t* cl, const char* text);
+// Forward-declare kills-changed handler so SV_NXRP_ScoreFrame can call it before
+// the function is defined later in this file.
+void NXRP_OnKillsChanged(client_t *cl, int oldKills, int newKills);
 
 // Score polling state
 static int nxrp_lastScore[MAX_CLIENTS];
@@ -80,13 +83,14 @@ void NXRP_OnPlayerConnect(int clientNum, qboolean firstTime, qboolean isBot) {
 			if ( cl->nxrp_username[0] ) name = cl->nxrp_username;
 			else if ( cl->name[0] ) name = cl->name;
 		}
+	}
+	NXRP_PrintConsoleToPlayer(NULL, va("Player connected: %s", name));
+}
 
+// Called when a player's persistent kill counter changes (tracked by SV_NXRP_ScoreFrame)
 void NXRP_OnKillsChanged(client_t *cl, int oldKills, int newKills) {
 	const char *name = cl ? (cl->nxrp_username[0] ? cl->nxrp_username : cl->name) : "Unknown";
 	Com_Printf("Kill archived: %s %d -> %d\n", name, oldKills, newKills);
-}
-	}
-	NXRP_PrintConsoleToPlayer(NULL, va("Player connected: %s", name));
 }
 
 void NXRP_OnPlayerUserinfoChanged(int clientNum) {
