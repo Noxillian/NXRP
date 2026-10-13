@@ -61,6 +61,58 @@ qboolean NXRP_HandleNxTest( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
+// Admin-only: teleport the invoking player 5 meters above current position
+qboolean NXRP_HandleNxTp( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
+
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	if (!cl || !cl->gentity || !cl->gentity->playerState) {
+		NXRP_PrintConsoleToPlayer(cl, "Teleport failed: no player entity");
+		return qtrue;
+	}
+
+	// Game units: approximate 32 units per meter -> 5 meters = 160 units
+	const float meters = 5.0f;
+	const float unitsPerMeter = 32.0f;
+	const float zOffset = meters * unitsPerMeter;
+
+	// Update authoritative player state origin and shared entity positions
+	vec3_t newOrg;
+	VectorCopy(cl->gentity->playerState->origin, newOrg);
+	newOrg[2] += zOffset;
+
+	// If the game VM provides TeleportPlayer via gentity helper, prefer that through social.exe loader
+	// social.cpp exposes a function pointer gTeleportPlayer we can call indirectly through Sys_LoadFunction
+	// Fallback: directly set positions and link entity
+
+	// Try dynamic TeleportPlayer if available
+	void* dll = GVM_GetDllHandle();
+	if (dll) {
+		void (*TeleportPlayer_f)(void*, float*, float*) = (void (*)(void*, float*, float*))Sys_LoadFunction(dll, "TeleportPlayer");
+		if (TeleportPlayer_f) {
+			float angs[3] = {0.0f, cl->gentity->s.angles[YAW], 0.0f};
+			float orgf[3] = { newOrg[0], newOrg[1], newOrg[2] };
+			void* old = GVM_BeginNative();
+			TeleportPlayer_f(cl->gentity, orgf, angs);
+			GVM_EndNative(old);
+			NXRP_PrintConsoleToPlayer(cl, "Teleported 5 meters up");
+			return qtrue;
+		}
+	}
+
+	// Direct fallback: adjust entity/playerState and relink
+	VectorCopy(newOrg, cl->gentity->playerState->origin);
+	VectorCopy(newOrg, cl->gentity->r.currentOrigin);
+	VectorCopy(newOrg, cl->gentity->s.origin);
+	cl->gentity->s.pos.trType = TR_STATIONARY;
+	SV_LinkEntity(cl->gentity);
+
+	NXRP_PrintConsoleToPlayer(cl, "Teleported 5 meters up (direct)");
+	return qtrue;
+}
+
 // Admin-only: spawn model at client with provided path
 qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;

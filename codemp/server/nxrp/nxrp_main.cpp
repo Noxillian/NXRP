@@ -36,6 +36,7 @@ int SV_SpawnModelAtClient(client_t* cl, const char* modelPath);
 enum NXRP_SubCmd {
 	NXRP_SUB_UNKNOWN = 0,
 	NXRP_SUB_SPAWN,
+	NXRP_SUB_TP,
 	NXRP_SUB_VEHICLE,
 	NXRP_SUB_INFO,
 	NXRP_SUB_TEST,
@@ -151,6 +152,9 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 
 
 			switch ( sc ) {
+			case NXRP_SUB_TP:
+				return NXRP_HandleNxTp(cl, chatCursor);
+
 			case NXRP_SUB_SPAWN:
 				return NXRP_HandleNxSpawn(cl, chatCursor);
 			case NXRP_SUB_MODEL:

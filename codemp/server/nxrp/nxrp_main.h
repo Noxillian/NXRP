@@ -35,6 +35,8 @@ qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxPModel( client_t *cl, const char *chatCursor );
 // Admin-only: spawn an NPC or misc model test
 qboolean NXRP_HandleNxSpawn( client_t *cl, const char *chatCursor );
+// Admin-only: teleport player upward
+qboolean NXRP_HandleNxTp( client_t *cl, const char *chatCursor );
 // Admin-only: test spawn command
 qboolean NXRP_HandleNxTest( client_t *cl, const char *chatCursor );
 // Admin-only: spawn a vehicle
