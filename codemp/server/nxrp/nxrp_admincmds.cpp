@@ -113,35 +113,16 @@ qboolean NXRP_HandleNxPModel( client_t *cl, const char *chatCursor ) {
 }
 
 // Admin-only: toggle FFA respawn mode
-/*
+// FFA feature is temporarily disabled. Provide a stub handler so calls
+// from nxrp_main.cpp link correctly while the feature is commented out.
 qboolean NXRP_HandleNxFFA( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
-	// chatCursor may be "ffa on", "ffa off", or empty to toggle
-	char arg[MAX_TOKEN_CHARS] = {0};
-	if (sscanf(chatCursor, "%31s", arg) < 1) {
-		// toggle
-		NXRP_FFA_SetEnabled(NXRP_FFA_IsEnabled() ? qfalse : qtrue);
-		NXRP_PrintConsoleToPlayer(cl, NXRP_FFA_IsEnabled() ? "FFA respawn enabled" : "FFA respawn disabled");
-		return qtrue;
-	}
-
-	if (!Q_stricmp(arg, "on")) {
-		NXRP_FFA_SetEnabled(qtrue);
-		NXRP_PrintConsoleToPlayer(cl, "FFA respawn enabled");
-	} else if (!Q_stricmp(arg, "off")) {
-		NXRP_FFA_SetEnabled(qfalse);
-		NXRP_PrintConsoleToPlayer(cl, "FFA respawn disabled");
-	} else if (!Q_stricmp(arg, "toggle")) {
-		NXRP_FFA_SetEnabled(NXRP_FFA_IsEnabled() ? qfalse : qtrue);
-		NXRP_PrintConsoleToPlayer(cl, NXRP_FFA_IsEnabled() ? "FFA respawn enabled" : "FFA respawn disabled");
-	} else {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx ffa [on|off|toggle]");
-	}
+	NXRP_PrintConsoleToPlayer(cl, "FFA feature is currently disabled");
 	return qtrue;
 }
-*/
 
 // Handler: !nx giveall
 qboolean NXRP_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
