@@ -27,8 +27,14 @@ qboolean NXRP_HandleNxLogin( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxGiveAll( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxAccount( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxNoclip( client_t *cl, const char *chatCursor );
-// Handler for: !nxrp pos - send player's current XYZ position in a private console message
-qboolean NXRP_HandleNxrpPos( client_t *cl, const char *chatCursor );
+// Admin-only: spawn a model with a provided path
+qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor );
+// Admin-only: player-model placeholder command (currently same as NXRP_HandleNxModel)
+qboolean NXRP_HandleNxPModel( client_t *cl, const char *chatCursor );
+// Admin-only: spawn an NPC or misc model test
+qboolean NXRP_HandleNxSpawn( client_t *cl, const char *chatCursor );
+// Admin-only: test spawn command
+qboolean NXRP_HandleNxTest( client_t *cl, const char *chatCursor );
 
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );
@@ -51,6 +57,10 @@ void NXRP_OnMatchEnd(void);
 // Server-side NXRP helpers
 void SV_NXRP_ScoreInit(void);
 void SV_NXRP_ScoreFrame(void);
+
+// FFA respawn helpers
+void NXRP_FFA_Init(void);
+void NXRP_FFA_SetEnabled(qboolean enable);
 
 // helper to spawn a misc model near a client (implemented in social.cpp)
 int SV_SpawnModelAtClient(client_t* cl, const char* modelPath);

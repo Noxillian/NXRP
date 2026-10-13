@@ -43,7 +43,10 @@ enum NXRP_SubCmd {
 	NXRP_SUB_GIVEALL,
 	NXRP_SUB_NOCLIP,
 	NXRP_SUB_REGISTER,
-	NXRP_SUB_LOGIN
+	NXRP_SUB_LOGIN,
+	NXRP_SUB_POS,
+	NXRP_SUB_MODEL,
+	NXRP_SUB_PMODEL
 };
 
 static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
@@ -56,7 +59,15 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "noclip" ) )	return NXRP_SUB_NOCLIP;
 	if ( !Q_stricmp( s, "register" ) )	return NXRP_SUB_REGISTER;
 	if ( !Q_stricmp( s, "login" ) )		return NXRP_SUB_LOGIN;
+	if ( !Q_stricmp( s, "pos" ) )		return NXRP_SUB_POS;
+	if ( !Q_stricmp( s, "model" ) )		return NXRP_SUB_MODEL;
+	if ( !Q_stricmp( s, "pmodel" ) )		return NXRP_SUB_PMODEL;
 	return NXRP_SUB_UNKNOWN;
+}
+
+// Initialize FFA helpers (resolve MBII symbols if present)
+void NXRP_FFA_Init(void) {
+	// noop here; nxrp_ffa.cpp implements actual init when loaded
 }
 
 // Spawn a misc model near a client using the game module's spawn helpers.
@@ -118,45 +129,30 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 	if ( !commandName ) return qfalse;
 
 	if ( !Q_stricmp( commandName, "nx" ) ) {
+		// Diagnostic: log incoming NXRP chat commands to server console so we
+		// can verify the handler is reached when debugging client-side no-ops.
+		Com_Printf("NXRP_HandleChatCommands: commandName=%s chatCursor=%s\n", commandName, chatCursor ? chatCursor : "<null>");
 		char subcmd[MAX_TOKEN_CHARS] = {0};
 		char arg[MAX_TOKEN_CHARS] = {0};
 
 		if ( sscanf( chatCursor, "%31s %31s", subcmd, arg ) >= 1 ) {
 			NXRP_SubCmd sc = NXRP_ParseSubcmd( subcmd );
 
-			if ( sc == NXRP_SUB_SPAWN ) {
-				if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-				if (!NXRP_IsClientAdmin(cl)) return qtrue;
-			}
+
 
 			switch ( sc ) {
 			case NXRP_SUB_SPAWN:
-				if ( arg[0] == '\0' ) {
-					NXRP_PrintConsoleToPlayer(cl, "Usage: !nx spawn <npc_type>");
-					return qtrue;
-				}
-				return NXRP_HandleNpcSpawn(cl, chatCursor);
+				return NXRP_HandleNxSpawn(cl, chatCursor);
+			case NXRP_SUB_MODEL:
+				return NXRP_HandleNxModel(cl, chatCursor);
+			case NXRP_SUB_PMODEL:
+				return NXRP_HandleNxPModel(cl, chatCursor);
+			case NXRP_SUB_POS:
+				return NXRP_HandleNxrpPos(cl, chatCursor);
 			case NXRP_SUB_INFO:
 				return NXRP_HandleNxInfo( cl, chatCursor );
 			case NXRP_SUB_TEST:
-				if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-				// Admin-only spawn test: spawn a misc model near the player.
-				if (!NXRP_IsClientAdmin(cl)) {
-					NXRP_PrintConsoleToPlayer(cl, "Test requires admin privileges to spawn models.");
-					return qtrue;
-				}
-				{
-					// pick a default model path commonly present in JA assets
-					// Spawn the requested Korriban statue model from GameData/base/assets1.pk3
-					const char* model = "models/map_objects/korriban/statue_sith_lord.md3";
-					int ent = SV_SpawnModelAtClient(cl, model);
-					if (ent >= 0) {
-						NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", model, ent));
-					} else {
-						NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model.");
-					}
-					return qtrue;
-				}
+				return NXRP_HandleNxTest(cl, chatCursor);
 			case NXRP_SUB_ACCOUNT:
 				return NXRP_HandleNxAccount( cl, chatCursor );
 			case NXRP_SUB_GIVEALL:
