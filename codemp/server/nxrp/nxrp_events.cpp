@@ -7,6 +7,8 @@ void NXRP_PrintConsoleToPlayer(client_t* cl, const char* text);
 
 // Score polling state
 static int nxrp_lastScore[MAX_CLIENTS];
+// Round start tracking - set when round begins (svs.time), reset on intermission
+static int nxrp_roundStartTime = 0;
 
 void SV_NXRP_ScoreInit(void) {
 	for (int i = 0; i < MAX_CLIENTS; i++) nxrp_lastScore[i] = 0;
@@ -14,6 +16,26 @@ void SV_NXRP_ScoreInit(void) {
 
 void SV_NXRP_ScoreFrame(void) {
 	if (!svs.clients) return;
+
+	// If intermission is active, reset round start state so we trigger again
+	if (sv.configstrings[CS_INTERMISSION] && atoi(sv.configstrings[CS_INTERMISSION]) == 1) {
+		nxrp_roundStartTime = 0;
+	} else {
+		// Not intermission: if we haven't signaled round start yet, trigger once when
+		// we observe the first active player. This mirrors other server systems that
+		// record round start on first-seen active player and ensures NXRP_OnRoundStart
+		// runs exactly once per round.
+		if (nxrp_roundStartTime == 0) {
+			for (int i = 0; i < sv_maxclients->integer; i++) {
+				client_t* cl = &svs.clients[i];
+				if (cl->state == CS_ACTIVE && cl->gentity) {
+					nxrp_roundStartTime = svs.time;
+					NXRP_OnRoundStart();
+					break;
+				}
+			}
+		}
+	}
 	for (int i = 0; i < sv_maxclients->integer; i++) {
 		client_t* cl = &svs.clients[i];
 		if (cl->state != CS_ACTIVE || !cl->gentity || !cl->gentity->playerState) continue;
@@ -136,7 +158,7 @@ void NXRP_OnNPCKilled(client_t *killer, const char *npcName) {
 
 // Called when a player first enters the game
 void NXRP_OnPlayerSpawned(client_t *cl) {
-	const char *pName = "Unknown";
+	/*const char* pName = "Unknown";
 	if (!cl) {
 		NXRP_PrintConsoleToPlayer(NULL, "Unknown player spawned");
 		return;
@@ -157,5 +179,5 @@ void NXRP_OnPlayerSpawned(client_t *cl) {
 		oz = cl->gentity->r.currentOrigin[2];
 	}
 
-	NXRP_PrintConsoleToPlayer(NULL, va("Player spawned: %s (ent %d \"%s\") at %.1f %.1f %.1f", pName, entNum, entClass, ox, oy, oz));
+	NXRP_PrintConsoleToPlayer(NULL, va("Player spawned: %s (ent %d \"%s\") at %.1f %.1f %.1f", pName, entNum, entClass, ox, oy, oz));*/
 }
