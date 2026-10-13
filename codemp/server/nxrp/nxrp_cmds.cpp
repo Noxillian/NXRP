@@ -5,10 +5,8 @@
 #include "server/nxrp/nxrp_main.h"
 #include "server/nxrp/nxrp_utils.h"
 
-#include <cstdio>
 #include <cstring>
 #include <cstdlib>
-#include <cctype>
 #include <string>
 #include <sstream>
 #include <vector>
@@ -18,7 +16,6 @@
 	#include <direct.h>
 #endif
 #include <algorithm>
-#include <cctype>
 
 // Version variable for NXRP. Update as needed.
 const char *NXRP_VERSION = "0.2.0";
@@ -103,6 +100,7 @@ qboolean NXRP_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 	ofs << "  \"level\": 1,\n";
 	ofs << "  \"exp\": 0,\n";
 	ofs << "  \"credits\": 0,\n";
+	ofs << "  \"skillpoints\": 0,\n";
 	ofs << "  \"isAdmin\": false\n";
 	ofs << "}\n";
 
@@ -210,11 +208,35 @@ qboolean NXRP_HandleNxAccount( client_t *cl, const char *chatCursor ) {
 	std::string level = extract_number("\"level\"");
 	std::string exp = extract_number("\"exp\"");
 	std::string credits = extract_number("\"credits\"");
+	std::string skillpoints = extract_number("\"skillpoints\"");
 
 	NXRP_PrintConsoleToPlayerFmt(cl, "Account info for %s:", username);
 	NXRP_PrintConsoleToPlayerFmt(cl, "  Username: %s", username);
 	NXRP_PrintConsoleToPlayerFmt(cl, "  Level: %s", level.c_str());
 	NXRP_PrintConsoleToPlayerFmt(cl, "  Exp: %s", exp.c_str());
 	NXRP_PrintConsoleToPlayerFmt(cl, "  Credits: %s", credits.c_str());
+	NXRP_PrintConsoleToPlayerFmt(cl, "  Skill Points: %s", skillpoints.c_str());
+	return qtrue;
+}
+
+// Non-admin commands remain here (info, register, login, account)
+
+// Handler for: !nxrp pos
+qboolean NXRP_HandleNxrpPos( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
+	if (!cl || cl->state != CS_ACTIVE) {
+		NXRP_PrintConsoleToPlayer(cl, "You must be an active player to use this command");
+		return qtrue;
+	}
+	if (!cl->gentity) {
+		NXRP_PrintConsoleToPlayer(cl, "No game entity available for your client");
+		return qtrue;
+	}
+
+	// Use the entity's current origin
+	vec3_t org;
+	VectorCopy(cl->gentity->r.currentOrigin, org);
+
+	NXRP_PrintConsoleToPlayerFmt(cl, "Position: %.2f, %.2f, %.2f", org[0], org[1], org[2]);
 	return qtrue;
 }

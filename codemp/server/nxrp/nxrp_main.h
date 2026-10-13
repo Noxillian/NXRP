@@ -27,9 +27,52 @@ qboolean NXRP_HandleNxLogin( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxGiveAll( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxAccount( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxNoclip( client_t *cl, const char *chatCursor );
+// Non-admin: report player position
+qboolean NXRP_HandleNxrpPos( client_t *cl, const char *chatCursor );
+// Admin-only: spawn a model with a provided path
+qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor );
+// Admin-only: player-model placeholder command (currently same as NXRP_HandleNxModel)
+qboolean NXRP_HandleNxPModel( client_t *cl, const char *chatCursor );
+// Admin-only: spawn an NPC or misc model test
+qboolean NXRP_HandleNxSpawn( client_t *cl, const char *chatCursor );
+// Admin-only: teleport player upward
+qboolean NXRP_HandleNxTp( client_t *cl, const char *chatCursor );
+// Admin-only: test spawn command
+qboolean NXRP_HandleNxTest( client_t *cl, const char *chatCursor );
+// Admin-only: spawn a vehicle
+qboolean NXRP_HandleNxVehicle( client_t *cl, const char *chatCursor );
+// Admin-only: toggle FFA respawn mode (on/off/toggle)
+qboolean NXRP_HandleNxFFA( client_t *cl, const char *chatCursor );
 
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );
 void NXRP_OnPlayerSpawned( client_t *cl );
+// Additional NXRP event hooks
+void NXRP_OnPlayerConnect(int clientNum, qboolean firstTime, qboolean isBot);
+void NXRP_OnPlayerUserinfoChanged(int clientNum);
+void NXRP_OnPlayerBegin(int clientNum);
+void NXRP_OnPlayerDisconnect(int clientNum);
+void NXRP_OnPlayerKilled(client_t *attacker, client_t *victim, int meansOfDeath);
+void NXRP_OnScoreChanged(client_t *cl, int oldScore, int newScore);
+void NXRP_OnNPCSpawned(const char *npcName);
+void NXRP_OnVehicleDestroyed(int vehicleEntNum, client_t *killer);
+void NXRP_OnRoundStart(void);
+void NXRP_OnRoundEnd(int winningTeam);
+void NXRP_OnRoundRestart(void);
+void NXRP_OnMatchStart(void);
+void NXRP_OnMatchEnd(void);
+
+// Server-side NXRP helpers
+void SV_NXRP_ScoreInit(void);
+void SV_NXRP_ScoreFrame(void);
+
+// FFA respawn helpers
+void NXRP_FFA_Init(void);
+// FFA helpers are optional; commented out while disabled
+//void NXRP_FFA_SetEnabled(qboolean enable);
+//qboolean NXRP_FFA_IsEnabled(void);
+
+// helper to spawn a misc model near a client (implemented in social.cpp)
+int SV_SpawnModelAtClient(client_t* cl, const char* modelPath);
 
 #endif // NXRP_MAIN_H

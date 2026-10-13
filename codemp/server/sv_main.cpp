@@ -26,6 +26,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "ghoul2/ghoul2_shared.h"
 #include "sv_gameapi.h"
+// NXRP event frame hook
+#include "server/nxrp/nxrp_main.h"
 
 serverStatic_t	svs;				// persistant server info
 server_t		sv;					// local server
@@ -1345,6 +1347,9 @@ void SV_Frame( int msec ) {
 
 	// auto-spin all eligible players
 	SV_SpinFrame();
+
+	// NXRP per-frame hooks (score polling / round detection)
+	SV_NXRP_ScoreFrame();
 
 	// per-frame credit/bounty award (must run once per frame)
 	SV_EconomyFrame();

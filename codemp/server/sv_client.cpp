@@ -360,6 +360,8 @@ gotnewcl:
 		Com_DPrintf ("Game rejected a connection: %s.\n", denied);
 		return;
 	}
+	// Notify NXRP of the client connect
+	NXRP_OnPlayerConnect(clientNum, qtrue, qfalse);
 
 	SV_UserinfoChanged( newcl );
 
@@ -421,6 +423,9 @@ void SV_DropClient( client_t *drop, const char *reason ) {
 	// call the prog function for removing a client
 	// this will remove the body, among other things
 	GVM_ClientDisconnect( drop - svs.clients );
+
+	// Notify NXRP of the disconnect
+	NXRP_OnPlayerDisconnect(drop - svs.clients);
 
 	// clear this slot's gun game tier so whoever connects into it next
 	// doesn't inherit someone else's progress
