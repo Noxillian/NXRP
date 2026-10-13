@@ -112,6 +112,30 @@ qboolean NXRP_HandleNxPModel( client_t *cl, const char *chatCursor ) {
 	return NXRP_HandleNxModel(cl, chatCursor);
 }
 
+// Admin-only: spawn a vehicle using the game's NPC vehicle spawn helper
+qboolean NXRP_HandleNxVehicle( client_t *cl, const char *chatCursor ) {
+	char subcmd[MAX_TOKEN_CHARS] = {0};
+	char arg[MAX_TOKEN_CHARS] = {0};
+
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	if ( sscanf( chatCursor, "%31s %31s", subcmd, arg ) < 1 ) {
+		return qtrue;
+	}
+
+	if ( arg[0] == '\0' ) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx vehicle <vehicle_name>");
+		return qtrue;
+	}
+
+	char cmdBuf[128];
+	Com_sprintf( cmdBuf, sizeof(cmdBuf), "npc spawn vehicle %s", arg );
+	NXRP_PrintConsoleToPlayer(cl, "Spawning vehicle");
+	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
+	return qtrue;
+}
+
 // Admin-only: toggle FFA respawn mode
 // FFA feature is temporarily disabled. Provide a stub handler so calls
 // from nxrp_main.cpp link correctly while the feature is commented out.

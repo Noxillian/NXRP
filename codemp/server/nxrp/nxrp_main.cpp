@@ -36,6 +36,7 @@ int SV_SpawnModelAtClient(client_t* cl, const char* modelPath);
 enum NXRP_SubCmd {
 	NXRP_SUB_UNKNOWN = 0,
 	NXRP_SUB_SPAWN,
+	NXRP_SUB_VEHICLE,
 	NXRP_SUB_INFO,
 	NXRP_SUB_TEST,
 	NXRP_SUB_ACCOUNT,
@@ -62,6 +63,7 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "pos" ) )		return NXRP_SUB_POS;
 	if ( !Q_stricmp( s, "model" ) )		return NXRP_SUB_MODEL;
 	if ( !Q_stricmp( s, "pmodel" ) )		return NXRP_SUB_PMODEL;
+	if ( !Q_stricmp( s, "vehicle" ) )	return NXRP_SUB_VEHICLE;
 	if ( !Q_stricmp( s, "ffa" ) )		return NXRP_SUB_FFA;
 	return NXRP_SUB_UNKNOWN;
 }
@@ -107,6 +109,15 @@ int SV_SpawnModelAtClient(client_t* cl, const char* modelPath)
 
 	e->s.eType = ET_GENERAL;
 	e->s.modelindex = model;
+	// Ask the game VM to set the model's proper collision bounds if available.
+	if (dll) {
+		void (*G_SetModelBoundsForEntity_f)(sharedEntity_t*) = (void(*)(sharedEntity_t*))Sys_LoadFunction(dll, "G_SetModelBoundsForEntity");
+		if (G_SetModelBoundsForEntity_f) {
+			void* old2 = GVM_BeginNative();
+			G_SetModelBoundsForEntity_f(e);
+			GVM_EndNative(old2);
+		}
+	}
 	VectorCopy(org, e->s.pos.trBase);
 	VectorCopy(org, e->s.origin);
 	VectorCopy(org, e->r.currentOrigin);
@@ -146,6 +157,8 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 				return NXRP_HandleNxModel(cl, chatCursor);
 			case NXRP_SUB_PMODEL:
 				return NXRP_HandleNxPModel(cl, chatCursor);
+			case NXRP_SUB_VEHICLE:
+				return NXRP_HandleNxVehicle(cl, chatCursor);
 			case NXRP_SUB_POS:
 				return NXRP_HandleNxrpPos(cl, chatCursor);
 			case NXRP_SUB_INFO:
