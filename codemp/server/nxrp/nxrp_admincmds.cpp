@@ -113,6 +113,7 @@ qboolean NXRP_HandleNxPModel( client_t *cl, const char *chatCursor ) {
 }
 
 // Admin-only: toggle FFA respawn mode
+/*
 qboolean NXRP_HandleNxFFA( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
@@ -140,6 +141,7 @@ qboolean NXRP_HandleNxFFA( client_t *cl, const char *chatCursor ) {
 	}
 	return qtrue;
 }
+*/
 
 // Handler: !nx giveall
 qboolean NXRP_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
