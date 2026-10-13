@@ -4,6 +4,7 @@
 #include <cctype>
 #include "server/sv_gameapi.h"
 #include "sys/sys_loadlib.h"
+#include <cmath>
 
 // Spawn a misc model near a client using the game module's spawn helpers.
 // Returns the new entity number, or -1 on failure.
@@ -40,7 +41,7 @@ int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath)
 		return -1;
 
 	// Calculate spawn position in front of the client.
-	vec3_t org = { 0.0f, 0.0f, 0.0f };
+	vec3_t org = { 2.0f, -5.0f, 0.0f };
 
 	if (cl->gentity)
 	{
@@ -73,6 +74,30 @@ int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath)
 		old = GVM_BeginNative();
 		G_SetModelBoundsForEntity_f(e);
 		GVM_EndNative(old);
+
+		// Ensure collision bounds are reasonable: add a small padding and enforce a minimum extent
+		vec3_t size;
+		VectorSubtract(e->r.maxs, e->r.mins, size);
+		float maxDim = fabsf(size[0]);
+		if (fabsf(size[1]) > maxDim) maxDim = fabsf(size[1]);
+		if (fabsf(size[2]) > maxDim) maxDim = fabsf(size[2]);
+
+		const float minExtent = 24.0f; // minimum half-extent to avoid tiny collision boxes
+		const float padding = 8.0f;    // extra padding around model bounds
+
+		if (maxDim < minExtent) {
+			VectorSet(e->r.mins, -minExtent - padding, -minExtent - padding, -minExtent - padding);
+			VectorSet(e->r.maxs,  minExtent + padding,  minExtent + padding,  minExtent + padding);
+		} else {
+			vec3_t padNeg = { -padding, -padding, -padding };
+			vec3_t padPos = {  padding,  padding,  padding };
+			VectorAdd(e->r.mins, padNeg, e->r.mins);
+			VectorAdd(e->r.maxs, padPos, e->r.maxs);
+		}
+
+		// Recompute absolute bounds relative to the entity origin
+		VectorAdd(e->s.pos.trBase, e->r.mins, e->r.absmin);
+		VectorAdd(e->s.pos.trBase, e->r.maxs, e->r.absmax);
 	}
 
 	// Set position and angles.
@@ -82,10 +107,20 @@ int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath)
 
 	e->s.pos.trType = TR_STATIONARY;
 
+	// Set the entity yaw so the model looks toward the player when possible.
+	float entYaw = 0.0f;
+	if (cl->gentity) {
+		vec3_t toPlayer;
+		VectorSubtract(cl->gentity->r.currentOrigin, org, toPlayer);
+		entYaw = atan2f(toPlayer[1], toPlayer[0]) * (180.0f / (float)M_PI);
+	} else {
+		entYaw = 0.0f;
+	}
+
 	VectorSet(
 		e->s.apos.trBase,
 		0.0f,
-		cl->gentity ? cl->gentity->s.angles[YAW] : 0.0f,
+		entYaw,
 		0.0f
 	);
 
