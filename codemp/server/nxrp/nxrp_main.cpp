@@ -19,7 +19,6 @@
 	#include <sys/stat.h>
 #endif
 
-#pragma once
 // forward-declare weapon give helper from sv_ccmds.cpp
 void SV_WannaGiveWeapon(client_t* cl, int wnum);
 #include "game/bg_weapons.h"
