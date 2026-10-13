@@ -53,7 +53,7 @@ qboolean NXRP_HandleNxTest( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_IsClientAdmin(cl)) { NXRP_PrintConsoleToPlayer(cl, "Test requires admin privileges to spawn models."); return qtrue; }
 
 	const char* model = "models/map_objects/korriban/statue_sith_lord.md3";
-	int ent = SV_SpawnModelAtClient(cl, model);
+	int ent = NXRP_SpawnModelAtClient(cl, model);
 	if (ent >= 0) {
 		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", model, ent));
 	} else {
