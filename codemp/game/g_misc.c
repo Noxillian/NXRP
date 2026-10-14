@@ -54,21 +54,6 @@ void SP_info_null( gentity_t *self ) {
 	G_FreeEntity( self );
 }
 
-// Helper: set entity collision bounds from its model's renderer bounds
-void G_SetModelBoundsForEntity(sharedEntity_t *ent) {
-	if (!ent) return;
-	vec3_t mins, maxs;
-	// If entity uses modelindex as handle, query renderer for bounds
-	// trap->R_ModelBounds takes a model handle (qhandle_t)
-	mins[0] = mins[1] = mins[2] = 0.0f;
-	maxs[0] = maxs[1] = maxs[2] = 0.0f;
-	trap->R_ModelBounds(ent->s.modelindex, mins, maxs);
-	VectorCopy(mins, ent->r.mins);
-	VectorCopy(maxs, ent->r.maxs);
-	VectorAdd(ent->s.pos.trBase, ent->r.mins, ent->r.absmin);
-	VectorAdd(ent->s.pos.trBase, ent->r.maxs, ent->r.absmax);
-}
-
 
 /*QUAKED info_notnull (0 0.5 0) (-4 -4 -4) (4 4 4)
 Used as a positional target for in-game calculation, like jumppad targets.
