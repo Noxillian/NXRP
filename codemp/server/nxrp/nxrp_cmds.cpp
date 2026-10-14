@@ -39,14 +39,14 @@ static bool parse_user_pass(const char *chatCursor, std::string &outUser, std::s
 }
 
 // Handler for: !nx info
-qboolean NXRP_cmd_NxInfo( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	NXRP_PrintConsoleToPlayer(cl, va("NXRP version: %s", NXRP_VERSION));
 	return qtrue;
 }
 
 // Handler for: !nx register <user> <pass>
-qboolean NXRP_cmd_NxRegister( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmd_register( client_t *cl, const char *chatCursor ) {
 	std::string user, pass;
 	if (!parse_user_pass(chatCursor, user, pass)) {
 		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx register <user> <pass>");
@@ -111,7 +111,7 @@ qboolean NXRP_cmd_NxRegister( client_t *cl, const char *chatCursor ) {
 }
 
 // Handler for: !nx login <user> <pass>
-qboolean NXRP_cmd_NxLogin( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor ) {
 	std::string user, pass;
 	if (!parse_user_pass(chatCursor, user, pass)) {
 		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx login <user> <pass>");
@@ -169,7 +169,7 @@ qboolean NXRP_cmd_NxLogin( client_t *cl, const char *chatCursor ) {
 }
 
 // Handler for: !nx account
-qboolean NXRP_cmd_NxAccount( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmd_account( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!cl || cl->state != CS_ACTIVE) {
 		NXRP_PrintConsoleToPlayer(cl, "You must be an active player to use this command");
@@ -222,7 +222,7 @@ qboolean NXRP_cmd_NxAccount( client_t *cl, const char *chatCursor ) {
 // Non-admin commands remain here (info, register, login, account)
 
 // Handler for: !nxrp pos
-qboolean NXRP_cmd_NxrpPos( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmd_pos( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!cl || cl->state != CS_ACTIVE) {
 		NXRP_PrintConsoleToPlayer(cl, "You must be an active player to use this command");

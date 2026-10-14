@@ -13,7 +13,7 @@ void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 extern void SV_WannaGiveWeapon(client_t* cl, int wnum);
 
 // Handler: !nx noclip
-qboolean NXRP_admincmd_NxNoclip( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
@@ -23,7 +23,7 @@ qboolean NXRP_admincmd_NxNoclip( client_t *cl, const char *chatCursor ) {
 }
 
 // Admin-only: handle !nx spawn <npc_type>
-qboolean NXRP_admincmd_NxSpawn( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor ) {
 	char subcmd[MAX_TOKEN_CHARS] = {0};
 	char arg[MAX_TOKEN_CHARS] = {0};
 
@@ -47,7 +47,7 @@ qboolean NXRP_admincmd_NxSpawn( client_t *cl, const char *chatCursor ) {
 }
 
 // Admin-only: handle !nx test (spawn a default model)
-qboolean NXRP_admincmd_NxTest( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmdAdmin_test( client_t *cl, const char *chatCursor ) {
 	// Accept optional model path: "modelpath" or "model <path>"
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) { NXRP_PrintConsoleToPlayer(cl, "Test requires admin privileges to spawn models."); return qtrue; }
@@ -94,7 +94,7 @@ qboolean NXRP_admincmd_NxTest( client_t *cl, const char *chatCursor ) {
 }
 
 // Admin-only: teleport the invoking player 5 meters above current position
-qboolean NXRP_admincmd_NxTp( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
@@ -213,7 +213,7 @@ qboolean NXRP_admincmd_NxTp( client_t *cl, const char *chatCursor ) {
 }
 
 // Admin-only: spawn model at client with provided path
-qboolean NXRP_admincmd_NxModel( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmdAdmin_model( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 	// chatCursor may be: "model <path> [angle]" or "<path> [angle]"
@@ -273,7 +273,7 @@ qboolean NXRP_admincmd_NxModel( client_t *cl, const char *chatCursor ) {
 
 // Admin-only: adjust last spawned model position
 // Admin-only: move last placed model by vector deltas
-qboolean NXRP_admincmd_NxModelMove( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmdAdmin_modelmove( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
@@ -296,12 +296,12 @@ qboolean NXRP_admincmd_NxModelMove( client_t *cl, const char *chatCursor ) {
 }
 
 // Admin-only: pmodel is currently the same as model
-qboolean NXRP_admincmd_NxPModel( client_t *cl, const char *chatCursor ) {
-	return NXRP_admincmd_NxModel(cl, chatCursor);
+qboolean NXRP_cmdAdmin_pmodel( client_t *cl, const char *chatCursor ) {
+	return NXRP_cmdAdmin_model(cl, chatCursor);
 }
 
 // Admin-only: handle !nx test2 - spawn a prop using social-style place logic
-qboolean NXRP_admincmd_NxTest2( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmdAdmin_test2( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) { NXRP_PrintConsoleToPlayer(cl, "Test requires admin privileges to spawn models."); return qtrue; }
@@ -325,7 +325,7 @@ qboolean NXRP_admincmd_NxTest2( client_t *cl, const char *chatCursor ) {
 }
 
 // Admin-only: spawn a vehicle using the game's NPC vehicle spawn helper
-qboolean NXRP_admincmd_NxVehicle( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {
 	char subcmd[MAX_TOKEN_CHARS] = {0};
 	char arg[MAX_TOKEN_CHARS] = {0};
 
@@ -351,7 +351,7 @@ qboolean NXRP_admincmd_NxVehicle( client_t *cl, const char *chatCursor ) {
 // Admin-only: toggle FFA respawn mode
 // FFA feature is temporarily disabled. Provide a stub handler so calls
 // from nxrp_main.cpp link correctly while the feature is commented out.
-qboolean NXRP_admincmd_NxFFA( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmdAdmin_ffa( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
@@ -361,7 +361,7 @@ qboolean NXRP_admincmd_NxFFA( client_t *cl, const char *chatCursor ) {
 }
 
 // Handler: !nx giveall
-qboolean NXRP_admincmd_NxGiveAll( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
