@@ -184,31 +184,8 @@ int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMa
 	VectorCopy(mins, e->r.mins);
 	VectorCopy(maxs, e->r.maxs);
 
-	// Try to call the game's model bounds helper to refine z extents if available
-	void (*G_SetModelBoundsForEntity_f)(sharedEntity_t*) = (void (*)(sharedEntity_t*))Sys_LoadFunction(dll, "G_SetModelBoundsForEntity");
-	if (G_SetModelBoundsForEntity_f) {
-		old = GVM_BeginNative();
-		G_SetModelBoundsForEntity_f(e);
-		GVM_EndNative(old);
-	}
-
-	// Same padding/minimum logic as NXRP_SpawnModelAtClient
-	vec3_t size;
-	VectorSubtract(e->r.maxs, e->r.mins, size);
-	float maxDim = fabsf(size[0]);
-	if (fabsf(size[1]) > maxDim) maxDim = fabsf(size[1]);
-	if (fabsf(size[2]) > maxDim) maxDim = fabsf(size[2]);
-	const float minExtent = 24.0f;
-	const float padding = 8.0f;
-	if (maxDim < minExtent) {
-		VectorSet(e->r.mins, -minExtent - padding, -minExtent - padding, -minExtent - padding);
-		VectorSet(e->r.maxs,  minExtent + padding,  minExtent + padding,  minExtent + padding);
-	} else {
-		vec3_t padNeg = { -padding, -padding, -padding };
-		vec3_t padPos = {  padding,  padding,  padding };
-		VectorAdd(e->r.mins, padNeg, e->r.mins);
-		VectorAdd(e->r.maxs, padPos, e->r.maxs);
-	}
+	// Use the rotated prop bounds as-is (match Holo_PlaceModel behavior):
+	// copy mins/maxs already set above and enable solid contents, then link.
 	VectorAdd(e->s.pos.trBase, e->r.mins, e->r.absmin);
 	VectorAdd(e->s.pos.trBase, e->r.maxs, e->r.absmax);
 
