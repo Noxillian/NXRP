@@ -157,6 +157,7 @@ void NXRP_OnVehicleDestroyed(int vehicleEntNum, client_t *killer) {
 
 void NXRP_OnRoundStart(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Round started");
+	SV_SendServerCommand(NULL, "Round Start SV");    // global chat message
 }
 
 void NXRP_OnRoundEnd(int winningTeam) {
