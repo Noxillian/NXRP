@@ -52,7 +52,7 @@ qboolean NXRP_HandleNxTest( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) { NXRP_PrintConsoleToPlayer(cl, "Test requires admin privileges to spawn models."); return qtrue; }
 
-	const char* model = "models/map_objects/korriban/statue_sith_lord.md3";
+	const char* model = "models/map_objects/nar_shaddar/table01.md3";
 	int ent = NXRP_SpawnModelAtClient(cl, model);
 	if (ent >= 0) {
 		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", model, ent));
@@ -163,6 +163,30 @@ qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor ) {
 // Admin-only: pmodel currently same as model
 qboolean NXRP_HandleNxPModel( client_t *cl, const char *chatCursor ) {
 	return NXRP_HandleNxModel(cl, chatCursor);
+}
+
+// Admin-only: handle !nx test2 - spawn a prop using social-style place logic
+qboolean NXRP_HandleNxTest2( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) { NXRP_PrintConsoleToPlayer(cl, "Test requires admin privileges to spawn models."); return qtrue; }
+
+	// Example model and approximate model bounds; these could be tuned per-model.
+	const char* model = "models/map_objects/nar_shaddar/table01.md3";
+	vec3_t mins = { -24.0f, -24.0f, -8.0f };
+	vec3_t maxs = {  24.0f,  24.0f, 24.0f };
+
+	// Use the client's yaw as the spawned prop's yaw
+	float yaw = 0.0f;
+	if (cl && cl->gentity) yaw = cl->gentity->s.angles[YAW];
+
+	int ent = NXRP_SpawnPropAtClient(cl, model, mins, maxs, yaw);
+	if (ent >= 0) {
+		NXRP_PrintConsoleToPlayer(cl, va("Spawned test2 model %s as entity %d", model, ent));
+	} else {
+		NXRP_PrintConsoleToPlayer(cl, "Failed to spawn test2 model.");
+	}
+	return qtrue;
 }
 
 // Admin-only: spawn a vehicle using the game's NPC vehicle spawn helper

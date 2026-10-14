@@ -18,6 +18,14 @@ bool NXRP_ReadAccountContentForClient(client_t* cl, std::string& outContent, std
 // Returns the new entity number, or -1 on failure.
 int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath);
 
+// Place a model at a given floor position with explicit prop bounds and yaw.
+// Returns the new entity number, or -1 on failure.
+int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMaxs, float yaw, const vec3_t floor);
+
+// Spawn a prop (model) near a client using provided model bounds. This calls
+// NXRP_PlaceModel using the client's origin as the floor reference.
+int NXRP_SpawnPropAtClient(client_t* cl, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, float yaw);
+
 // Print a standardized NXRP console message to a specific player. If cl is
 // NULL the message will be broadcast to all clients by passing NULL to
 // SV_SendServerCommand.

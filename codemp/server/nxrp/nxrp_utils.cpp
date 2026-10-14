@@ -5,6 +5,7 @@
 #include "server/sv_gameapi.h"
 #include "sys/sys_loadlib.h"
 #include <cmath>
+#include <cstring>
 
 // Spawn a misc model near a client using the game module's spawn helpers.
 // Returns the new entity number, or -1 on failure.
@@ -54,6 +55,94 @@ int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath)
 		org[1] += fwd[1] * 24.0f;
 		org[2] += 16.0f;
 	}
+
+// Place a model with explicit prop bounds and yaw at a floor position.
+int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMaxs, float yaw, const vec3_t floor)
+{
+	if (!name || !name[0]) return -1;
+
+	void* dll = GVM_GetDllHandle();
+	if (!dll) return -1;
+
+	void* gGSpawn_f = Sys_LoadFunction(dll, "G_Spawn");
+	int (*gModelIndex_f)(const char*) = (int (*)(const char*))Sys_LoadFunction(dll, "G_ModelIndex");
+	void* (*gGSpawn)() = (void* (*)())gGSpawn_f;
+	if (!gGSpawn || !gModelIndex_f) return -1;
+
+	void* old = GVM_BeginNative();
+	sharedEntity_t* e = (sharedEntity_t*)gGSpawn();
+	const int model = e ? gModelIndex_f(name) : 0;
+	GVM_EndNative(old);
+	if (!e) return -1;
+
+	vec3_t org = { floor[0], floor[1], floor[2] - propMins[2] };
+	e->s.eType = ET_GENERAL;
+	e->s.modelindex = model;
+	VectorCopy(org, e->s.pos.trBase);
+	VectorCopy(org, e->s.origin);
+	VectorCopy(org, e->r.currentOrigin);
+	e->s.pos.trType = TR_STATIONARY;
+	VectorSet(e->s.apos.trBase, 0.0f, yaw, 0.0f);
+	VectorCopy(e->s.apos.trBase, e->s.angles);
+	VectorCopy(e->s.apos.trBase, e->r.currentAngles);
+	e->s.apos.trType = TR_STATIONARY;
+
+	// Compute a rotated box around the yaw like social.cpp does
+	const float c = cosf(DEG2RAD(yaw)), sn = sinf(DEG2RAD(yaw));
+	vec3_t mins = { 99999.0f, 99999.0f, propMins[2] }, maxs = { -99999.0f, -99999.0f, propMaxs[2] };
+	for (int k = 0; k < 4; k++) {
+		const float x = (k & 1) ? propMaxs[0] : propMins[0];
+		const float y = (k & 2) ? propMaxs[1] : propMins[1];
+		const float rx = x * c - y * sn, ry = x * sn + y * c;
+		mins[0] = Q_min(mins[0], rx); maxs[0] = Q_max(maxs[0], rx);
+		mins[1] = Q_min(mins[1], ry); maxs[1] = Q_max(maxs[1], ry);
+	}
+	VectorCopy(mins, e->r.mins);
+	VectorCopy(maxs, e->r.maxs);
+
+	// Try to call the game's model bounds helper to refine z extents if available
+	void (*G_SetModelBoundsForEntity_f)(sharedEntity_t*) = (void (*)(sharedEntity_t*))Sys_LoadFunction(dll, "G_SetModelBoundsForEntity");
+	if (G_SetModelBoundsForEntity_f) {
+		old = GVM_BeginNative();
+		G_SetModelBoundsForEntity_f(e);
+		GVM_EndNative(old);
+	}
+
+	// Same padding/minimum logic as NXRP_SpawnModelAtClient
+	vec3_t size;
+	VectorSubtract(e->r.maxs, e->r.mins, size);
+	float maxDim = fabsf(size[0]);
+	if (fabsf(size[1]) > maxDim) maxDim = fabsf(size[1]);
+	if (fabsf(size[2]) > maxDim) maxDim = fabsf(size[2]);
+	const float minExtent = 24.0f;
+	const float padding = 8.0f;
+	if (maxDim < minExtent) {
+		VectorSet(e->r.mins, -minExtent - padding, -minExtent - padding, -minExtent - padding);
+		VectorSet(e->r.maxs,  minExtent + padding,  minExtent + padding,  minExtent + padding);
+	} else {
+		vec3_t padNeg = { -padding, -padding, -padding };
+		vec3_t padPos = {  padding,  padding,  padding };
+		VectorAdd(e->r.mins, padNeg, e->r.mins);
+		VectorAdd(e->r.maxs, padPos, e->r.maxs);
+	}
+	VectorAdd(e->s.pos.trBase, e->r.mins, e->r.absmin);
+	VectorAdd(e->s.pos.trBase, e->r.maxs, e->r.absmax);
+
+	e->r.contents = CONTENTS_SOLID;
+	e->r.svFlags = 0;
+	SV_LinkEntity(e);
+	return e->s.number;
+}
+
+// Spawn a prop at the client's origin using given model and prop bounds
+int NXRP_SpawnPropAtClient(client_t* cl, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, float yaw)
+{
+	if (!cl || !modelPath) return -1;
+	vec3_t floor;
+	if (cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
+	else { VectorSet(floor, 0,0,0); }
+	return NXRP_PlaceModel(modelPath, propMins, propMaxs, yaw, floor);
+}
 
 	// Set entity type and model.
 	e->s.eType = ET_GENERAL;

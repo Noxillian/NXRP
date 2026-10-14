@@ -39,6 +39,8 @@ qboolean NXRP_HandleNxSpawn( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxTp( client_t *cl, const char *chatCursor );
 // Admin-only: test spawn command
 qboolean NXRP_HandleNxTest( client_t *cl, const char *chatCursor );
+// Admin-only: additional test command (prop placement)
+qboolean NXRP_HandleNxTest2( client_t *cl, const char *chatCursor );
 // Admin-only: spawn a vehicle
 qboolean NXRP_HandleNxVehicle( client_t *cl, const char *chatCursor );
 // Admin-only: toggle FFA respawn mode (on/off/toggle)

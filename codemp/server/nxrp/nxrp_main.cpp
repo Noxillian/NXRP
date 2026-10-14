@@ -168,7 +168,17 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 			case NXRP_SUB_INFO:
 				return NXRP_HandleNxInfo( cl, chatCursor );
 			case NXRP_SUB_TEST:
-				return NXRP_HandleNxTest(cl, chatCursor);
+					return NXRP_HandleNxTest(cl, chatCursor);
+
+				case NXRP_SUB_UNKNOWN: // allow hooking specific literal "test2" subcommand
+				{
+					// If the parsed subcmd was unknown, inspect raw subcmd text for test2.
+					char firstTok[MAX_TOKEN_CHARS] = {0};
+					if (sscanf(chatCursor, "%31s", firstTok) == 1) {
+						if (!Q_stricmp(firstTok, "test2")) return NXRP_HandleNxTest2(cl, chatCursor);
+					}
+					break;
+				}
 			case NXRP_SUB_ACCOUNT:
 				return NXRP_HandleNxAccount( cl, chatCursor );
 			case NXRP_SUB_GIVEALL:
