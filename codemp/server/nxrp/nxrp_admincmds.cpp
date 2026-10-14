@@ -384,6 +384,26 @@ qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
+	// Validate vehicle exists via game VM's VehicleTable/GetIDForString before spawning
+	void* dll = GVM_GetDllHandle();
+	if (!dll) {
+		NXRP_PrintConsoleToPlayer(cl, "Cannot validate vehicle: game VM not available");
+		return qtrue;
+	}
+
+	int (*GetIDForString_f)(void*, const char*) = (int (*)(void*, const char*))Sys_LoadFunction(dll, "GetIDForString");
+	void* vehicleTable = Sys_LoadFunction(dll, "VehicleTable");
+	if (!GetIDForString_f || !vehicleTable) {
+		NXRP_PrintConsoleToPlayer(cl, "Cannot validate vehicle: lookup functions unavailable");
+		return qtrue;
+	}
+
+	int vid = GetIDForString_f(vehicleTable, arg);
+	if (vid < 0) {
+		NXRP_PrintConsoleToPlayer(cl, va("Unknown vehicle '%s'", arg));
+		return qtrue;
+	}
+
 	char cmdBuf[128];
 	Com_sprintf( cmdBuf, sizeof(cmdBuf), "npc spawn vehicle %s", arg );
 	NXRP_PrintConsoleToPlayer(cl, "Spawning vehicle");
