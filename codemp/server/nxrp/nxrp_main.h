@@ -21,31 +21,31 @@ qboolean NXRP_HandleChat( client_t *cl, const char *commandName, const char *cha
 #endif
 
 // additional handlers declared in nxrp_cmds.cpp - renamed to NXRP_ prefix
-qboolean NXRP_HandleNxInfo( client_t *cl, const char *chatCursor );
-qboolean NXRP_HandleNxRegister( client_t *cl, const char *chatCursor );
-qboolean NXRP_HandleNxLogin( client_t *cl, const char *chatCursor );
-qboolean NXRP_HandleNxGiveAll( client_t *cl, const char *chatCursor );
-qboolean NXRP_HandleNxAccount( client_t *cl, const char *chatCursor );
-qboolean NXRP_HandleNxNoclip( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_NxInfo( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_NxRegister( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_NxLogin( client_t *cl, const char *chatCursor );
+qboolean NXRP_admincmd_NxGiveAll( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_NxAccount( client_t *cl, const char *chatCursor );
+qboolean NXRP_admincmd_NxNoclip( client_t *cl, const char *chatCursor );
 // Non-admin: report player position
-qboolean NXRP_HandleNxrpPos( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_NxrpPos( client_t *cl, const char *chatCursor );
 // Admin-only: spawn a model with a provided path
-qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor );
-qboolean NXRP_HandleNxModelMove( client_t *cl, const char *chatCursor );
-// Admin-only: player-model placeholder command (currently same as NXRP_HandleNxModel)
-qboolean NXRP_HandleNxPModel( client_t *cl, const char *chatCursor );
+qboolean NXRP_admincmd_NxModel( client_t *cl, const char *chatCursor );
+qboolean NXRP_admincmd_NxModelMove( client_t *cl, const char *chatCursor );
+// Admin-only: player-model placeholder command (currently same as NXRP_admincmdNxModel)
+qboolean NXRP_admincmd_NxPModel( client_t *cl, const char *chatCursor );
 // Admin-only: spawn an NPC or misc model test
-qboolean NXRP_HandleNxSpawn( client_t *cl, const char *chatCursor );
+qboolean NXRP_admincmd_NxSpawn( client_t *cl, const char *chatCursor );
 // Admin-only: teleport player upward
-qboolean NXRP_HandleNxTp( client_t *cl, const char *chatCursor );
+qboolean NXRP_admincmd_NxTp( client_t *cl, const char *chatCursor );
 // Admin-only: test spawn command
-qboolean NXRP_HandleNxTest( client_t *cl, const char *chatCursor );
+qboolean NXRP_admincmd_NxTest( client_t *cl, const char *chatCursor );
 // Admin-only: additional test command (prop placement)
-qboolean NXRP_HandleNxTest2( client_t *cl, const char *chatCursor );
+qboolean NXRP_admincmd_NxTest2( client_t *cl, const char *chatCursor );
 // Admin-only: spawn a vehicle
-qboolean NXRP_HandleNxVehicle( client_t *cl, const char *chatCursor );
+qboolean NXRP_admincmd_NxVehicle( client_t *cl, const char *chatCursor );
 // Admin-only: toggle FFA respawn mode (on/off/toggle)
-qboolean NXRP_HandleNxFFA( client_t *cl, const char *chatCursor );
+qboolean NXRP_admincmd_NxFFA( client_t *cl, const char *chatCursor );
 
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );

@@ -27,8 +27,8 @@ void SV_WannaGiveWeapon(client_t* cl, int wnum);
 void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 
 // Forward declarations for the extracted command handlers
-qboolean NXRP_HandleNxNoclip( client_t *cl, const char *chatCursor );
-qboolean NXRP_HandleNxInfo( client_t *cl, const char *chatCursor );
+qboolean NXRP_admincmd_NxNoclip( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_NxInfo( client_t *cl, const char *chatCursor );
 static qboolean NXRP_HandleNpcSpawn( client_t *cl, const char *chatCursor );
 // forward-declare the spawn helper we will implement in this module
 int SV_SpawnModelAtClient(client_t* cl, const char* modelPath);
@@ -154,13 +154,13 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 
 			switch ( sc ) {
 			case NXRP_SUB_TP:
-				return NXRP_HandleNxTp(cl, chatCursor);
+				return NXRP_admincmd_NxTp(cl, chatCursor);
 
 			case NXRP_SUB_MMOVE:
-				return NXRP_HandleNxModelMove(cl, chatCursor);
+				return NXRP_admincmd_NxModelMove(cl, chatCursor);
 
 			case NXRP_SUB_SPAWN:
-				return NXRP_HandleNxSpawn(cl, chatCursor);
+				return NXRP_admincmd_NxSpawn(cl, chatCursor);
 			case NXRP_SUB_MODEL:
 			// support mmove as separate action - handled inside NXRP_HandleNxModelMove
 			{
@@ -171,43 +171,43 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 						const char* p = chatCursor;
 						while (*p && *p != ' ' && *p != '\t') p++;
 						while (*p == ' ' || *p == '\t') p++;
-						return NXRP_HandleNxModelMove(cl, p);
+						return NXRP_admincmd_NxModelMove(cl, p);
 					}
 				}
-				return NXRP_HandleNxModel(cl, chatCursor);
+				return NXRP_admincmd_NxModel(cl, chatCursor);
 			}
 			case NXRP_SUB_PMODEL:
-				return NXRP_HandleNxPModel(cl, chatCursor);
+				return NXRP_admincmd_NxPModel(cl, chatCursor);
 			case NXRP_SUB_VEHICLE:
-				return NXRP_HandleNxVehicle(cl, chatCursor);
+				return NXRP_admincmd_NxVehicle(cl, chatCursor);
 			case NXRP_SUB_POS:
-				return NXRP_HandleNxrpPos(cl, chatCursor);
+				return NXRP_cmd_NxrpPos(cl, chatCursor);
 			case NXRP_SUB_INFO:
-				return NXRP_HandleNxInfo( cl, chatCursor );
+				return NXRP_cmd_NxInfo( cl, chatCursor );
 			case NXRP_SUB_TEST:
-					return NXRP_HandleNxTest(cl, chatCursor);
+					return NXRP_admincmd_NxTest(cl, chatCursor);
 
 				case NXRP_SUB_UNKNOWN: // allow hooking specific literal "test2" subcommand
 				{
 					// If the parsed subcmd was unknown, inspect raw subcmd text for test2.
 					char firstTok[MAX_TOKEN_CHARS] = {0};
 					if (sscanf(chatCursor, "%31s", firstTok) == 1) {
-						if (!Q_stricmp(firstTok, "test2")) return NXRP_HandleNxTest2(cl, chatCursor);
+						if (!Q_stricmp(firstTok, "test2")) return NXRP_admincmd_NxTest2(cl, chatCursor);
 					}
 					break;
 				}
 			case NXRP_SUB_ACCOUNT:
-				return NXRP_HandleNxAccount( cl, chatCursor );
+				return NXRP_cmd_NxAccount( cl, chatCursor );
 			case NXRP_SUB_GIVEALL:
-				return NXRP_HandleNxGiveAll( cl, chatCursor );
+				return NXRP_admincmd_NxGiveAll( cl, chatCursor );
 			case NXRP_SUB_NOCLIP:
-				return NXRP_HandleNxNoclip( cl, chatCursor );
+				return NXRP_admincmd_NxNoclip( cl, chatCursor );
 			case NXRP_SUB_REGISTER:
-				return NXRP_HandleNxRegister( cl, chatCursor );
+				return NXRP_cmd_NxRegister( cl, chatCursor );
 			case NXRP_SUB_LOGIN:
-				return NXRP_HandleNxLogin( cl, chatCursor );
+				return NXRP_cmd_NxLogin( cl, chatCursor );
 			case NXRP_SUB_FFA:
-				return NXRP_HandleNxFFA( cl, chatCursor );
+				return NXRP_admincmd_NxFFA( cl, chatCursor );
 			default:
 				break;
 			}
