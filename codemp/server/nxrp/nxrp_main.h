@@ -29,9 +29,11 @@ qboolean NXRP_cmd_account( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor );
 // Non-admin: report player position
 qboolean NXRP_cmd_pos( client_t *cl, const char *chatCursor );
-// Admin-only: spawn a model with a provided path
-qboolean NXRP_cmdAdmin_model( client_t *cl, const char *chatCursor );
-qboolean NXRP_cmdAdmin_modelmove( client_t *cl, const char *chatCursor );
+// Admin-only: spawn a model with a provided path (command: !nx mspawn)
+qboolean NXRP_cmdAdmin_mspawn( client_t *cl, const char *chatCursor );
+// Admin-only: remove the last spawned model (!nx mremove)
+qboolean NXRP_cmdAdmin_mremove( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmdAdmin_mmove( client_t *cl, const char *chatCursor );
 // Admin-only: player-model placeholder command (currently same as NXRP_admincmdNxModel)
 qboolean NXRP_cmdAdmin_pmodel( client_t *cl, const char *chatCursor );
 // Admin-only: spawn an NPC or misc model test

@@ -48,6 +48,7 @@ enum NXRP_SubCmd {
 	NXRP_SUB_LOGIN,
 	NXRP_SUB_POS,
 	NXRP_SUB_MODEL,
+	NXRP_SUB_MREMOVE,
 	NXRP_SUB_PMODEL,
 	NXRP_SUB_FFA
 };
@@ -63,7 +64,8 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "register" ) )	return NXRP_SUB_REGISTER;
 	if ( !Q_stricmp( s, "login" ) )		return NXRP_SUB_LOGIN;
 	if ( !Q_stricmp( s, "pos" ) )		return NXRP_SUB_POS;
-	if ( !Q_stricmp( s, "model" ) )		return NXRP_SUB_MODEL;
+	if ( !Q_stricmp( s, "mspawn" ) )		return NXRP_SUB_MODEL;
+	if ( !Q_stricmp( s, "mmove" ) )		return NXRP_SUB_MMOVE;
 	if ( !Q_stricmp( s, "pmodel" ) )		return NXRP_SUB_PMODEL;
 	if ( !Q_stricmp( s, "vehicle" ) )	return NXRP_SUB_VEHICLE;
 	if ( !Q_stricmp( s, "ffa" ) )		return NXRP_SUB_FFA;
@@ -156,26 +158,21 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 			case NXRP_SUB_TP:
 				return NXRP_cmdAdmin_tp(cl, chatCursor);
 
-			case NXRP_SUB_MMOVE:
-				return NXRP_cmdAdmin_modelmove(cl, chatCursor);
+		case NXRP_SUB_MMOVE:
+			return NXRP_cmdAdmin_mmove(cl, chatCursor);
 
 			case NXRP_SUB_SPAWN:
 				return NXRP_cmdAdmin_spawn(cl, chatCursor);
 			case NXRP_SUB_MODEL:
-			// support mmove as separate action - handled inside NXRP_HandleNxModelMove
-			{
-				char tok[MAX_TOKEN_CHARS] = {0};
-				if (sscanf(chatCursor, "%31s", tok) == 1) {
-					if (!Q_stricmp(tok, "mmove")) {
-						// skip the 'mmove' token and pass the rest
-						const char* p = chatCursor;
-						while (*p && *p != ' ' && *p != '\t') p++;
-						while (*p == ' ' || *p == '\t') p++;
-						return NXRP_cmdAdmin_modelmove(cl, p);
-					}
-				}
-				return NXRP_cmdAdmin_model(cl, chatCursor);
-			}
+				return NXRP_cmdAdmin_mspawn(cl, chatCursor);
+
+		case NXRP_SUB_MREMOVE:
+			return NXRP_cmdAdmin_mremove(cl, chatCursor);
+
+		case NXRP_SUB_PMODEL:
+			return NXRP_cmdAdmin_pmodel(cl, chatCursor);
+			case NXRP_SUB_MREMOVE:
+				return NXRP_cmdAdmin_mremove(cl, chatCursor);
 			case NXRP_SUB_PMODEL:
 				return NXRP_cmdAdmin_pmodel(cl, chatCursor);
 			case NXRP_SUB_VEHICLE:

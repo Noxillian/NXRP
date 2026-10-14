@@ -213,12 +213,12 @@ qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor ) {
 }
 
 // Admin-only: spawn model at client with provided path
-qboolean NXRP_cmdAdmin_model( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmdAdmin_mspawn( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 	// chatCursor may be: "model <path> [angle]" or "<path> [angle]"
 	if (!chatCursor) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx model <model_path> [angle]");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx mspawn <model_path> [angle]");
 		return qtrue;
 	}
 
@@ -238,7 +238,7 @@ qboolean NXRP_cmdAdmin_model( client_t *cl, const char *chatCursor ) {
 	}
 
 	if (!p || !*p) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx model <model_path> [angle]");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx mspawn <model_path> [angle]");
 		return qtrue;
 	}
 
@@ -247,7 +247,7 @@ qboolean NXRP_cmdAdmin_model( client_t *cl, const char *chatCursor ) {
 	float angle = 0.0f;
 	int scanned = sscanf(p, "%511s %f", path, &angle);
 	if (scanned < 1) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx model <model_path> [angle]");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx mspawn <model_path> [angle]");
 		return qtrue;
 	}
 
@@ -273,12 +273,12 @@ qboolean NXRP_cmdAdmin_model( client_t *cl, const char *chatCursor ) {
 
 // Admin-only: adjust last spawned model position
 // Admin-only: move last placed model by vector deltas
-qboolean NXRP_cmdAdmin_modelmove( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmdAdmin_mmove( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
 	if (!chatCursor || !*chatCursor) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx model <x> <y> <z>    (deltas in world units)");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx mmove <x> <y> <z>    (deltas in world units)");
 		return qtrue;
 	}
 
@@ -291,13 +291,56 @@ qboolean NXRP_cmdAdmin_modelmove( client_t *cl, const char *chatCursor ) {
 		else NXRP_PrintConsoleToPlayer(cl, "Failed to move last spawned model");
 		return qtrue;
 	}
-	NXRP_PrintConsoleToPlayer(cl, "Usage: !nx model <x> <y> <z>    (deltas in world units)");
+	NXRP_PrintConsoleToPlayer(cl, "Usage: !nx mmove <x> <y> <z>    (deltas in world units)");
 	return qtrue;
 }
 
 // Admin-only: pmodel is currently the same as model
 qboolean NXRP_cmdAdmin_pmodel( client_t *cl, const char *chatCursor ) {
-	return NXRP_cmdAdmin_model(cl, chatCursor);
+	return NXRP_cmdAdmin_mspawn(cl, chatCursor);
+}
+
+// Admin-only: remove the last NXRP-spawned model
+qboolean NXRP_cmdAdmin_mremove( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	int last = NXRP_GetLastSpawn();
+	if (last < 0) {
+		NXRP_PrintConsoleToPlayer(cl, "No last spawned model to remove");
+		return qtrue;
+	}
+	if (last < 0 || last >= sv.num_entities) {
+		NXRP_PrintConsoleToPlayer(cl, "Invalid last spawned model id");
+		return qtrue;
+	}
+
+	sharedEntity_t* e = SV_GentityNum(last);
+	if (!e) {
+		NXRP_PrintConsoleToPlayer(cl, "Last spawned entity not found");
+		return qtrue;
+	}
+
+	void* dll = GVM_GetDllHandle();
+	if (!dll) {
+		NXRP_PrintConsoleToPlayer(cl, "Game VM not available");
+		return qtrue;
+	}
+
+	void (*G_FreeEntity_f)(void*) = (void (*)(void*))Sys_LoadFunction(dll, "G_FreeEntity");
+	if (!G_FreeEntity_f) {
+		NXRP_PrintConsoleToPlayer(cl, "Remove function not available in game VM");
+		return qtrue;
+	}
+
+	void* old = GVM_BeginNative();
+	G_FreeEntity_f(e);
+	GVM_EndNative(old);
+
+	NXRP_RegisterSpawn(-1);
+	NXRP_PrintConsoleToPlayer(cl, va("Removed last spawned model entity %d", last));
+	return qtrue;
 }
 
 // Admin-only: handle !nx test2 - spawn a prop using social-style place logic
