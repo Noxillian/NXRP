@@ -51,10 +51,19 @@ int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath)
 		vec3_t fwd;
 		AngleVectors(cl->gentity->s.angles, fwd, NULL, NULL);
 
-		org[0] += fwd[0] * 24.0f;
-		org[1] += fwd[1] * 24.0f;
-		org[2] += 16.0f;
+		// spawn a little further in front and a bit lower than before
+		const float forwardDist = 36.0f; // previously 24.0f
+		const float zOffset = 8.0f;      // previously 16.0f (make it lower)
+
+		org[0] += fwd[0] * forwardDist;
+		org[1] += fwd[1] * forwardDist;
+		org[2] += zOffset;
 	}
+
+	// Round up coordinates so the spawn location snaps to whole units
+	org[0] = ceilf(org[0]);
+	org[1] = ceilf(org[1]);
+	org[2] = ceilf(org[2]);
 
 	// Set entity type and model.
 	e->s.eType = ET_GENERAL;
@@ -203,6 +212,46 @@ int NXRP_SpawnPropAtClient(client_t* cl, const char* modelPath, const vec3_t pro
 	if (cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
 	else { VectorSet(floor, 0,0,0); }
 	return NXRP_PlaceModel(modelPath, propMins, propMaxs, yaw, floor);
+}
+
+// Simple tracking for last NXRP spawn
+static int nxrp_last_spawn = -1;
+
+void NXRP_RegisterSpawn(int entnum) {
+	nxrp_last_spawn = entnum;
+}
+
+int NXRP_GetLastSpawn() {
+	return nxrp_last_spawn;
+}
+
+// Move the last spawn in cardinal directions or up/down by 'amount' units
+// Legacy directional mover removed; use NXRP_MoveLastSpawnByVec instead.
+
+qboolean NXRP_MoveLastSpawnByVec(client_t* cl, float dx, float dy, float dz) {
+	if (nxrp_last_spawn < 0) return qfalse;
+	if (nxrp_last_spawn < 0 || nxrp_last_spawn >= sv.num_entities) return qfalse;
+	sharedEntity_t* e = SV_GentityNum(nxrp_last_spawn);
+	if (!e || !e->r.linked) return qfalse;
+
+	vec3_t org;
+	VectorCopy(e->s.pos.trBase, org);
+
+	org[0] += dx;
+	org[1] += dy;
+	org[2] += dz;
+
+	// snap to whole units
+	org[0] = ceilf(org[0]); org[1] = ceilf(org[1]); org[2] = ceilf(org[2]);
+
+	VectorCopy(org, e->s.pos.trBase);
+	VectorCopy(org, e->s.origin);
+	VectorCopy(org, e->r.currentOrigin);
+	e->s.pos.trType = TR_STATIONARY;
+	SV_LinkEntity(e);
+
+	NXRP_PrintConsoleToPlayer(cl, va("Moved model %d by (%.1f %.1f %.1f)", nxrp_last_spawn, dx, dy, dz));
+	return qtrue;
 }
 
 bool NXRP_EnsureLoggedIn(client_t* cl) {

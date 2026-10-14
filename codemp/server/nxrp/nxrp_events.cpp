@@ -151,13 +151,8 @@ void NXRP_OnNPCSpawned(const char *npcName) {
 	NXRP_PrintConsoleToPlayer(NULL, va("NPC spawned: %s", npcName ? npcName : "<unknown>"));
 }
 
-void NXRP_OnVehicleDestroyed(int vehicleEntNum, client_t *killer) {
-	NXRP_PrintConsoleToPlayer(NULL, va("Vehicle destroyed: ent %d", vehicleEntNum));
-}
-
 void NXRP_OnRoundStart(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Round started");
-	SV_SendServerCommand(NULL, "Round Start SV");    // global chat message
 }
 
 void NXRP_OnRoundEnd(int winningTeam) {

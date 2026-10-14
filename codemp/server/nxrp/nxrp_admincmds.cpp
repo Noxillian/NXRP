@@ -94,53 +94,120 @@ qboolean NXRP_HandleNxTest( client_t *cl, const char *chatCursor ) {
 
 // Admin-only: teleport the invoking player 5 meters above current position
 qboolean NXRP_HandleNxTp( client_t *cl, const char *chatCursor ) {
-	(void)chatCursor;
-
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
-	if (!cl || !cl->gentity || !cl->gentity->playerState) {
-		NXRP_PrintConsoleToPlayer(cl, "Teleport failed: no player entity");
+	// Allow forms:
+	//  - "" : teleport invoking player 5m up (legacy)
+	//  - "<dst>" : teleport invoking player to client number dst
+	//  - "<src> <dst>" : teleport player src to player dst
+
+	if (!chatCursor || !*chatCursor) {
+		// Legacy behavior: teleport self 5 meters up
+		if (!cl || !cl->gentity || !cl->gentity->playerState) {
+			NXRP_PrintConsoleToPlayer(cl, "Teleport failed: no player entity");
+			return qtrue;
+		}
+		const float meters = 5.0f;
+		const float unitsPerMeter = 32.0f;
+		const float zOffset = meters * unitsPerMeter;
+		vec3_t newOrg;
+		VectorCopy(cl->gentity->playerState->origin, newOrg);
+		newOrg[2] += zOffset;
+
+		void* dll = GVM_GetDllHandle();
+		if (dll) {
+			void (*TeleportPlayer_f)(void*, float*, float*) = (void (*)(void*, float*, float*))Sys_LoadFunction(dll, "TeleportPlayer");
+			if (TeleportPlayer_f) {
+				float angs[3] = {0.0f, cl->gentity->s.angles[YAW], 0.0f};
+				float orgf[3] = { newOrg[0], newOrg[1], newOrg[2] };
+				void* old = GVM_BeginNative();
+				TeleportPlayer_f(cl->gentity, orgf, angs);
+				GVM_EndNative(old);
+				NXRP_PrintConsoleToPlayer(cl, "Teleported 5 meters up");
+				return qtrue;
+			}
+		}
+		VectorCopy(newOrg, cl->gentity->playerState->origin);
+		VectorCopy(newOrg, cl->gentity->r.currentOrigin);
+		VectorCopy(newOrg, cl->gentity->s.origin);
+		cl->gentity->s.pos.trType = TR_STATIONARY;
+		SV_LinkEntity(cl->gentity);
+		NXRP_PrintConsoleToPlayer(cl, "Teleported 5 meters up (direct)");
 		return qtrue;
 	}
 
-	// Game units: approximate 32 units per meter -> 5 meters = 160 units
-	const float meters = 5.0f;
-	const float unitsPerMeter = 32.0f;
-	const float zOffset = meters * unitsPerMeter;
+	// Parse ints
+	int src = -1, dst = -1;
+	int cnt = sscanf(chatCursor, "%d %d", &src, &dst);
+	if (cnt == 1) {
+		// teleport invoking player to dst
+		dst = src; // reuse variable
+		if (dst < 0 || dst >= MAX_CLIENTS) { NXRP_PrintConsoleToPlayer(cl, "Invalid target client number"); return qtrue; }
+		if (!cl || !cl->gentity || !cl->gentity->playerState) { NXRP_PrintConsoleToPlayer(cl, "Teleport failed: no player entity"); return qtrue; }
 
-	// Update authoritative player state origin and shared entity positions
-	vec3_t newOrg;
-	VectorCopy(cl->gentity->playerState->origin, newOrg);
-	newOrg[2] += zOffset;
+		sharedEntity_t* destEnt = SV_GentityNum(dst);
+		if (!destEnt || !destEnt->r.linked || !destEnt->playerState) { NXRP_PrintConsoleToPlayer(cl, "Target player not found or not active"); return qtrue; }
 
-	// If the game VM provides TeleportPlayer via gentity helper, prefer that through social.exe loader
-	// social.cpp exposes a function pointer gTeleportPlayer we can call indirectly through Sys_LoadFunction
-	// Fallback: directly set positions and link entity
+		vec3_t targetOrg;
+		VectorCopy(destEnt->playerState->origin, targetOrg);
 
-	// Try dynamic TeleportPlayer if available
-	void* dll = GVM_GetDllHandle();
-	if (dll) {
-		void (*TeleportPlayer_f)(void*, float*, float*) = (void (*)(void*, float*, float*))Sys_LoadFunction(dll, "TeleportPlayer");
-		if (TeleportPlayer_f) {
-			float angs[3] = {0.0f, cl->gentity->s.angles[YAW], 0.0f};
-			float orgf[3] = { newOrg[0], newOrg[1], newOrg[2] };
-			void* old = GVM_BeginNative();
-			TeleportPlayer_f(cl->gentity, orgf, angs);
-			GVM_EndNative(old);
-			NXRP_PrintConsoleToPlayer(cl, "Teleported 5 meters up");
-			return qtrue;
+		void* dll = GVM_GetDllHandle();
+		if (dll) {
+			void (*TeleportPlayer_f)(void*, float*, float*) = (void (*)(void*, float*, float*))Sys_LoadFunction(dll, "TeleportPlayer");
+			if (TeleportPlayer_f) {
+				float angs[3] = {0.0f, destEnt->s.angles[YAW], 0.0f};
+				float orgf[3] = { targetOrg[0], targetOrg[1], targetOrg[2] };
+				void* old = GVM_BeginNative();
+				TeleportPlayer_f(cl->gentity, orgf, angs);
+				GVM_EndNative(old);
+				NXRP_PrintConsoleToPlayer(cl, va("Teleported you to player %d", dst));
+				return qtrue;
+			}
 		}
+
+		VectorCopy(targetOrg, cl->gentity->playerState->origin);
+		VectorCopy(targetOrg, cl->gentity->r.currentOrigin);
+		VectorCopy(targetOrg, cl->gentity->s.origin);
+		cl->gentity->s.pos.trType = TR_STATIONARY;
+		SV_LinkEntity(cl->gentity);
+		NXRP_PrintConsoleToPlayer(cl, va("Teleported you to player %d (direct)", dst));
+		return qtrue;
+	} else if (cnt == 2) {
+		// teleport src to dst
+		if (src < 0 || src >= MAX_CLIENTS || dst < 0 || dst >= MAX_CLIENTS) { NXRP_PrintConsoleToPlayer(cl, "Invalid client numbers"); return qtrue; }
+		sharedEntity_t* srcEnt = SV_GentityNum(src);
+		sharedEntity_t* destEnt = SV_GentityNum(dst);
+		if (!srcEnt || !srcEnt->r.linked || !srcEnt->playerState) { NXRP_PrintConsoleToPlayer(cl, "Source player not found or not active"); return qtrue; }
+		if (!destEnt || !destEnt->r.linked || !destEnt->playerState) { NXRP_PrintConsoleToPlayer(cl, "Target player not found or not active"); return qtrue; }
+
+		vec3_t targetOrg;
+		VectorCopy(destEnt->playerState->origin, targetOrg);
+
+		void* dll = GVM_GetDllHandle();
+		if (dll) {
+			void (*TeleportPlayer_f)(void*, float*, float*) = (void (*)(void*, float*, float*))Sys_LoadFunction(dll, "TeleportPlayer");
+			if (TeleportPlayer_f) {
+				float angs[3] = {0.0f, destEnt->s.angles[YAW], 0.0f};
+				float orgf[3] = { targetOrg[0], targetOrg[1], targetOrg[2] };
+				void* old = GVM_BeginNative();
+				TeleportPlayer_f(srcEnt, orgf, angs);
+				GVM_EndNative(old);
+				NXRP_PrintConsoleToPlayer(cl, va("Teleported player %d to player %d", src, dst));
+				return qtrue;
+			}
+		}
+
+		VectorCopy(targetOrg, srcEnt->playerState->origin);
+		VectorCopy(targetOrg, srcEnt->r.currentOrigin);
+		VectorCopy(targetOrg, srcEnt->s.origin);
+		srcEnt->s.pos.trType = TR_STATIONARY;
+		SV_LinkEntity(srcEnt);
+		NXRP_PrintConsoleToPlayer(cl, va("Teleported player %d to player %d (direct)", src, dst));
+		return qtrue;
 	}
 
-	// Direct fallback: adjust entity/playerState and relink
-	VectorCopy(newOrg, cl->gentity->playerState->origin);
-	VectorCopy(newOrg, cl->gentity->r.currentOrigin);
-	VectorCopy(newOrg, cl->gentity->s.origin);
-	cl->gentity->s.pos.trType = TR_STATIONARY;
-	SV_LinkEntity(cl->gentity);
-
-	NXRP_PrintConsoleToPlayer(cl, "Teleported 5 meters up (direct)");
+	NXRP_PrintConsoleToPlayer(cl, "Usage: !tp                (teleport self up 5m)\n       !tp <dst>          (teleport you to dst client number)\n       !tp <src> <dst>    (teleport client src to client dst)");
 	return qtrue;
 }
 
@@ -196,9 +263,33 @@ qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor ) {
 	int ent = NXRP_PlaceModel(path, mins, maxs, angle, floor);
 	if (ent >= 0) {
 		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", path, ent));
+		NXRP_RegisterSpawn(ent);
 	} else {
 		NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model.");
 	}
+	return qtrue;
+}
+
+// Admin-only: adjust last spawned model position
+qboolean NXRP_HandleNxModelMove( client_t *cl, const char *chatCursor ) {
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	if (!chatCursor || !*chatCursor) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx model <x> <y> <z>    (deltas in world units)");
+		return qtrue;
+	}
+
+	// Allow only three numeric args; legacy direction handling was removed
+	float x=0.0f,y=0.0f,z=0.0f;
+	// Try parse three floats
+	int cnt = sscanf(chatCursor, "%f %f %f", &x, &y, &z);
+	if (cnt == 3) {
+		if (NXRP_MoveLastSpawnByVec(cl, x, y, z)) NXRP_PrintConsoleToPlayer(cl, "Moved last spawned model");
+		else NXRP_PrintConsoleToPlayer(cl, "Failed to move last spawned model");
+		return qtrue;
+	}
+	NXRP_PrintConsoleToPlayer(cl, "Usage: !nx model <x> <y> <z>    (deltas in world units)");
 	return qtrue;
 }
 
@@ -293,6 +384,7 @@ qboolean NXRP_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePowerLevel[MB_FORCE_SABER_DEFENCE] = 1;
 		ps->fd.forcePowerLevel[MB_FORCE_SABER_OFFENCE] = 1;
 		ps->fd.forcePowerLevel[MB_FORCE_SABER_THROW]   = 1;
+		ps->fd.forcePowersKnown |= (1 << FP_PUSH);
 		ps->fd.forcePowerLevel[MB_FORCE_PUSH] = 2;
 		ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = 2;
 		ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
@@ -300,9 +392,8 @@ qboolean NXRP_HandleNxGiveAll( client_t *cl, const char *chatCursor ) {
 		// Grant force-levitation (force jump) same as lightning: mark known and set level
 		ps->fd.forcePowersKnown |= (1 << FP_LEVITATION);
 		ps->fd.forcePowerLevel[FP_LEVITATION] = 3;
-		ps->fd.forcePowerMax = 300;
+		ps->fd.forcePowerMax = 150;
 		ps->fd.forcePower = 100;
-		ps->fd.forcePowerSelected = FP_LIGHTNING;
 		ps->fd.forcePowersActive |= (1 << FP_LIGHTNING);
 
 		SV_WannaGiveWeapon(cl, WP_CLONE_PISTOL);

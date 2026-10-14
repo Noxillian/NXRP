@@ -57,7 +57,6 @@ void NXRP_OnPlayerDisconnect(int clientNum);
 void NXRP_OnPlayerKilled(client_t *attacker, client_t *victim, int meansOfDeath);
 void NXRP_OnScoreChanged(client_t *cl, int oldScore, int newScore);
 void NXRP_OnNPCSpawned(const char *npcName);
-void NXRP_OnVehicleDestroyed(int vehicleEntNum, client_t *killer);
 void NXRP_OnRoundStart(void);
 void NXRP_OnRoundEnd(int winningTeam);
 void NXRP_OnRoundRestart(void);
