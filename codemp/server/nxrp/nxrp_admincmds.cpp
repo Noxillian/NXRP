@@ -86,6 +86,7 @@ qboolean NXRP_HandleNxTest( client_t *cl, const char *chatCursor ) {
 	int ent = NXRP_PlaceModel(model, mins, maxs, yaw, floor);
 	if (ent >= 0) {
 		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", model, ent));
+	NXRP_RegisterSpawn(ent);
 	} else {
 		NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model.");
 	}
@@ -271,6 +272,7 @@ qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor ) {
 }
 
 // Admin-only: adjust last spawned model position
+// Admin-only: move last placed model by vector deltas
 qboolean NXRP_HandleNxModelMove( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;

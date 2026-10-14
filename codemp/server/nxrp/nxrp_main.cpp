@@ -36,6 +36,7 @@ int SV_SpawnModelAtClient(client_t* cl, const char* modelPath);
 enum NXRP_SubCmd {
 	NXRP_SUB_UNKNOWN = 0,
 	NXRP_SUB_SPAWN,
+	NXRP_SUB_MMOVE,
 	NXRP_SUB_TP,
 	NXRP_SUB_VEHICLE,
 	NXRP_SUB_INFO,
@@ -155,10 +156,26 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 			case NXRP_SUB_TP:
 				return NXRP_HandleNxTp(cl, chatCursor);
 
+			case NXRP_SUB_MMOVE:
+				return NXRP_HandleNxModelMove(cl, chatCursor);
+
 			case NXRP_SUB_SPAWN:
 				return NXRP_HandleNxSpawn(cl, chatCursor);
 			case NXRP_SUB_MODEL:
+			// support mmove as separate action - handled inside NXRP_HandleNxModelMove
+			{
+				char tok[MAX_TOKEN_CHARS] = {0};
+				if (sscanf(chatCursor, "%31s", tok) == 1) {
+					if (!Q_stricmp(tok, "mmove")) {
+						// skip the 'mmove' token and pass the rest
+						const char* p = chatCursor;
+						while (*p && *p != ' ' && *p != '\t') p++;
+						while (*p == ' ' || *p == '\t') p++;
+						return NXRP_HandleNxModelMove(cl, p);
+					}
+				}
 				return NXRP_HandleNxModel(cl, chatCursor);
+			}
 			case NXRP_SUB_PMODEL:
 				return NXRP_HandleNxPModel(cl, chatCursor);
 			case NXRP_SUB_VEHICLE:

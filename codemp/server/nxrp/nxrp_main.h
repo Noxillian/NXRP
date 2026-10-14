@@ -31,6 +31,7 @@ qboolean NXRP_HandleNxNoclip( client_t *cl, const char *chatCursor );
 qboolean NXRP_HandleNxrpPos( client_t *cl, const char *chatCursor );
 // Admin-only: spawn a model with a provided path
 qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor );
+qboolean NXRP_HandleNxModelMove( client_t *cl, const char *chatCursor );
 // Admin-only: player-model placeholder command (currently same as NXRP_HandleNxModel)
 qboolean NXRP_HandleNxPModel( client_t *cl, const char *chatCursor );
 // Admin-only: spawn an NPC or misc model test
