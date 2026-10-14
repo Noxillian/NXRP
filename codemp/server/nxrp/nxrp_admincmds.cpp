@@ -48,12 +48,42 @@ qboolean NXRP_HandleNxSpawn( client_t *cl, const char *chatCursor ) {
 
 // Admin-only: handle !nx test (spawn a default model)
 qboolean NXRP_HandleNxTest( client_t *cl, const char *chatCursor ) {
-	(void)chatCursor;
+	// Accept optional model path: "modelpath" or "model <path>"
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) { NXRP_PrintConsoleToPlayer(cl, "Test requires admin privileges to spawn models."); return qtrue; }
 
-	const char* model = "models/map_objects/nar_shaddar/table01.md3";
-	int ent = NXRP_SpawnModelAtClient(cl, model);
+	// Default model
+	const char* defaultModel = "models/map_objects/nar_shaddar/table01.md3";
+	const char* model = defaultModel;
+
+	// If a model path was provided, parse it (allow leading "model" token)
+	if (chatCursor && *chatCursor) {
+		const char* p = chatCursor;
+		while (*p == ' ' || *p == '\t') p++;
+		char firstTok[MAX_TOKEN_CHARS] = {0};
+		if (sscanf(p, "%31s", firstTok) == 1) {
+			if (!Q_stricmp(firstTok, "model") || !Q_stricmp(firstTok, "pmodel")) {
+				const char* q = p;
+				while (*q && *q != ' ' && *q != '\t') q++;
+				while (*q == ' ' || *q == '\t') q++;
+				if (*q) model = q;
+			} else {
+				model = p;
+			}
+		}
+	}
+
+	// Use Holo-style placement via NXRP_PlaceModel: default prop bounds and client yaw/floor
+	vec3_t mins = { -24.0f, -24.0f, -8.0f };
+	vec3_t maxs = {  24.0f,  24.0f, 24.0f };
+	float yaw = 0.0f;
+	vec3_t floor = {0.0f, 0.0f, 0.0f};
+	if (cl && cl->gentity) {
+		yaw = cl->gentity->s.angles[YAW];
+		VectorCopy(cl->gentity->r.currentOrigin, floor);
+	}
+
+	int ent = NXRP_PlaceModel(model, mins, maxs, yaw, floor);
 	if (ent >= 0) {
 		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", model, ent));
 	} else {
@@ -118,11 +148,9 @@ qboolean NXRP_HandleNxTp( client_t *cl, const char *chatCursor ) {
 qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
-
-	// chatCursor may be of the form: "model <path>" (since the caller passes
-	// the full subcommand text). Accept either that or a bare path.
+	// chatCursor may be: "model <path> [angle]" or "<path> [angle]"
 	if (!chatCursor) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx model <model_path>");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx model <model_path> [angle]");
 		return qtrue;
 	}
 
@@ -134,7 +162,6 @@ qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor ) {
 	char firstTok[MAX_TOKEN_CHARS] = {0};
 	if (sscanf(p, "%31s", firstTok) == 1) {
 		if (!Q_stricmp(firstTok, "model") || !Q_stricmp(firstTok, "pmodel")) {
-			// advance past the first token
 			const char* q = p;
 			while (*q && *q != ' ' && *q != '\t') q++;
 			while (*q == ' ' || *q == '\t') q++;
@@ -143,15 +170,30 @@ qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor ) {
 	}
 
 	if (!p || !*p) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx model <model_path>");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx model <model_path> [angle]");
 		return qtrue;
 	}
 
-	// p now points at the model path string. Limit to 511 chars.
+	// Parse path and optional angle
 	char path[512] = {0};
-	Com_sprintf(path, sizeof(path), "%s", p);
+	float angle = 0.0f;
+	int scanned = sscanf(p, "%511s %f", path, &angle);
+	if (scanned < 1) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx model <model_path> [angle]");
+		return qtrue;
+	}
 
-	int ent = SV_SpawnModelAtClient(cl, path);
+	// normalize angle into [0,360)
+	while (angle < 0.0f) angle += 360.0f;
+	while (angle >= 360.0f) angle -= 360.0f;
+
+	// Default prop bounds; callers may add variants or extended syntax later
+	vec3_t mins = { -24.0f, -24.0f, -8.0f };
+	vec3_t maxs = {  24.0f,  24.0f, 24.0f };
+	vec3_t floor = { 0.0f, 0.0f, 0.0f };
+	if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
+
+	int ent = NXRP_PlaceModel(path, mins, maxs, angle, floor);
 	if (ent >= 0) {
 		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", path, ent));
 	} else {
@@ -160,7 +202,7 @@ qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: pmodel currently same as model
+// Admin-only: pmodel is currently the same as model
 qboolean NXRP_HandleNxPModel( client_t *cl, const char *chatCursor ) {
 	return NXRP_HandleNxModel(cl, chatCursor);
 }

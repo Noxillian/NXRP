@@ -22,6 +22,9 @@ int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath);
 // Returns the new entity number, or -1 on failure.
 int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMaxs, float yaw, const vec3_t floor);
 
+// Expose holotable placement wrapper so NXRP can reuse exact Holo placement logic
+// (removed public wrapper to Holo_PlaceModel) - do not expose holotable internals here
+
 // Spawn a prop (model) near a client using provided model bounds. This calls
 // NXRP_PlaceModel using the client's origin as the floor reference.
 int NXRP_SpawnPropAtClient(client_t* cl, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, float yaw);

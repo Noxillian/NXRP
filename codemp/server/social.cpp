@@ -3401,6 +3401,10 @@ static int Holo_PlaceModel(const char* name, const vec3_t propMins, const vec3_t
 	return e->s.number;
 }
 
+// Public wrapper to expose Holo_PlaceModel placement to other modules (calls the internal static)
+// Returns the spawned entity number or -1 on failure.
+// NOTE: Holo_PlaceModel remains static/internal. Do not expose it publicly here.
+
 static int Holo_SpawnProp(const htAction_t* act, const vec3_t floor)
 {
 	return Holo_PlaceModel(act->extra, act->propMins, act->propMaxs, (float)act->value, floor, &act->brk, -1);
