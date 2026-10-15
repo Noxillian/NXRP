@@ -1,5 +1,6 @@
 #include "server/nxrp/nxrp_main.h"
 #include "server/nxrp/nxrp_utils.h"
+#include "sys/sys_loadlib.h"
 // <cstdio> not required in this TU; va() is provided by the engine headers included elsewhere
 
 // Ensure the print helper is visible in this translation unit
@@ -14,6 +15,10 @@ static int nxrp_lastScore[MAX_CLIENTS];
 static int nxrp_lastKills[MAX_CLIENTS];
 // Round start tracking - set when round begins (svs.time), reset on intermission
 static int nxrp_roundStartTime = 0;
+// Pointer into the game VM for MBII's gSiegeRoundBegun flag (if available)
+static qboolean* nxrp_gSiegeRoundBegun = NULL;
+// Local cached state to detect transition
+static qboolean nxrp_roundBegunFlag = qfalse;
 
 void SV_NXRP_ScoreInit(void) {
 	for (int i = 0; i < MAX_CLIENTS; i++) {
@@ -25,11 +30,11 @@ void SV_NXRP_ScoreInit(void) {
 void SV_NXRP_ScoreFrame(void) {
 
 	if (!svs.clients) return;
-	NXRP_PrintConsoleToPlayer(NULL, va("ScoreFrame"));
 	// If intermission is active, reset round start state so we trigger again
 	if (sv.configstrings[CS_INTERMISSION] && atoi(sv.configstrings[CS_INTERMISSION]) == 1) {
 		NXRP_PrintConsoleToPlayer(NULL, va("Round Restart"));
 		nxrp_roundStartTime = 0;
+		nxrp_roundBegunFlag = qfalse;
 
 	} else {
 		// Not intermission: if we haven't signaled round start yet, trigger once when
@@ -53,6 +58,15 @@ void SV_NXRP_ScoreFrame(void) {
 					}
 					break;
 				}
+			}
+		}
+		// If the game VM exposes a siege-round-begun flag, detect its rising
+		// edge and signal NXRP_OnRoundStart once per round.
+		if (nxrp_gSiegeRoundBegun) {
+			const qboolean begun = (*nxrp_gSiegeRoundBegun) ? qtrue : qfalse;
+			if (begun && !nxrp_roundBegunFlag) {
+				nxrp_roundBegunFlag = qtrue;
+				NXRP_OnRoundStart();
 			}
 		}
 	}
@@ -157,10 +171,25 @@ void NXRP_OnNPCSpawned(const char *npcName) {
 
 void NXRP_OnMapStart(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Map started");
+	// Attempt to resolve MBII's gSiegeRoundBegun global in the game VM so
+	// we can detect the exact round-begin transition when available.
+	void* dll = GVM_GetDllHandle();
+	if (dll) {
+		nxrp_gSiegeRoundBegun = (qboolean*)Sys_LoadFunction(dll, "gSiegeRoundBegun");
+	} else {
+		nxrp_gSiegeRoundBegun = NULL;
+	}
+	nxrp_roundBegunFlag = qfalse;
 }
 
 void NXRP_OnRoundEnd(int winningTeam) {
 	NXRP_PrintConsoleToPlayer(NULL, va("Round ended, winning team %d", winningTeam));
+}
+
+void NXRP_OnRoundStart(void) {
+	NXRP_PrintConsoleToPlayer(NULL, "Round started");
+	// Announce in chat as well
+	SV_SendServerCommand(NULL, "chat \"^3[NXRP]^7 Round started\"\n");
 }
 
 void NXRP_OnRoundRestart(void) {
