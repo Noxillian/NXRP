@@ -158,41 +158,43 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 			case NXRP_SUB_TP:
 				return NXRP_cmdAdmin_tp(cl, chatCursor);
 
-		case NXRP_SUB_MMOVE:
-			return NXRP_cmdAdmin_mmove(cl, chatCursor);
+			case NXRP_SUB_MMOVE:
+				return NXRP_cmdAdmin_mmove(cl, chatCursor);
 
 			case NXRP_SUB_SPAWN:
 				return NXRP_cmdAdmin_spawn(cl, chatCursor);
+
 			case NXRP_SUB_MODEL:
 				return NXRP_cmdAdmin_mspawn(cl, chatCursor);
 
-		case NXRP_SUB_MREMOVE:
-			return NXRP_cmdAdmin_mremove(cl, chatCursor);
-
-		case NXRP_SUB_PMODEL:
-			return NXRP_cmdAdmin_pmodel(cl, chatCursor);
 			case NXRP_SUB_MREMOVE:
 				return NXRP_cmdAdmin_mremove(cl, chatCursor);
+
 			case NXRP_SUB_PMODEL:
 				return NXRP_cmdAdmin_pmodel(cl, chatCursor);
+
 			case NXRP_SUB_VEHICLE:
 				return NXRP_cmdAdmin_vehicle(cl, chatCursor);
+
 			case NXRP_SUB_POS:
 				return NXRP_cmd_pos(cl, chatCursor);
+
 			case NXRP_SUB_INFO:
 				return NXRP_cmd_info( cl, chatCursor );
-			case NXRP_SUB_TEST:
-					return NXRP_cmdAdmin_test(cl, chatCursor);
 
-				case NXRP_SUB_UNKNOWN: // allow hooking specific literal "test2" subcommand
-				{
-					// If the parsed subcmd was unknown, inspect raw subcmd text for test2.
-					char firstTok[MAX_TOKEN_CHARS] = {0};
-					if (sscanf(chatCursor, "%31s", firstTok) == 1) {
-						if (!Q_stricmp(firstTok, "test2")) return NXRP_cmdAdmin_test2(cl, chatCursor);
-					}
-					break;
+			case NXRP_SUB_TEST:
+				return NXRP_cmdAdmin_test(cl, chatCursor);
+
+			case NXRP_SUB_UNKNOWN: // allow hooking specific literal "test2" subcommand
+			{
+				// If the parsed subcmd was unknown, inspect raw subcmd text for test2.
+				char firstTok[MAX_TOKEN_CHARS] = {0};
+				if (sscanf(chatCursor, "%31s", firstTok) == 1) {
+					if (!Q_stricmp(firstTok, "test2")) return NXRP_cmdAdmin_test2(cl, chatCursor);
 				}
+				break;
+			}
+
 			case NXRP_SUB_ACCOUNT:
 				return NXRP_cmd_account( cl, chatCursor );
 			case NXRP_SUB_GIVEALL:
