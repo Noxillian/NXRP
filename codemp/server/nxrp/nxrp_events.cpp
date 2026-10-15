@@ -20,6 +20,11 @@ static int nxrp_roundStartTime = 0;
 static qboolean* nxrp_gSiegeRoundBegun = NULL;
 // Local cached state to detect transition
 static qboolean nxrp_roundBegunFlag = qfalse;
+// MBII per-round timer pointers (optional)
+static int* nxrp_rebelCountdown = NULL;
+static int* nxrp_imperialCountdown = NULL;
+static int nxrp_prevRebelCountdown = 0;
+static int nxrp_prevImperialCountdown = 0;
 
 void SV_NXRP_ScoreInit(void) {
 	for (int i = 0; i < MAX_CLIENTS; i++) {
@@ -36,6 +41,8 @@ void SV_NXRP_ScoreFrame(void) {
 		NXRP_PrintConsoleToPlayer(NULL, va("Round Restart"));
 		nxrp_roundStartTime = 0;
 		nxrp_roundBegunFlag = qfalse;
+		nxrp_prevRebelCountdown = 0;
+		nxrp_prevImperialCountdown = 0;
 
 	} else {
 		// Not intermission: if we haven't signaled round start yet, trigger once when
@@ -49,6 +56,10 @@ void SV_NXRP_ScoreFrame(void) {
 					nxrp_roundStartTime = svs.time;
 					NXRP_OnMapStart();
 
+					// Also treat this as a round start: first active player seen -> round begins
+					NXRP_OnRoundStart();
+					nxrp_roundBegunFlag = qtrue;
+
 					// Initialize last-kill counters from current persistent values so
 					// we don't trigger spurrious change events at round start.
 					for (int j = 0; j < sv_maxclients->integer; j++) {
@@ -60,6 +71,18 @@ void SV_NXRP_ScoreFrame(void) {
 					break;
 				}
 			}
+		}
+		// Timer-based detection: check MBII's countdowns for a transition
+		if (!nxrp_roundBegunFlag && (nxrp_rebelCountdown || nxrp_imperialCountdown)) {
+			int r = nxrp_rebelCountdown ? *nxrp_rebelCountdown : 0;
+			int im = nxrp_imperialCountdown ? *nxrp_imperialCountdown : 0;
+			// detect transition from non-positive to positive countdown
+			if ((r > 0 && nxrp_prevRebelCountdown <= 0) || (im > 0 && nxrp_prevImperialCountdown <= 0)) {
+				nxrp_roundBegunFlag = qtrue;
+				NXRP_OnRoundStart();
+			}
+			nxrp_prevRebelCountdown = r;
+			nxrp_prevImperialCountdown = im;
 		}
 		// If the game VM exposes a siege-round-begun flag, detect its rising
 		// edge and signal NXRP_OnRoundStart once per round.
@@ -177,10 +200,14 @@ void NXRP_OnMapStart(void) {
 	void* dll = GVM_GetDllHandle();
 	if (dll) {
 		nxrp_gSiegeRoundBegun = (qboolean*)Sys_LoadFunction(dll, "gSiegeRoundBegun");
+		nxrp_rebelCountdown = (int*)Sys_LoadFunction(dll, "gRebelCountdown");
+		nxrp_imperialCountdown = (int*)Sys_LoadFunction(dll, "gImperialCountdown");
 	} else {
 		nxrp_gSiegeRoundBegun = NULL;
 	}
 	nxrp_roundBegunFlag = qfalse;
+	nxrp_prevRebelCountdown = 0;
+	nxrp_prevImperialCountdown = 0;
 }
 
 void NXRP_OnRoundEnd(int winningTeam) {
