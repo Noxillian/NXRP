@@ -23,11 +23,14 @@ void SV_NXRP_ScoreInit(void) {
 }
 
 void SV_NXRP_ScoreFrame(void) {
-	if (!svs.clients) return;
 
+	if (!svs.clients) return;
+	NXRP_PrintConsoleToPlayer(NULL, va("ScoreFrame"));
 	// If intermission is active, reset round start state so we trigger again
 	if (sv.configstrings[CS_INTERMISSION] && atoi(sv.configstrings[CS_INTERMISSION]) == 1) {
+		NXRP_PrintConsoleToPlayer(NULL, va("Round Restart"));
 		nxrp_roundStartTime = 0;
+
 	} else {
 		// Not intermission: if we haven't signaled round start yet, trigger once when
 		// we observe the first active player. This mirrors other server systems that
@@ -38,7 +41,7 @@ void SV_NXRP_ScoreFrame(void) {
 				client_t* cl = &svs.clients[i];
 				if (cl->state == CS_ACTIVE && cl->gentity) {
 					nxrp_roundStartTime = svs.time;
-					NXRP_OnRoundStart();
+					NXRP_OnMapStart();
 
 					// Initialize last-kill counters from current persistent values so
 					// we don't trigger spurrious change events at round start.
@@ -90,7 +93,8 @@ void NXRP_OnPlayerConnect(int clientNum, qboolean firstTime, qboolean isBot) {
 // Called when a player's persistent kill counter changes (tracked by SV_NXRP_ScoreFrame)
 void NXRP_OnKillsChanged(client_t *cl, int oldKills, int newKills) {
 	const char *name = cl ? (cl->nxrp_username[0] ? cl->nxrp_username : cl->name) : "Unknown";
-	Com_Printf("Kill archived: %s %d -> %d\n", name, oldKills, newKills);
+	NXRP_PrintConsoleToPlayer(NULL, va("Kill archived: %s %d -> %d\n", name));
+	//Com_Printf("Kill archived: %s %d -> %d\n", name, oldKills, newKills);
 }
 
 void NXRP_OnPlayerUserinfoChanged(int clientNum) {
@@ -151,8 +155,8 @@ void NXRP_OnNPCSpawned(const char *npcName) {
 	NXRP_PrintConsoleToPlayer(NULL, va("NPC spawned: %s", npcName ? npcName : "<unknown>"));
 }
 
-void NXRP_OnRoundStart(void) {
-	NXRP_PrintConsoleToPlayer(NULL, "Round started");
+void NXRP_OnMapStart(void) {
+	NXRP_PrintConsoleToPlayer(NULL, "Map started");
 }
 
 void NXRP_OnRoundEnd(int winningTeam) {
