@@ -110,22 +110,29 @@ void NXRP_FFA_Init(void) {
 	// Attempt to resolve MBII's respawn timers structure (ctfcqRespawnTimers)
 	gRespawnTimers = (nxrpRespawnTimers_t*)Sys_LoadFunction(dll, "ctfcqRespawnTimers");
 
-	// Capture original timers if available
-	gHaveOriginalTimers = qfalse;
-	gTimersOverridden = qfalse;
-	if (gRespawnTimers) {
-		gOriginalTimers = *gRespawnTimers;
-		gHaveOriginalTimers = qtrue;
-		// Sanity-check the struct values (seconds in 1..119)
-		const int* t = (const int*)&gOriginalTimers;
-		for (int i = 0; i < 4; i++) {
-			if (t[i] < 1 || t[i] > 119) {
-				// Looks wrong; disable timer override
-				gRespawnTimers = NULL;
-				gHaveOriginalTimers = qfalse;
-				break;
+	// Capture original timers if available. Only capture once per game load
+	// to avoid recording our own overrides as the "original" values when
+	// NXRP_FFA_Init is called multiple times across rounds. social.cpp uses
+	// a per-game-load guard; replicate that behavior here.
+	static qboolean gInitCaptured = qfalse;
+	if (!gInitCaptured) {
+		gHaveOriginalTimers = qfalse;
+		gTimersOverridden = qfalse;
+		if (gRespawnTimers) {
+			gOriginalTimers = *gRespawnTimers;
+			gHaveOriginalTimers = qtrue;
+			// Sanity-check the struct values (seconds in 1..119)
+			const int* t = (const int*)&gOriginalTimers;
+			for (int i = 0; i < 4; i++) {
+				if (t[i] < 1 || t[i] > 119) {
+					// Looks wrong; disable timer override
+					gRespawnTimers = NULL;
+					gHaveOriginalTimers = qfalse;
+					break;
+				}
 			}
 		}
+		gInitCaptured = qtrue;
 	}
 
 	// If FFA should be enabled by default like social mode, enable it now
