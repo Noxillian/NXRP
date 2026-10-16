@@ -22,6 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //Anything above this #include will be ignored by the compiler
 
 #include "server.h"
+#include "server/nxrp/nxrp_main.h"
 #include "botlib/botlib.h"
 #include "qcommon/stringed_ingame.h"
 #include "qcommon/RoffSystem.h"
@@ -2907,6 +2908,11 @@ void SV_InitGame( qboolean restart ) {
 
 	// Same reason: G_InitGame recomputes MBII's respawn-mode flag every round.
 	SV_SocialGameInit();
+
+	// Ensure NXRP FFA helpers are reinitialized alongside social mode so
+	// respawn-anytime stays active across G_InitGame (map load / restart).
+	NXRP_FFA_Init();
+	NXRP_FFA_Frame();
 
 	// restart == qtrue is a routine round-to-round restart (SV_RestartGame,
 	// via MBII's own "map_restart 0"), not a fresh map load

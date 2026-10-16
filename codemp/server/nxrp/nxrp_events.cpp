@@ -230,7 +230,8 @@ void NXRP_OnRoundStart(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Round started");
 	// Announce in chat as well
 	SV_SendServerCommand(NULL, "chat \"^3[NXRP]^7 Round started\"\n");
-	// Ensure FFA timers/mode are (re)applied at round start
+	// Re-resolve and reapply FFA hooks at round start (matches social.cpp behavior)
+	NXRP_FFA_Init();
 	NXRP_FFA_Frame();
 }
 
@@ -241,6 +242,10 @@ void NXRP_OnRoundRestart(void) {
 	nxrp_roundStartTime = 0;
 	nxrp_prevRebelCountdown = 0;
 	nxrp_prevImperialCountdown = 0;
+
+	// Ensure FFA helpers reinitialize on round restart
+	NXRP_FFA_Init();
+	NXRP_FFA_Frame();
 }
 
 void NXRP_OnMatchStart(void) {
