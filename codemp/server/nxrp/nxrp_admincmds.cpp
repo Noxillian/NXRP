@@ -395,8 +395,31 @@ qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 
 		char userinfo[MAX_INFO_STRING];
 		SV_GetUserinfo(cl - svs.clients, userinfo, sizeof(userinfo));
-		Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
-		Info_SetValueForKey(userinfo, "color1", "red");
+			// boss gives saber style same as giveall can (default single)
+			char styleTok[32] = {0};
+			const char* style = "single";
+			// allow optional argument for style
+			if (chatCursor && sscanf(chatCursor, "%31s", styleTok) == 1) {
+				if (!Q_stricmp(styleTok, "dual")) style = "dual";
+				else if (!Q_stricmp(styleTok, "staff")) style = "staff";
+			}
+			if (!Q_stricmp(style, "dual")) {
+				Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
+				Info_SetValueForKey(userinfo, "saber2", DEFAULT_SABER);
+				Info_SetValueForKey(userinfo, "color1", "red");
+				Info_SetValueForKey(userinfo, "saber2_color", "red");
+				Info_SetValueForKey(userinfo, "saber_type", "dual");
+			} else if (!Q_stricmp(style, "staff")) {
+				Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER_STAFF);
+				Info_SetValueForKey(userinfo, "saber2", "none");
+				Info_SetValueForKey(userinfo, "color1", "red");
+				Info_SetValueForKey(userinfo, "saber_type", "staff");
+			} else {
+				Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
+				Info_SetValueForKey(userinfo, "saber2", "none");
+				Info_SetValueForKey(userinfo, "color1", "red");
+				Info_SetValueForKey(userinfo, "saber_type", "single");
+			}
 		// Set player model to Tavion
 		Info_SetValueForKey(userinfo, "model", "tavion");
 		Info_SetValueForKey(userinfo, "pmodel", "tavion");
@@ -929,7 +952,14 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		GVM_RunFrame(sv.time);
 	}
 
-	NXRP_PrintConsoleToPlayer(cl, "You have been given a Lightsaber");
+	// Allow optional argument to choose saber style: single (default), dual, staff
+	char styleTok[32] = {0};
+	const char* style = "single";
+	if (chatCursor && sscanf(chatCursor, "%31s", styleTok) == 1) {
+		if (!Q_stricmp(styleTok, "dual")) style = "dual";
+		else if (!Q_stricmp(styleTok, "staff")) style = "staff";
+	}
+	NXRP_PrintConsoleToPlayer(cl, va("You have been given a Lightsaber (%s)", style));
 
 	if (cl && cl->gentity && cl->gentity->playerState) {
 		playerState_t* ps = cl->gentity->playerState;
@@ -989,8 +1019,23 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 
 		char userinfo[MAX_INFO_STRING];
 		SV_GetUserinfo(cl - svs.clients, userinfo, sizeof(userinfo));
-		Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
-		Info_SetValueForKey(userinfo, "color1", "red");
+			if (!Q_stricmp(style, "dual")) {
+				Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
+				Info_SetValueForKey(userinfo, "saber2", DEFAULT_SABER);
+				Info_SetValueForKey(userinfo, "color1", "red");
+				Info_SetValueForKey(userinfo, "saber2_color", "red");
+				Info_SetValueForKey(userinfo, "saber_type", "dual");
+			} else if (!Q_stricmp(style, "staff")) {
+				Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER_STAFF);
+				Info_SetValueForKey(userinfo, "saber2", "none");
+				Info_SetValueForKey(userinfo, "color1", "red");
+				Info_SetValueForKey(userinfo, "saber_type", "staff");
+			} else {
+				Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
+				Info_SetValueForKey(userinfo, "saber2", "none");
+				Info_SetValueForKey(userinfo, "color1", "red");
+				Info_SetValueForKey(userinfo, "saber_type", "single");
+			}
 		SV_SetUserinfo(cl - svs.clients, userinfo);
 		GVM_ClientUserinfoChanged(cl - svs.clients);
 
