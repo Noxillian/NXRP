@@ -76,10 +76,7 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	return NXRP_SUB_UNKNOWN;
 }
 
-// Initialize FFA helpers (resolve MBII symbols if present)
-void NXRP_FFA_Init(void) {
-	// noop here; nxrp_ffa.cpp implements actual init when loaded
-}
+// Initialize FFA helpers (implemented in nxrp_ffa.cpp)
 
 // Spawn a misc model near a client using the game module's spawn helpers.
 // Returns the new entity number, or -1 on failure.
