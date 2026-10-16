@@ -74,7 +74,7 @@ int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath)
 // Load saved entries for the current map and spawn them. Returns how many were spawned.
 int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_spawns" : std::string("nxrp_spawns");
+	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
 	const char* map = Cvar_VariableString("mapname");
 	if (!map || !map[0]) map = "nomap";
 	std::string filename = dir + "/" + std::string(map) + ".json";
@@ -140,7 +140,7 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 // per-map file excluding the requested index. Returns true on success.
 bool NXRP_RemoveSavedSpawnByIndex(int index) {
 	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_spawns" : std::string("nxrp_spawns");
+	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
 	const char* map = Cvar_VariableString("mapname");
 	if (!map || !map[0]) map = "nomap";
 	std::string filename = dir + "/" + std::string(map) + ".json";
@@ -344,6 +344,8 @@ int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMa
 	if (!e) return -1;
 
 	vec3_t org = { floor[0], floor[1], floor[2] - propMins[2] };
+	// Snap spawn origin to whole units so spawned props align to integer coordinates
+	org[0] = roundf(org[0]); org[1] = roundf(org[1]); org[2] = roundf(org[2]);
 	e->s.eType = ET_GENERAL;
 	e->s.modelindex = model;
 	VectorCopy(org, e->s.pos.trBase);

@@ -22,6 +22,153 @@ qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
+// Admin-only: move the last spawned prop to specified x y z (world coordinates)
+// Usage: !nx prop m <x> <y> <z>
+qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor ) {
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	if (!chatCursor || !*chatCursor) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx prop m <x> <y> <z>");
+		return qtrue;
+	}
+
+	float x=0,y=0,z=0;
+	int cnt = sscanf(chatCursor, "%f %f %f", &x, &y, &z);
+	if (cnt != 3) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx prop m <x> <y> <z>");
+		return qtrue;
+	}
+
+	int last = NXRP_GetLastSpawn();
+	if (last < 0) { NXRP_PrintConsoleToPlayer(cl, "No last spawned model to move"); return qtrue; }
+	if (last < 0 || last >= sv.num_entities) { NXRP_PrintConsoleToPlayer(cl, "Invalid last spawned model id"); return qtrue; }
+
+	sharedEntity_t* e = SV_GentityNum(last);
+	if (!e) { NXRP_PrintConsoleToPlayer(cl, "Last spawned entity not found"); return qtrue; }
+
+	// Remove saved entry that corresponds to 'last' if present (find by ent field) so we can re-save at new location
+	// Load file and find matching line by ent
+	const char* home = Cvar_VariableString("fs_homepath");
+	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
+	const char* map = Cvar_VariableString("mapname");
+	if (!map || !map[0]) map = "nomap";
+	std::string filename = dir + "/" + std::string(map) + ".json";
+
+	// Read lines
+	std::ifstream ifs(filename);
+	std::vector<std::string> lines;
+	if (ifs.is_open()) {
+		std::string line;
+		while (std::getline(ifs, line)) { if (!line.empty()) lines.push_back(line); }
+		ifs.close();
+	}
+
+	bool removed = false;
+	std::string removedLine;
+	for (size_t i = 0; i < lines.size(); ++i) {
+		const std::string &l = lines[i];
+		size_t pos = l.find("\"ent\"");
+		if (pos != std::string::npos) {
+			size_t colon = l.find(':', pos);
+			if (colon != std::string::npos) {
+				size_t valStart = colon + 1;
+				while (valStart < l.size() && isspace((unsigned char)l[valStart])) ++valStart;
+				size_t valEnd = valStart;
+				if (valEnd < l.size() && (l[valEnd] == '-' || isdigit((unsigned char)l[valEnd]))) ++valEnd;
+				while (valEnd < l.size() && isdigit((unsigned char)l[valEnd])) ++valEnd;
+				if (valEnd > valStart) {
+					int entVal = -1;
+					try { entVal = std::stoi(l.substr(valStart, valEnd - valStart)); } catch(...) { entVal = -1; }
+					if (entVal == last) {
+						// remove this line and keep a copy for respawn
+						removedLine = l;
+						lines.erase(lines.begin() + i);
+						removed = true;
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	// rewrite file
+	if (!removed) {
+		// nothing to remove; proceed to move and save new location anyway
+	} else {
+		FILE* f = fopen(filename.c_str(), "w");
+		if (f) {
+			for (const auto &ll : lines) { fputs(ll.c_str(), f); fputc('\n', f); }
+			fclose(f);
+		}
+	}
+
+	// Free the old entity and spawn a new one at the requested coordinates
+	void* dll = GVM_GetDllHandle();
+	if (!dll) { NXRP_PrintConsoleToPlayer(cl, "Game VM not available"); return qtrue; }
+	void (*G_FreeEntity_f)(void*) = (void (*)(void*))Sys_LoadFunction(dll, "G_FreeEntity");
+	if (G_FreeEntity_f) {
+		void* old = GVM_BeginNative();
+		G_FreeEntity_f(e);
+		GVM_EndNative(old);
+	}
+
+	// spawn new at x y z using the model path parsed from the removed line
+	if (!removed || removedLine.empty()) {
+		NXRP_PrintConsoleToPlayer(cl, "Could not find saved model entry for the last spawn; aborting move.");
+		return qtrue;
+	}
+
+	// parse model path and angles from removedLine
+	std::string modelPathStr;
+	float savedAx=0.0f, savedAy=0.0f, savedAz=0.0f;
+	const char* s = removedLine.c_str();
+	const char* modelKey = "\"model\"";
+	const char* anglesKey = "\"angles\"";
+	const char* m = strstr(s, modelKey);
+	if (m) {
+		m = strchr(m, ':'); if (m) m++;
+		while (m && *m && isspace((unsigned char)*m)) m++;
+		if (m && *m == '"') {
+			m++;
+			const char* me = strchr(m, '"');
+			if (me) modelPathStr.assign(m, me - m);
+		}
+	}
+	const char* a = strstr(s, anglesKey);
+	if (a) {
+		a = strchr(a, '[');
+		if (a) {
+			a++;
+			sscanf(a, "%f %*[, ] %f %*[, ] %f", &savedAx, &savedAy, &savedAz);
+		}
+	}
+
+	if (modelPathStr.empty()) {
+		NXRP_PrintConsoleToPlayer(cl, "Saved entry missing model path; aborting move.");
+		return qtrue;
+	}
+
+	vec3_t newFloor = { x, y, z };
+	// snap to integers like spawn/save behavior
+	newFloor[0] = roundf(newFloor[0]); newFloor[1] = roundf(newFloor[1]); newFloor[2] = roundf(newFloor[2]);
+
+	vec3_t mins = { -24.0f, -24.0f, -8.0f };
+	vec3_t maxs = {  24.0f,  24.0f, 24.0f };
+	float yaw = savedAy; // preserve saved yaw
+
+	int newEnt = NXRP_PlaceModel(modelPathStr.c_str(), mins, maxs, yaw, newFloor);
+	if (newEnt >= 0) {
+		NXRP_RegisterSpawn(newEnt);
+		NXRP_SaveSpawnToMap(newEnt, modelPathStr.c_str());
+		NXRP_PrintConsoleToPlayer(cl, va("Moved model and respawned as entity %d", newEnt));
+	} else {
+		NXRP_PrintConsoleToPlayer(cl, "Failed to respawn model at new location");
+	}
+
+	return qtrue;
+}
+
 // Admin-only: load saved prop spawns for the current map: !nx prop load
 qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
