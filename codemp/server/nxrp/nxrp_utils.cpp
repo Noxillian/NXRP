@@ -119,6 +119,21 @@ int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMa
 	}
 	GVM_EndNative(old);
 	if (!e) return -1;
+	// If the model index couldn't be resolved, free the spawned entity and fail
+	if (model <= 0) {
+		// attempt to free the entity to avoid leaving a gizmo/default model
+		void* dll2 = GVM_GetDllHandle();
+		if (dll2) {
+			void* gFreeEntity_f = Sys_LoadFunction(dll2, "G_FreeEntity");
+			void (*gFreeEntity)(void*) = (void (*)(void*))gFreeEntity_f;
+			if (gFreeEntity) {
+				void* old2 = GVM_BeginNative();
+				gFreeEntity((void*)e);
+				GVM_EndNative(old2);
+			}
+		}
+		return -1;
+	}
 
 	vec3_t org = { floor[0], floor[1], floor[2] - propMins[2] };
 	// Snap spawn origin to whole units so spawned props align to integer coordinates
