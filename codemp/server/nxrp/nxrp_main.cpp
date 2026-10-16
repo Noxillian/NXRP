@@ -293,6 +293,10 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 	case NXRP_SUB_ACCOUNT:
 		return NXRP_cmd_account( cl, dispatchCursor );
 	case NXRP_SUB_GIVEALL:
+		// Disallow legacy "!nx giveall"; require direct "!giveall".
+		if ( viaNx ) {
+			return qtrue;
+		}
 		return NXRP_cmdAdmin_giveall( cl, dispatchCursor );
 	case NXRP_SUB_NOCLIP:
 		return NXRP_cmdAdmin_noclip( cl, dispatchCursor );
