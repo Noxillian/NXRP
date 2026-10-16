@@ -162,8 +162,27 @@ qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor ) {
 		NXRP_PrintConsoleToPlayer(cl, "Saved entry missing model path; aborting move.");
 		return qtrue;
 	}
-	// Debug: show parsed values
+	// Trim whitespace from modelPathStr
+	{
+		size_t a = modelPathStr.find_first_not_of(" \t\r\n");
+		size_t b = modelPathStr.find_last_not_of(" \t\r\n");
+		if (a == std::string::npos) modelPathStr.clear(); else modelPathStr = modelPathStr.substr(a, b - a + 1);
+	}
+	// Debug: show parsed values and the raw removed line
 	NXRP_PrintConsoleToPlayer(cl, va("Moving model '%s' to (%.0f %.0f %.0f) with saved yaw %.1f", modelPathStr.c_str(), x, y, z, savedAy));
+	NXRP_PrintConsoleToPlayer(cl, va("Saved line: %s", removedLine.c_str()));
+
+	// Quick check: query the game VM for the model index to ensure the model exists
+	void* dll_check = GVM_GetDllHandle();
+	if (dll_check) {
+		int (*gModelIndex_f)(const char*) = (int (*)(const char*))Sys_LoadFunction(dll_check, "G_ModelIndex");
+		if (gModelIndex_f) {
+			void* old = GVM_BeginNative();
+			int idx = gModelIndex_f(modelPathStr.c_str());
+			GVM_EndNative(old);
+			NXRP_PrintConsoleToPlayer(cl, va("G_ModelIndex('%s') = %d", modelPathStr.c_str(), idx));
+		}
+	}
 
 	if (modelPathStr.empty()) {
 		NXRP_PrintConsoleToPlayer(cl, "Saved entry missing model path; aborting move.");
