@@ -157,7 +157,46 @@ bool NXRP_RemoveSavedSpawnByIndex(int index) {
 
 	if (index < 0 || index >= (int)lines.size()) return false;
 
-	// Remove the selected entry and rewrite file
+	// Attempt to free the runtime entity for the removed entry if available.
+	std::string targetLine = lines[index];
+	int entToFree = -1;
+	size_t entPos = targetLine.find("\"ent\"");
+	if (entPos != std::string::npos) {
+		size_t colon = targetLine.find(':', entPos);
+		if (colon != std::string::npos) {
+			size_t valStart = colon + 1;
+			while (valStart < targetLine.size() && isspace((unsigned char)targetLine[valStart])) valStart++;
+			size_t valEnd = valStart;
+			if (valEnd < targetLine.size() && targetLine[valEnd] == '-') valEnd++;
+			while (valEnd < targetLine.size() && isdigit((unsigned char)targetLine[valEnd])) valEnd++;
+			if (valEnd > valStart) {
+				try {
+					entToFree = std::stoi(targetLine.substr(valStart, valEnd - valStart));
+				} catch (...) {
+					entToFree = -1;
+				}
+			}
+		}
+	}
+
+	if (entToFree >= 0 && entToFree < sv.num_entities) {
+		sharedEntity_t* e = SV_GentityNum(entToFree);
+		if (e) {
+			void* dll = GVM_GetDllHandle();
+			if (dll) {
+				void* gFreeEntity_f = Sys_LoadFunction(dll, "G_FreeEntity");
+				void (*gFreeEntity)(void*) = (void (*)(void*))gFreeEntity_f;
+				if (gFreeEntity) {
+					void* old = GVM_BeginNative();
+					gFreeEntity((void*)e);
+					GVM_EndNative(old);
+					NXRP_RegisterSpawn(-1);
+				}
+			}
+		}
+	}
+
+	// Remove the selected entry and rewrite file without touching stored index fields.
 	lines.erase(lines.begin() + index);
 	FILE* f = fopen(filename.c_str(), "w");
 	if (!f) return false;
@@ -191,14 +230,29 @@ void NXRP_SaveSpawnToMap(int entnum, const char* modelPath) {
 	if (!map || !map[0]) map = "nomap";
 	std::string filename = dir + "/" + std::string(map) + ".json";
 
+	// Determine the index this entry will have by counting existing non-empty lines.
+	int nextIndex = 0;
+	{
+		std::ifstream existing(filename);
+		if (existing.is_open()) {
+			std::string l;
+			while (std::getline(existing, l)) {
+				if (!l.empty()) nextIndex++;
+			}
+			existing.close();
+		}
+	}
+
 	// Append the entry to the map file. For simplicity, store as a JSON array where
 	// we append entries separated by newlines; tooling reading this can accept an
 	// array-like newline-separated file or simplistic parser used here later.
 	FILE* f = fopen(filename.c_str(), "a");
 	if (!f) return;
 
-	snprintf(buf, sizeof(buf), "{ \"ent\": %d, \"model\": \"%s\", \"origin\": [%.1f, %.1f, %.1f], \"angles\": [%.1f, %.1f, %.1f] }\n",
-		entnum, modelPath,
+	// Save both the entity number and an explicit id field for orientation/reference.
+	// Keep the older "ent" field for compatibility but also write "id" and "index".
+	snprintf(buf, sizeof(buf), "{ \"ent\": %d, \"id\": %d, \"index\": %d, \"model\": \"%s\", \"origin\": [%.1f, %.1f, %.1f], \"angles\": [%.1f, %.1f, %.1f] }\n",
+		entnum, entnum, nextIndex, modelPath,
 		e->s.pos.trBase[0], e->s.pos.trBase[1], e->s.pos.trBase[2],
 		e->s.apos.trBase[0], e->s.apos.trBase[1], e->s.apos.trBase[2]);
 	fputs(buf, f);
@@ -224,7 +278,16 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 	while (std::getline(ifs, line)) {
 		if (line.empty()) continue;
 		// Print with an explicit index prefix so admins can reference entries by number.
-		NXRP_PrintConsoleToPlayer(cl, va("%d: %s", idx, line.c_str()));
+		// Some lines may be long; print in multiple console lines for readability.
+		char buf[1024];
+		snprintf(buf, sizeof(buf), "%d:", idx);
+		NXRP_PrintConsoleToPlayer(cl, buf);
+		// Break the saved JSON line into chunks of 200 chars to avoid console truncation.
+		const size_t chunk = 200;
+		for (size_t off = 0; off < line.size(); off += chunk) {
+			std::string part = line.substr(off, std::min(chunk, line.size() - off));
+			NXRP_PrintConsoleToPlayer(cl, part.c_str());
+		}
 		idx++;
 	}
 	ifs.close();
