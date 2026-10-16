@@ -25,41 +25,6 @@ static qboolean gHaveOriginalTimers = qfalse;
 static qboolean gTimersOverridden = qfalse;
 static qboolean gRespawnForced = qfalse;
 
-void NXRP_FFA_Init(void) {
-	// Attempt to resolve MBII's bNewRespawnMode symbol if available
-	void* dll = GVM_GetDllHandle();
-	if (dll) {
-		gBNewRespawnMode = (qboolean*)Sys_LoadFunction(dll, "bNewRespawnMode");
-		// Attempt to resolve MBII's respawn timers structure (ctfcqRespawnTimers)
-		gRespawnTimers = (nxrpRespawnTimers_t*)Sys_LoadFunction(dll, "ctfcqRespawnTimers");
-		// Capture original timers if available
-		gHaveOriginalTimers = qfalse;
-		gTimersOverridden = qfalse;
-		if (gRespawnTimers) {
-			gOriginalTimers = *gRespawnTimers;
-			gHaveOriginalTimers = qtrue;
-			// Sanity-check the struct values (seconds in 1..119)
-			const int* t = (const int*)&gOriginalTimers;
-			for (int i = 0; i < 4; i++) {
-				if (t[i] < 1 || t[i] > 119) {
-					// Looks wrong; disable timer override
-					gRespawnTimers = NULL;
-					gHaveOriginalTimers = qfalse;
-					break;
-			}
-		}
-
-		// If FFA should be enabled by default like social mode, enable it now
-		// and apply the timers/mode immediately.
-		gFFA_Enabled = qtrue;
-		NXRP_FFA_ApplyTimers();
-		NXRP_FFA_ForceRespawnMode();
-	}
-			}
-		}
-	}
-}
-
 static void NXRP_FFA_ApplyTimers(void)
 {
 	if (!gRespawnTimers) return;
@@ -134,4 +99,38 @@ void NXRP_FFA_SetEnabled(qboolean enable) {
 		*gBNewRespawnMode = gRespawnWasNew;
 		Cvar_Set("RespawnMode", gRespawnWasMode);
 	}
+}
+
+void NXRP_FFA_Init(void) {
+	// Attempt to resolve MBII's bNewRespawnMode symbol if available
+	void* dll = GVM_GetDllHandle();
+	if (!dll) return;
+
+	gBNewRespawnMode = (qboolean*)Sys_LoadFunction(dll, "bNewRespawnMode");
+	// Attempt to resolve MBII's respawn timers structure (ctfcqRespawnTimers)
+	gRespawnTimers = (nxrpRespawnTimers_t*)Sys_LoadFunction(dll, "ctfcqRespawnTimers");
+
+	// Capture original timers if available
+	gHaveOriginalTimers = qfalse;
+	gTimersOverridden = qfalse;
+	if (gRespawnTimers) {
+		gOriginalTimers = *gRespawnTimers;
+		gHaveOriginalTimers = qtrue;
+		// Sanity-check the struct values (seconds in 1..119)
+		const int* t = (const int*)&gOriginalTimers;
+		for (int i = 0; i < 4; i++) {
+			if (t[i] < 1 || t[i] > 119) {
+				// Looks wrong; disable timer override
+				gRespawnTimers = NULL;
+				gHaveOriginalTimers = qfalse;
+				break;
+			}
+		}
+	}
+
+	// If FFA should be enabled by default like social mode, enable it now
+	// and apply the timers/mode immediately.
+	gFFA_Enabled = qtrue;
+	NXRP_FFA_ApplyTimers();
+	NXRP_FFA_ForceRespawnMode();
 }

@@ -51,8 +51,7 @@ enum NXRP_SubCmd {
 	NXRP_SUB_MREMOVE,
 	NXRP_SUB_STRIP,
 	NXRP_SUB_PMODEL,
-
-	, NXRP_SUB_LIST
+	NXRP_SUB_LIST
 };
 
 static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
@@ -211,8 +210,6 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 				return NXRP_cmd_register( cl, chatCursor );
 			case NXRP_SUB_LOGIN:
 				return NXRP_cmd_login( cl, chatCursor );
-			case NXRP_SUB_GIVEALL:
-				return NXRP_cmdAdmin_boss( cl, chatCursor );
 
 			default:
 				break;
