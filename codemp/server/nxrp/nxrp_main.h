@@ -72,6 +72,10 @@ void NXRP_OnRoundRestart(void);
 void NXRP_OnMatchStart(void);
 void NXRP_OnMatchEnd(void);
 
+// Round index helper (1-based within the current map). Returns 0 before
+// the first round has started.
+int NXRP_GetRoundNumber(void);
+
 // Server-side NXRP helpers
 void SV_NXRP_ScoreInit(void);
 void SV_NXRP_ScoreFrame(void);

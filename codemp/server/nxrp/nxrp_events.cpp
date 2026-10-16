@@ -16,6 +16,8 @@ static int nxrp_lastScore[MAX_CLIENTS];
 static int nxrp_lastKills[MAX_CLIENTS];
 // Round start tracking - set when round begins (svs.time), reset on intermission
 static int nxrp_roundStartTime = 0;
+// 1-based round counter for the current map; 0 before first round
+static int nxrp_roundNumber = 0;
 // Pointer into the game VM for MBII's gSiegeRoundBegun flag (if available)
 static qboolean* nxrp_gSiegeRoundBegun = NULL;
 // Local cached state to detect transition
@@ -46,6 +48,8 @@ void SV_NXRP_ScoreFrame(void) {
 		nxrp_roundBegunFlag = qfalse;
 		nxrp_prevRebelCountdown = 0;
 		nxrp_prevImperialCountdown = 0;
+	// Reset per-map round number
+	nxrp_roundNumber = 0;
 
 	} else {
 		// Not intermission: if we haven't signaled round start yet, trigger once when
@@ -230,7 +234,8 @@ void NXRP_OnRoundStart(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Round started");
 	// Announce in chat as well
 	SV_SendServerCommand(NULL, "chat \"^3[NXRP]^7 Round started\"\n");
-	// Re-resolve and reapply FFA hooks at round start (matches social.cpp behavior)
+	// Increment round counter and re-resolve/reapply FFA hooks at round start
+	nxrp_roundNumber++;
 	NXRP_FFA_Init();
 	NXRP_FFA_Frame();
 }
@@ -255,6 +260,11 @@ void NXRP_OnMatchStart(void) {
 void NXRP_OnMatchEnd(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Match end");
 }
+
+int NXRP_GetRoundNumber(void) {
+	return nxrp_roundNumber;
+}
+
 
 // Called when an NPC is killed by a player. Work in Progress
 void NXRP_OnNPCKilled(client_t *killer, const char *npcName) {
