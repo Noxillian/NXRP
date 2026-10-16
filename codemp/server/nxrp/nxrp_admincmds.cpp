@@ -515,7 +515,7 @@ qboolean NXRP_cmdAdmin_ffa( client_t *cl, const char *chatCursor ) {
 		NXRP_FFA_SetEnabled(qfalse);
 		NXRP_PrintConsoleToPlayer(cl, "FFA respawn disabled");
 	} else if (!Q_stricmp(arg, "toggle")) {
-		NXRP_FFA_SetEnabled(!NXRP_FFA_IsEnabled());
+		NXRP_FFA_SetEnabled(NXRP_FFA_IsEnabled() ? qfalse : qtrue);
 		NXRP_PrintConsoleToPlayer(cl, va("FFA respawn is now %s", NXRP_FFA_IsEnabled() ? "ENABLED" : "DISABLED"));
 	} else if (!Q_stricmp(arg, "status")) {
 		NXRP_PrintConsoleToPlayer(cl, va("FFA respawn is %s", NXRP_FFA_IsEnabled() ? "ENABLED" : "DISABLED"));
