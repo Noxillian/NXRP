@@ -3,6 +3,7 @@
 #include <fstream>
 #include <cctype>
 #include <vector>
+#include <algorithm>
 #include <sys/stat.h>
 #include <cstdio>
 #include <string>
@@ -130,7 +131,7 @@ bool NXRP_RemoveSavedSpawnByIndex(int index) {
 	lines.erase(lines.begin() + index);
 	FILE* f = fopen(filename.c_str(), "w");
 	if (!f) return false;
-	for (const auto &l : lines) {
+	for (const auto& l : lines) {
 		fputs(l.c_str(), f);
 		fputc('\n', f);
 	}
