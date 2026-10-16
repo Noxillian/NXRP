@@ -107,14 +107,22 @@ qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor ) {
 	}
 
 	// Free the old entity and spawn a new one at the requested coordinates
+	NXRP_PrintConsoleToPlayer(cl, va("Freeing old entity %d before respawn", last));
 	void* dll = GVM_GetDllHandle();
 	if (!dll) { NXRP_PrintConsoleToPlayer(cl, "Game VM not available"); return qtrue; }
 	void (*G_FreeEntity_f)(void*) = (void (*)(void*))Sys_LoadFunction(dll, "G_FreeEntity");
-	if (G_FreeEntity_f) {
+	if (!G_FreeEntity_f) {
+		NXRP_PrintConsoleToPlayer(cl, "G_FreeEntity not available; aborting move");
+		return qtrue;
+	}
+	{
 		void* old = GVM_BeginNative();
 		G_FreeEntity_f(e);
 		GVM_EndNative(old);
 	}
+	// mark that last spawn is gone
+	NXRP_RegisterSpawn(-1);
+	NXRP_PrintConsoleToPlayer(cl, "Old entity freed");
 
 	// spawn new at x y z using the model path parsed from the removed line
 	if (!removed || removedLine.empty()) {
@@ -134,8 +142,9 @@ qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor ) {
 		while (m && *m && isspace((unsigned char)*m)) m++;
 		if (m && *m == '"') {
 			m++;
+			// find closing quote - handle simple escaped quotes by searching for '"' directly
 			const char* me = strchr(m, '"');
-			if (me) modelPathStr.assign(m, me - m);
+			if (me && me > m) modelPathStr.assign(m, me - m);
 		}
 	}
 	const char* a = strstr(s, anglesKey);
@@ -143,9 +152,18 @@ qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor ) {
 		a = strchr(a, '[');
 		if (a) {
 			a++;
+			// sscanf may encounter commas or spaces; accept both
 			sscanf(a, "%f %*[, ] %f %*[, ] %f", &savedAx, &savedAy, &savedAz);
 		}
 	}
+
+	// Basic validation and debug output
+	if (modelPathStr.empty()) {
+		NXRP_PrintConsoleToPlayer(cl, "Saved entry missing model path; aborting move.");
+		return qtrue;
+	}
+	// Debug: show parsed values
+	NXRP_PrintConsoleToPlayer(cl, va("Moving model '%s' to (%.0f %.0f %.0f) with saved yaw %.1f", modelPathStr.c_str(), x, y, z, savedAy));
 
 	if (modelPathStr.empty()) {
 		NXRP_PrintConsoleToPlayer(cl, "Saved entry missing model path; aborting move.");
