@@ -18,23 +18,8 @@
 #include <algorithm>
 #include "qcommon/md5.h"
 
-// Version variable for NXRP. Update as needed.
-const char *NXRP_VERSION = "0.2.0";
-
-// Parse username and password from chatCursor. Accept either
-// "user pass" or "subcmd user pass" (when full chatCursor is passed).
-static bool parse_user_pass(const char *chatCursor, std::string &outUser, std::string &outPass) {
-	if (!chatCursor) return false;
-	std::istringstream iss(chatCursor);
-	std::vector<std::string> toks;
-	std::string w;
-	while (iss >> w) toks.push_back(w);
-	if (toks.size() == 2) {
-		outUser = toks[0]; outPass = toks[1]; return true;
-	}
-
 static std::string hex_encode(const unsigned char *data, size_t len) {
-	static const char* hex = "daV86tempVar7";
+	static const char* hex = "0123456789abcdef";
 	std::string out; out.reserve(len*2);
 	for (size_t i = 0; i < len; ++i) {
 		unsigned char b = data[i];
@@ -61,6 +46,21 @@ static bool hex_decode(const std::string &hex, std::vector<unsigned char> &out) 
 	}
 	return true;
 }
+
+// Version variable for NXRP. Update as needed.
+const char *NXRP_VERSION = "0.2.0";
+
+// Parse username and password from chatCursor. Accept either
+// "user pass" or "subcmd user pass" (when full chatCursor is passed).
+static bool parse_user_pass(const char *chatCursor, std::string &outUser, std::string &outPass) {
+	if (!chatCursor) return false;
+	std::istringstream iss(chatCursor);
+	std::vector<std::string> toks;
+	std::string w;
+	while (iss >> w) toks.push_back(w);
+	if (toks.size() == 2) {
+		outUser = toks[0]; outPass = toks[1]; return true;
+	}
 	if (toks.size() >= 3) {
 		// could be: "register user pass" or "login user pass"
 		outUser = toks[1]; outPass = toks[2]; return true;

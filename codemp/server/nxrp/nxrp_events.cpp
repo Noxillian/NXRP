@@ -212,6 +212,11 @@ void NXRP_OnMapStart(void) {
 
 void NXRP_OnRoundEnd(int winningTeam) {
 	NXRP_PrintConsoleToPlayer(NULL, va("Round ended, winning team %d", winningTeam));
+	// Reset round-detection state so subsequent rounds fire correctly
+	nxrp_roundBegunFlag = qfalse;
+	nxrp_roundStartTime = 0;
+	nxrp_prevRebelCountdown = 0;
+	nxrp_prevImperialCountdown = 0;
 }
 
 void NXRP_OnRoundStart(void) {
@@ -222,6 +227,11 @@ void NXRP_OnRoundStart(void) {
 
 void NXRP_OnRoundRestart(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Round restart");
+	// Reset round-detection state so the next round start is detected
+	nxrp_roundBegunFlag = qfalse;
+	nxrp_roundStartTime = 0;
+	nxrp_prevRebelCountdown = 0;
+	nxrp_prevImperialCountdown = 0;
 }
 
 void NXRP_OnMatchStart(void) {
