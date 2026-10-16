@@ -43,6 +43,7 @@ enum NXRP_SubCmd {
 	NXRP_SUB_TEST,
 	NXRP_SUB_ACCOUNT,
 	NXRP_SUB_GIVEALL,
+	NXRP_SUB_BOSS,
 	NXRP_SUB_NOCLIP,
 	NXRP_SUB_REGISTER,
 	NXRP_SUB_LOGIN,
@@ -69,6 +70,7 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "mmove" ) )		return NXRP_SUB_MMOVE;
 	if ( !Q_stricmp( s, "strip" ) )		return NXRP_SUB_STRIP;
 	if ( !Q_stricmp( s, "pmodel" ) )		return NXRP_SUB_PMODEL;
+	if ( !Q_stricmp( s, "boss" ) )		return NXRP_SUB_BOSS;
 	if ( !Q_stricmp( s, "vehicle" ) )	return NXRP_SUB_VEHICLE;
 	if ( !Q_stricmp( s, "list" ) )	return NXRP_SUB_LIST;
 	return NXRP_SUB_UNKNOWN;
@@ -171,6 +173,9 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 
 			case NXRP_SUB_PMODEL:
 				return NXRP_cmdAdmin_pmodel(cl, chatCursor);
+
+	case NXRP_SUB_BOSS:
+		return NXRP_cmdAdmin_boss(cl, chatCursor);
 
 		case NXRP_SUB_LIST:
 			return NXRP_cmdAdmin_list(cl, chatCursor);
