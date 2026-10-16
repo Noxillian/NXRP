@@ -2554,12 +2554,18 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 				}
 				else
 				{
-					AddScore( attacker, self->r.currentOrigin, -1 );
+					if (attacker == self)
+					{
+						AddScore( attacker, self->r.currentOrigin, -1 );
+					}
 				}
 			}
 			else
 			{
-				AddScore( attacker, self->r.currentOrigin, -1 );
+				if (attacker == self)
+				{
+					AddScore( attacker, self->r.currentOrigin, -1 );
+				}
 			}
 			if (level.gametype == GT_JEDIMASTER)
 			{
