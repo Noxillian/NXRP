@@ -30,6 +30,16 @@ qboolean NXRP_MoveLastSpawnByVec(client_t* cl, float dx, float dy, float dz);
 // NXRP_PlaceModel using the client's origin as the floor reference.
 int NXRP_SpawnPropAtClient(client_t* cl, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, float yaw);
 
+// Persist and list NXRP-spawned models per-map in the homepath directory.
+// Save a spawned entity's model path and location to the map's JSON file.
+void NXRP_SaveSpawnToMap(int entnum, const char* modelPath);
+// Send a player a list of saved spawns for the current map.
+void NXRP_ListSavedSpawns(client_t* cl);
+// Remove a saved spawn entry by its index in the per-map file. Returns true on success.
+bool NXRP_RemoveSavedSpawnByIndex(int index);
+// Load and spawn all saved entries for the current map. Returns number spawned.
+int NXRP_LoadSavedSpawnsForMap(client_t* cl);
+
 // Print a standardized NXRP console message to a specific player. If cl is
 // NULL the message will be broadcast to all clients by passing NULL to
 // SV_SendServerCommand.

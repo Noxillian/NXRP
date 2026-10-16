@@ -22,6 +22,41 @@ qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
+// Admin-only: load saved prop spawns for the current map: !nx prop load
+qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	int count = NXRP_LoadSavedSpawnsForMap(cl);
+	NXRP_PrintConsoleToPlayer(cl, va("Loaded %d saved spawns for this map", count));
+	return qtrue;
+}
+
+// Admin-only: remove a saved spawn by index. Usage: !nx prop r <index>
+qboolean NXRP_cmdAdmin_prop_r( client_t *cl, const char *chatCursor ) {
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	int idx = -1;
+	if (!chatCursor || sscanf(chatCursor, "%*s %d", &idx) < 1) {
+		// Try plain number
+		if (!chatCursor || sscanf(chatCursor, "%d", &idx) < 1) {
+			NXRP_PrintConsoleToPlayer(cl, "Usage: !nx prop r <index>");
+			return qtrue;
+		}
+	}
+
+	if (idx < 0) { NXRP_PrintConsoleToPlayer(cl, "Invalid index"); return qtrue; }
+
+	if (NXRP_RemoveSavedSpawnByIndex(idx)) {
+		NXRP_PrintConsoleToPlayer(cl, va("Removed saved spawn %d", idx));
+	} else {
+		NXRP_PrintConsoleToPlayer(cl, va("Failed to remove saved spawn %d", idx));
+	}
+	return qtrue;
+}
+
 // Admin-only: promote the invoking player to a 'boss' kit (copy of giveall)
 qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
@@ -363,12 +398,13 @@ qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor ) {
 }
 
 // Admin-only: spawn model at client with provided path
-qboolean NXRP_cmdAdmin_mspawn( client_t *cl, const char *chatCursor ) {
+// New command: !nx prop s <model_path> [angle]
+qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 	// chatCursor may be: "model <path> [angle]" or "<path> [angle]"
 	if (!chatCursor) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx mspawn <model_path> [angle]");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx prop s <model_path> [angle]");
 		return qtrue;
 	}
 
@@ -388,7 +424,7 @@ qboolean NXRP_cmdAdmin_mspawn( client_t *cl, const char *chatCursor ) {
 	}
 
 	if (!p || !*p) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx mspawn <model_path> [angle]");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx prop s <model_path> [angle]");
 		return qtrue;
 	}
 
@@ -397,7 +433,7 @@ qboolean NXRP_cmdAdmin_mspawn( client_t *cl, const char *chatCursor ) {
 	float angle = 0.0f;
 	int scanned = sscanf(p, "%511s %f", path, &angle);
 	if (scanned < 1) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx mspawn <model_path> [angle]");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx prop s <model_path> [angle]");
 		return qtrue;
 	}
 
@@ -415,6 +451,8 @@ qboolean NXRP_cmdAdmin_mspawn( client_t *cl, const char *chatCursor ) {
 	if (ent >= 0) {
 		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", path, ent));
 		NXRP_RegisterSpawn(ent);
+		// Persist the spawn to the per-map JSON so admins can later list/manage them.
+		NXRP_SaveSpawnToMap(ent, path);
 	} else {
 		NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model.");
 	}
@@ -447,7 +485,7 @@ qboolean NXRP_cmdAdmin_mmove( client_t *cl, const char *chatCursor ) {
 
 // Admin-only: pmodel is currently the same as model
 qboolean NXRP_cmdAdmin_pmodel( client_t *cl, const char *chatCursor ) {
-	return NXRP_cmdAdmin_mspawn(cl, chatCursor);
+	return NXRP_cmdAdmin_prop_s(cl, chatCursor);
 }
 
 // Admin-only: remove the last NXRP-spawned model
@@ -490,6 +528,17 @@ qboolean NXRP_cmdAdmin_mremove( client_t *cl, const char *chatCursor ) {
 
 	NXRP_RegisterSpawn(-1);
 	NXRP_PrintConsoleToPlayer(cl, va("Removed last spawned model entity %d", last));
+	return qtrue;
+}
+
+// Admin-only: list NXRP-saved spawns for the current map
+qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	NXRP_PrintConsoleToPlayer(cl, "Saved spawns for this map:");
+	NXRP_ListSavedSpawns(cl);
 	return qtrue;
 }
 

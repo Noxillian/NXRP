@@ -66,7 +66,7 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "register" ) )	return NXRP_SUB_REGISTER;
 	if ( !Q_stricmp( s, "login" ) )		return NXRP_SUB_LOGIN;
 	if ( !Q_stricmp( s, "pos" ) )		return NXRP_SUB_POS;
-	if ( !Q_stricmp( s, "mspawn" ) )		return NXRP_SUB_MODEL;
+	if ( !Q_stricmp( s, "prop" ) )		return NXRP_SUB_MODEL;
 	if ( !Q_stricmp( s, "mmove" ) )		return NXRP_SUB_MMOVE;
 	if ( !Q_stricmp( s, "strip" ) )		return NXRP_SUB_STRIP;
 	if ( !Q_stricmp( s, "pmodel" ) )		return NXRP_SUB_PMODEL;
@@ -153,6 +153,40 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 		if ( sscanf( chatCursor, "%31s %31s", subcmd, arg ) >= 1 ) {
 			NXRP_SubCmd sc = NXRP_ParseSubcmd( subcmd );
 
+				// Special handling for prop subcommands: support syntax
+				//   !nx prop s <modelpath>
+				//   !nx prop r <index>
+				if (!Q_stricmp(subcmd, "prop")) {
+					// Extract the second token to determine action
+					char action[MAX_TOKEN_CHARS] = {0};
+					char rest[MAX_TOKEN_CHARS] = {0};
+					if (sscanf(chatCursor, "%31s %31s %511[^"]", action, arg, rest) >= 2) {
+						if (!Q_stricmp(arg, "s") || !Q_stricmp(action, "s")) {
+							// pass the remainder after the 's' token to the spawn handler
+							const char* after = chatCursor;
+							// find the first occurrence of 's' token and skip it
+							const char* p = strstr(after, "s");
+							if (p) {
+								// skip 's' and any following whitespace
+								p++;
+								while (*p == ' ' || *p == '\t') p++;
+								return NXRP_cmdAdmin_prop_s(cl, p);
+							}
+						} else if (!Q_stricmp(arg, "r") || !Q_stricmp(action, "r")) {
+							// find 'r' token and skip it
+							const char* after = chatCursor;
+							const char* p = strstr(after, "r");
+							if (p) {
+								p++;
+								while (*p == ' ' || *p == '\t') p++;
+								return NXRP_cmdAdmin_prop_r(cl, p);
+							}
+						} else if (!Q_stricmp(arg, "load") || !Q_stricmp(action, "load")) {
+							return NXRP_cmdAdmin_prop_load(cl, chatCursor);
+						}
+					}
+				}
+
 
 
 			switch ( sc ) {
@@ -166,7 +200,8 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 				return NXRP_cmdAdmin_spawn(cl, chatCursor);
 
 			case NXRP_SUB_MODEL:
-				return NXRP_cmdAdmin_mspawn(cl, chatCursor);
+				// Keep MODEL routing on prop_s.
+				return NXRP_cmdAdmin_prop_s(cl, chatCursor);
 
 			case NXRP_SUB_MREMOVE:
 				return NXRP_cmdAdmin_mremove(cl, chatCursor);

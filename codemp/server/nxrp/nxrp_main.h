@@ -32,6 +32,12 @@ qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_pos( client_t *cl, const char *chatCursor );
 // Admin-only: spawn a model with a provided path (command: !nx mspawn)
 qboolean NXRP_cmdAdmin_mspawn( client_t *cl, const char *chatCursor );
+// New prop-style spawn command (wrapper for backward compatibility)
+qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor );
+// Remove a saved prop spawn by index
+qboolean NXRP_cmdAdmin_prop_r( client_t *cl, const char *chatCursor );
+// Load saved prop spawns for the current map
+qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor );
 // Admin-only: remove the last spawned model (!nx mremove)
 qboolean NXRP_cmdAdmin_mremove( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_mmove( client_t *cl, const char *chatCursor );
@@ -53,6 +59,8 @@ qboolean NXRP_cmdAdmin_ffa( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_strip( client_t *cl, const char *chatCursor );
 // Admin-only: list entities or other map info (usage: !nx list e)
 qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor );
+// NXRP-specific listing of saved map spawns
+void NXRP_ListSavedSpawnsForPlayer(client_t* cl);
 
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );
