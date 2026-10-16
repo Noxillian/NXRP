@@ -201,14 +201,34 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 	int idx = 0;
 	while (std::getline(ifs, line)) {
 		if (line.empty()) continue;
-		char buf[1024];
-		snprintf(buf, sizeof(buf), "%d:", idx);
-		NXRP_PrintConsoleToPlayer(cl, buf);
-		const size_t chunk = 200;
-		for (size_t off = 0; off < line.size(); off += chunk) {
-			std::string part = line.substr(off, std::min(chunk, line.size() - off));
-			NXRP_PrintConsoleToPlayer(cl, part.c_str());
+		// Parse model path and origin from the saved JSON-like line
+		const char* s = line.c_str();
+		std::string modelPath;
+		float ox=0, oy=0, oz=0;
+		const char* modelKey = "\"model\"";
+		const char* originKey = "\"origin\"";
+		const char* m = strstr(s, modelKey);
+		if (m) {
+			m = strchr(m, ':'); if (m) m++;
+			while (m && *m && isspace((unsigned char)*m)) m++;
+			if (m && *m == '"') {
+				m++;
+				const char* me = strchr(m, '"');
+				if (me && me > m) modelPath.assign(m, me - m);
+			}
 		}
+		const char* o = strstr(s, originKey);
+		if (o) {
+			o = strchr(o, '[');
+			if (o) {
+				o++;
+				sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz);
+			}
+		}
+
+		char buf[1024];
+		snprintf(buf, sizeof(buf), "%d.\t%s\t%.0f, %.0f, %.0f", idx, modelPath.c_str(), ox, oy, oz);
+		NXRP_PrintConsoleToPlayer(cl, buf);
 		idx++;
 	}
 	ifs.close();
