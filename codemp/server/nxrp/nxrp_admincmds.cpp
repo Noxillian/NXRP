@@ -74,6 +74,39 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
 	const char* o = strstr(s, originKey);
 	if (o) { o = strchr(o, '['); if (o) { o++; sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz); } }
 
+	// Attempt to free any runtime entity referenced in this saved entry to avoid duplicates
+	int entToFree = -1;
+	size_t entPos = target.find("\"ent\"");
+	if (entPos != std::string::npos) {
+		size_t colon = target.find(':', entPos);
+		if (colon != std::string::npos) {
+			size_t valStart = colon + 1;
+			while (valStart < target.size() && isspace((unsigned char)target[valStart])) ++valStart;
+			size_t valEnd = valStart;
+			if (valEnd < target.size() && (target[valEnd] == '-' || isdigit((unsigned char)target[valEnd]))) ++valEnd;
+			while (valEnd < target.size() && isdigit((unsigned char)target[valEnd])) ++valEnd;
+			if (valEnd > valStart) {
+				try { entToFree = std::stoi(target.substr(valStart, valEnd - valStart)); } catch(...) { entToFree = -1; }
+			}
+		}
+	}
+	if (entToFree >= 0 && entToFree < sv.num_entities) {
+		sharedEntity_t* oldEnt = SV_GentityNum(entToFree);
+		if (oldEnt) {
+			void* dll = GVM_GetDllHandle();
+			if (dll) {
+				void (*G_FreeEntity_f)(void*) = (void (*)(void*))Sys_LoadFunction(dll, "G_FreeEntity");
+				if (G_FreeEntity_f) {
+					void* old = GVM_BeginNative();
+					G_FreeEntity_f(oldEnt);
+					GVM_EndNative(old);
+					NXRP_RegisterSpawn(-1);
+					NXRP_PrintConsoleToPlayer(cl, va("Freed old saved runtime entity %d", entToFree));
+				}
+			}
+		}
+	}
+
 	if (modelPath.empty()) { NXRP_PrintConsoleToPlayer(cl, "Saved entry missing model path"); return qtrue; }
 
 	// compute delta vector based on direction
