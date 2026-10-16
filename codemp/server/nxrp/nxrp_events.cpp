@@ -138,8 +138,36 @@ void NXRP_OnPlayerConnect(int clientNum, qboolean firstTime, qboolean isBot) {
 // Called when a player's persistent kill counter changes (tracked by SV_NXRP_ScoreFrame)
 void NXRP_OnKillsChanged(client_t *cl, int oldKills, int newKills) {
 	const char *name = cl ? (cl->nxrp_username[0] ? cl->nxrp_username : cl->name) : "Unknown";
-	NXRP_PrintConsoleToPlayer(NULL, va("Kill archived: %s %d -> %d\n", name));
+	NXRP_PrintConsoleToPlayer(NULL, va("Kill archived: %s %d -> %d\n", name, oldKills, newKills));
 	//Com_Printf("Kill archived: %s %d -> %d\n", name, oldKills, newKills);
+
+	// Detect teamkills from the victim-side kill change and restore attacker score.
+	if (!cl || !cl->gentity || !cl->gentity->playerState) return;
+	int attackerNum = cl->gentity->playerState->persistant[PERS_ATTACKER];
+	if (attackerNum < 0 || attackerNum >= sv_maxclients->integer) return;
+
+	client_t *attacker = &svs.clients[attackerNum];
+	if (!attacker || !attacker->gentity || !attacker->gentity->playerState) return;
+
+	int victimTeam = cl->gentity->playerState->persistant[PERS_TEAM];
+	int attackerTeam = attacker->gentity->playerState->persistant[PERS_TEAM];
+	if (victimTeam != attackerTeam) return;
+
+	void *dll = GVM_GetDllHandle();
+	if (!dll) return;
+
+	typedef void (*AddScoreFn)(void *ent, float *origin, int score);
+	AddScoreFn addscore = (AddScoreFn)Sys_LoadFunction(dll, "AddScore");
+	if (!addscore) return;
+
+	float org[3];
+	org[0] = attacker->gentity->r.currentOrigin[0];
+	org[1] = attacker->gentity->r.currentOrigin[1];
+	org[2] = attacker->gentity->r.currentOrigin[2];
+
+	void *old = GVM_BeginNative();
+	addscore(attacker->gentity, org, 1);
+	GVM_EndNative(old);
 }
 
 void NXRP_OnPlayerUserinfoChanged(int clientNum) {
