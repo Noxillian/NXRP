@@ -67,43 +67,21 @@ qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor ) {
 		ifs.close();
 	}
 
+	// Instead of matching by runtime ent id, use the last saved entry in the file.
 	bool removed = false;
 	std::string removedLine;
-	for (size_t i = 0; i < lines.size(); ++i) {
-		const std::string &l = lines[i];
-		size_t pos = l.find("\"ent\"");
-		if (pos != std::string::npos) {
-			size_t colon = l.find(':', pos);
-			if (colon != std::string::npos) {
-				size_t valStart = colon + 1;
-				while (valStart < l.size() && isspace((unsigned char)l[valStart])) ++valStart;
-				size_t valEnd = valStart;
-				if (valEnd < l.size() && (l[valEnd] == '-' || isdigit((unsigned char)l[valEnd]))) ++valEnd;
-				while (valEnd < l.size() && isdigit((unsigned char)l[valEnd])) ++valEnd;
-				if (valEnd > valStart) {
-					int entVal = -1;
-					try { entVal = std::stoi(l.substr(valStart, valEnd - valStart)); } catch(...) { entVal = -1; }
-					if (entVal == last) {
-						// remove this line and keep a copy for respawn
-						removedLine = l;
-						lines.erase(lines.begin() + i);
-						removed = true;
-						break;
-					}
-				}
-			}
-		}
-	}
-
-	// rewrite file
-	if (!removed) {
-		// nothing to remove; proceed to move and save new location anyway
-	} else {
+	if (!lines.empty()) {
+		removedLine = lines.back();
+		lines.pop_back();
+		removed = true;
+		// rewrite file immediately with remaining entries
 		FILE* f = fopen(filename.c_str(), "w");
 		if (f) {
 			for (const auto &ll : lines) { fputs(ll.c_str(), f); fputc('\n', f); }
 			fclose(f);
 		}
+	} else {
+		// nothing to remove; proceed to move and save new location anyway
 	}
 
 	// Free the old entity and spawn a new one at the requested coordinates
