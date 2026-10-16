@@ -46,7 +46,15 @@ void NXRP_FFA_Init(void) {
 					gRespawnTimers = NULL;
 					gHaveOriginalTimers = qfalse;
 					break;
-				}
+			}
+		}
+
+		// If FFA should be enabled by default like social mode, enable it now
+		// and apply the timers/mode immediately.
+		gFFA_Enabled = qtrue;
+		NXRP_FFA_ApplyTimers();
+		NXRP_FFA_ForceRespawnMode();
+	}
 			}
 		}
 	}
