@@ -59,6 +59,17 @@ int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath)
 		org[1] += fwd[1] * forwardDist;
 		org[2] += zOffset;
 	}
+	// finalize spawn at client using NXRP_PlaceModel
+	vec3_t mins = { -24.0f, -24.0f, -8.0f };
+	vec3_t maxs = {  24.0f,  24.0f, 24.0f };
+	float yaw = 0.0f;
+	if (cl && cl->gentity) yaw = cl->gentity->s.angles[YAW];
+	int entnum = NXRP_PlaceModel(modelPath, mins, maxs, yaw, org);
+	if (entnum >= 0) {
+		NXRP_RegisterSpawn(entnum);
+	}
+	return entnum;
+}
 
 // Load saved entries for the current map and spawn them. Returns how many were spawned.
 int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
@@ -218,96 +229,6 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 	}
 	ifs.close();
 	if (idx == 0) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
-}
-
-	// Round up coordinates so the spawn location snaps to whole units
-	org[0] = ceilf(org[0]);
-	org[1] = ceilf(org[1]);
-	org[2] = ceilf(org[2]);
-
-	// Set entity type and model.
-	e->s.eType = ET_GENERAL;
-	e->s.modelindex = model;
-
-	// Initialize default bounds first.
-	// These remain in use if the game module has no bounds helper.
-	VectorSet(e->r.mins, -16.0f, -16.0f, -8.0f);
-	VectorSet(e->r.maxs,  16.0f,  16.0f, 16.0f);
-
-	// Ask the game module to calculate model-specific bounds.
-	void (*G_SetModelBoundsForEntity_f)(sharedEntity_t*) =
-		(void (*)(sharedEntity_t*))
-		Sys_LoadFunction(dll, "G_SetModelBoundsForEntity");
-
-	if (G_SetModelBoundsForEntity_f)
-	{
-		old = GVM_BeginNative();
-		G_SetModelBoundsForEntity_f(e);
-		GVM_EndNative(old);
-
-		// Ensure collision bounds are reasonable: add a small padding and enforce a minimum extent
-		vec3_t size;
-		VectorSubtract(e->r.maxs, e->r.mins, size);
-		float maxDim = fabsf(size[0]);
-		if (fabsf(size[1]) > maxDim) maxDim = fabsf(size[1]);
-		if (fabsf(size[2]) > maxDim) maxDim = fabsf(size[2]);
-
-		const float minExtent = 24.0f; // minimum half-extent to avoid tiny collision boxes
-		const float padding = 8.0f;    // extra padding around model bounds
-
-		if (maxDim < minExtent) {
-			VectorSet(e->r.mins, -minExtent - padding, -minExtent - padding, -minExtent - padding);
-			VectorSet(e->r.maxs,  minExtent + padding,  minExtent + padding,  minExtent + padding);
-		} else {
-			vec3_t padNeg = { -padding, -padding, -padding };
-			vec3_t padPos = {  padding,  padding,  padding };
-			VectorAdd(e->r.mins, padNeg, e->r.mins);
-			VectorAdd(e->r.maxs, padPos, e->r.maxs);
-		}
-
-		// Recompute absolute bounds relative to the entity origin
-		VectorAdd(e->s.pos.trBase, e->r.mins, e->r.absmin);
-		VectorAdd(e->s.pos.trBase, e->r.maxs, e->r.absmax);
-	}
-
-	// Set position and angles.
-	VectorCopy(org, e->s.pos.trBase);
-	VectorCopy(org, e->s.origin);
-	VectorCopy(org, e->r.currentOrigin);
-
-	e->s.pos.trType = TR_STATIONARY;
-
-	// Set the entity yaw so the model looks toward the player when possible.
-	float entYaw = 0.0f;
-	if (cl->gentity) {
-		vec3_t toPlayer;
-		VectorSubtract(cl->gentity->r.currentOrigin, org, toPlayer);
-		entYaw = atan2f(toPlayer[1], toPlayer[0]) * (180.0f / (float)M_PI);
-	} else {
-		entYaw = 0.0f;
-	}
-
-	VectorSet(
-		e->s.apos.trBase,
-		0.0f,
-		entYaw,
-		0.0f
-	);
-
-	VectorCopy(e->s.apos.trBase, e->s.angles);
-	VectorCopy(e->s.apos.trBase, e->r.currentAngles);
-
-	e->s.apos.trType = TR_STATIONARY;
-
-	// Enable collision.
-	e->r.contents = CONTENTS_SOLID;
-	e->r.svFlags = 0;
-
-	// Link only after the bounds and position have been set.
-	SV_LinkEntity(e);
-
-	return e->s.number;
-
 }
 
 // Place a model with explicit prop bounds and yaw at a floor position.
