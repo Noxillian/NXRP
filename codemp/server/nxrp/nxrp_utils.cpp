@@ -164,7 +164,37 @@ int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMa
 
 	void* old = GVM_BeginNative();
 	sharedEntity_t* e = (sharedEntity_t*)gGSpawn();
-	const int model = e ? gModelIndex_f(name) : 0;
+	const int model0 = e ? gModelIndex_f(name) : 0;
+	int model = model0;
+	// If the model wasn't found, try common alternate path forms the user
+	// might provide (with or without the leading "models/" prefix or a
+	// leading slash). This preserves compatibility with older commands that
+	// accepted shorter names.
+	if (model == 0 && name && name[0]) {
+		// build a small buffer for alternates
+		char alt[MAX_QPATH];
+		// try without leading '/', if present
+		const char* s = name;
+		if (s[0] == '/') s++;
+		// if it already starts with "models/", try without that prefix
+		const char* prefix = "models/";
+		size_t prefixLen = strlen(prefix);
+		if (strncmp(s, prefix, prefixLen) == 0) {
+			// try s + prefixLen
+			Q_strncpyz(alt, s + prefixLen, sizeof(alt));
+			model = gModelIndex_f(alt);
+		}
+		// if still not found and it doesn't start with models/, try prefixing it
+		if (model == 0 && strncmp(s, prefix, prefixLen) != 0) {
+			Com_sprintf(alt, sizeof(alt), "models/%s", s);
+			model = gModelIndex_f(alt);
+		}
+		// lastly, try without any leading slash version in case caller used one
+		if (model == 0 && name[0] == '/') {
+			Q_strncpyz(alt, name + 1, sizeof(alt));
+			model = gModelIndex_f(alt);
+		}
+	}
 	GVM_EndNative(old);
 	if (!e) return -1;
 
