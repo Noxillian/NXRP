@@ -109,6 +109,13 @@ qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 		SV_UserinfoChanged(cl);
 		GVM_ClientUserinfoChanged(cl - svs.clients);
 
+		// Some clients do not immediately reflect a server-forced userinfo
+		// change until they process their next userinfo update. Force the
+		// client to refresh its userinfo by scheduling a delayed client
+		// command to re-send the userinfo string. This uses the existing
+		// delayed executor helper used across the server.
+		SV_ExecuteClientCommandDelayed_h(cl, std::string("userinfo \"" ) + cl->userinfo + std::string("\""), 1);
+
 			// Give the player an immediate force jump boost
 			SV_ExecuteClientCommandDelayed_h(cl, std::string("force jump 3"), 1);
 	}
