@@ -79,6 +79,8 @@ void SV_NXRP_ScoreFrame(void);
 void NXRP_FFA_Init(void);
 void NXRP_FFA_SetEnabled(qboolean enable);
 qboolean NXRP_FFA_IsEnabled(void);
+// Frame hook to reapply timers/mode each server frame while FFA is enabled
+void NXRP_FFA_Frame(void);
 // FFA helpers are optional; commented out while disabled
 //void NXRP_FFA_SetEnabled(qboolean enable);
 //qboolean NXRP_FFA_IsEnabled(void);

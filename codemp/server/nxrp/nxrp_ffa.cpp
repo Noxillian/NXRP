@@ -11,12 +11,91 @@ static qboolean gRespawnWasNew = qfalse;
 static char gRespawnWasMode[16];
 static qboolean* gBNewRespawnMode = NULL;
 
+// Mirror social.cpp's respawn timers override so FFA truly enables "anytime"
+struct nxrpRespawnTimers_t {
+	int oneLife;
+	int twoLife;
+	int threeLife;
+	int changePenalty;
+};
+
+static nxrpRespawnTimers_t* gRespawnTimers = NULL;
+static nxrpRespawnTimers_t gOriginalTimers;
+static qboolean gHaveOriginalTimers = qfalse;
+static qboolean gTimersOverridden = qfalse;
+static qboolean gRespawnForced = qfalse;
+
 void NXRP_FFA_Init(void) {
 	// Attempt to resolve MBII's bNewRespawnMode symbol if available
 	void* dll = GVM_GetDllHandle();
 	if (dll) {
 		gBNewRespawnMode = (qboolean*)Sys_LoadFunction(dll, "bNewRespawnMode");
+		// Attempt to resolve MBII's respawn timers structure (ctfcqRespawnTimers)
+		gRespawnTimers = (nxrpRespawnTimers_t*)Sys_LoadFunction(dll, "ctfcqRespawnTimers");
+		// Capture original timers if available
+		gHaveOriginalTimers = qfalse;
+		gTimersOverridden = qfalse;
+		if (gRespawnTimers) {
+			gOriginalTimers = *gRespawnTimers;
+			gHaveOriginalTimers = qtrue;
+			// Sanity-check the struct values (seconds in 1..119)
+			const int* t = (const int*)&gOriginalTimers;
+			for (int i = 0; i < 4; i++) {
+				if (t[i] < 1 || t[i] > 119) {
+					// Looks wrong; disable timer override
+					gRespawnTimers = NULL;
+					gHaveOriginalTimers = qfalse;
+					break;
+				}
+			}
+		}
 	}
+}
+
+static void NXRP_FFA_ApplyTimers(void)
+{
+	if (!gRespawnTimers) return;
+
+	if (gFFA_Enabled) {
+		int secs = 3; // match social's short respawn
+		if (secs < 1) secs = 1;
+		gRespawnTimers->oneLife = secs;
+		gRespawnTimers->twoLife = secs;
+		gRespawnTimers->threeLife = secs;
+		gRespawnTimers->changePenalty = secs;
+		gTimersOverridden = qtrue;
+	} else if (gTimersOverridden && gHaveOriginalTimers) {
+		*gRespawnTimers = gOriginalTimers;
+		gTimersOverridden = qfalse;
+	}
+}
+
+static void NXRP_FFA_ForceRespawnMode(void)
+{
+	if (!gBNewRespawnMode) return;
+	if (!gFFA_Enabled) {
+		if (gRespawnForced) {
+			*gBNewRespawnMode = gRespawnWasNew;
+			Cvar_Set("RespawnMode", gRespawnWasMode);
+			gRespawnForced = qfalse;
+		}
+		return;
+	}
+	if (!gRespawnForced) {
+		gRespawnWasNew = *gBNewRespawnMode;
+		Q_strncpyz(gRespawnWasMode, Cvar_VariableString("RespawnMode"), sizeof(gRespawnWasMode));
+		gRespawnForced = qtrue;
+	}
+	if (!*gBNewRespawnMode) *gBNewRespawnMode = qtrue;
+	if (Cvar_VariableIntegerValue("RespawnMode") != 1) Cvar_Set("RespawnMode", "1");
+}
+
+// Per-frame apply hook called from NXRP frame handler
+void NXRP_FFA_Frame(void)
+{
+	// Keep timers and respawn mode in-sync each frame like social.cpp
+	NXRP_FFA_ApplyTimers();
+	NXRP_FFA_ForceRespawnMode();
 }
 
 qboolean NXRP_FFA_IsEnabled(void) {

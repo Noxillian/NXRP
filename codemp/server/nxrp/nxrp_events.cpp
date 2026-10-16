@@ -31,6 +31,9 @@ void SV_NXRP_ScoreInit(void) {
 		nxrp_lastScore[i] = 0;
 		nxrp_lastKills[i] = 0;
 	}
+
+	// Per-frame NXRP hooks (keep FFA respawn mode & timers enforced)
+	NXRP_FFA_Frame();
 }
 
 void SV_NXRP_ScoreFrame(void) {
@@ -208,6 +211,10 @@ void NXRP_OnMapStart(void) {
 	nxrp_roundBegunFlag = qfalse;
 	nxrp_prevRebelCountdown = 0;
 	nxrp_prevImperialCountdown = 0;
+
+	// Initialize NXRP FFA hooks for this map and apply immediately
+	NXRP_FFA_Init();
+	NXRP_FFA_Frame();
 }
 
 void NXRP_OnRoundEnd(int winningTeam) {
@@ -223,6 +230,8 @@ void NXRP_OnRoundStart(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Round started");
 	// Announce in chat as well
 	SV_SendServerCommand(NULL, "chat \"^3[NXRP]^7 Round started\"\n");
+	// Ensure FFA timers/mode are (re)applied at round start
+	NXRP_FFA_Frame();
 }
 
 void NXRP_OnRoundRestart(void) {
