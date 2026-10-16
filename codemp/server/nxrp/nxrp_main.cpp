@@ -157,35 +157,55 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 				//   !nx prop s <modelpath>
 				//   !nx prop r <index>
 				if (!Q_stricmp(subcmd, "prop")) {
-					// Extract the second token to determine action
-					char action[MAX_TOKEN_CHARS] = {0};
-					char rest[MAX_TOKEN_CHARS] = {0};
-					if (sscanf(chatCursor, "%31s %31s %511[^"]", action, arg, rest) >= 2) {
-						if (!Q_stricmp(arg, "s") || !Q_stricmp(action, "s")) {
-							// pass the remainder after the 's' token to the spawn handler
-							const char* after = chatCursor;
-							// find the first occurrence of 's' token and skip it
-							const char* p = strstr(after, "s");
-							if (p) {
-								// skip 's' and any following whitespace
-								p++;
-								while (*p == ' ' || *p == '\t') p++;
-								return NXRP_cmdAdmin_prop_s(cl, p);
-							}
-						} else if (!Q_stricmp(arg, "r") || !Q_stricmp(action, "r")) {
-							// find 'r' token and skip it
-							const char* after = chatCursor;
-							const char* p = strstr(after, "r");
-							if (p) {
-								p++;
-								while (*p == ' ' || *p == '\t') p++;
-								return NXRP_cmdAdmin_prop_r(cl, p);
-							}
-						} else if (!Q_stricmp(arg, "load") || !Q_stricmp(action, "load")) {
-							return NXRP_cmdAdmin_prop_load(cl, chatCursor);
+					// Parse "prop" subcommands manually to avoid fragile sscanf patterns.
+					const char* p = chatCursor;
+					while (*p == ' ' || *p == '\t') {
+						++p;
+					}
+
+					char first[MAX_TOKEN_CHARS] = {0};
+					int firstLen = 0;
+					while (*p && *p != ' ' && *p != '\t') {
+						if (firstLen < (MAX_TOKEN_CHARS - 1)) {
+							first[firstLen++] = *p;
 						}
+						++p;
+					}
+					first[firstLen] = '\0';
+
+					while (*p == ' ' || *p == '\t') {
+						++p;
+					}
+
+					char action[MAX_TOKEN_CHARS] = {0};
+					if (!Q_stricmp(first, "prop")) {
+						int actionLen = 0;
+						while (*p && *p != ' ' && *p != '\t') {
+							if (actionLen < (MAX_TOKEN_CHARS - 1)) {
+								action[actionLen++] = *p;
+							}
+							++p;
+						}
+						action[actionLen] = '\0';
+					} else {
+						Q_strncpyz(action, first, sizeof(action));
+					}
+
+					while (*p == ' ' || *p == '\t') {
+						++p;
+					}
+
+					if (!Q_stricmp(action, "s")) {
+						return NXRP_cmdAdmin_prop_s(cl, p);
+					} else if (!Q_stricmp(action, "r")) {
+						return NXRP_cmdAdmin_prop_r(cl, p);
+					} else if (!Q_stricmp(action, "load")) {
+						return NXRP_cmdAdmin_prop_load(cl, chatCursor);
+					} else if (!Q_stricmp(action, "list")) {
+						return NXRP_cmdAdmin_prop_list(cl, chatCursor);
 					}
 				}
+
 
 
 

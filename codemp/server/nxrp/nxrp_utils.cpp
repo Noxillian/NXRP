@@ -6,8 +6,8 @@
 #include "sys/sys_loadlib.h"
 #include <cmath>
 #include <cstring>
-
-// (end of file)
+#include <vector>
+#include <sys/stat.h>
 // Returns the new entity number, or -1 on failure.
 int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath)
 {
@@ -307,6 +307,7 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 	SV_LinkEntity(e);
 
 	return e->s.number;
+
 }
 
 // Place a model with explicit prop bounds and yaw at a floor position.

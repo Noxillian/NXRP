@@ -38,6 +38,8 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_prop_r( client_t *cl, const char *chatCursor );
 // Load saved prop spawns for the current map
 qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor );
+// List saved prop spawns for the current map (admin)
+qboolean NXRP_cmdAdmin_prop_list( client_t *cl, const char *chatCursor );
 // Admin-only: remove the last spawned model (!nx mremove)
 qboolean NXRP_cmdAdmin_mremove( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_mmove( client_t *cl, const char *chatCursor );

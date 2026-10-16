@@ -531,8 +531,8 @@ qboolean NXRP_cmdAdmin_mremove( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: list NXRP-saved spawns for the current map
-qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor ) {
+// Admin-only: list NXRP-saved spawns for the current map (prop namespace)
+qboolean NXRP_cmdAdmin_prop_list( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
