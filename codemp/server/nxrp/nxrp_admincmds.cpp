@@ -22,6 +22,103 @@ qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
+// Admin-only: promote the invoking player to a 'boss' kit (copy of giveall)
+qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
+
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	// Some give commands are gated behind sv_cheats. Temporarily enable
+	// sv_cheats like other modules do (see social.cpp's Holo_CheatCommand)
+	const qboolean cheats = Cvar_VariableIntegerValue("sv_cheats") ? qtrue : qfalse;
+	if (!cheats) {
+		Cvar_Set("sv_cheats", "1");
+		GVM_RunFrame(sv.time);
+	}
+
+	NXRP_PrintConsoleToPlayer(cl, "You have been promoted to Boss (giveall kit)");
+
+	if (cl && cl->gentity && cl->gentity->playerState) {
+		playerState_t* ps = cl->gentity->playerState;
+
+		ps->stats[STAT_WEAPONS] |= (1 << WP_SABER);
+		ps->weapon = WP_SABER;
+		ps->weaponstate = WEAPON_READY;
+		ps->fd.saberAnimLevel = MB_SS_YELLOW;
+		ps->fd.forcePowerLevel[MB_FORCE_SABER_DEFENCE] = 1;
+		ps->fd.forcePowerLevel[MB_FORCE_SABER_OFFENCE] = 1;
+		ps->fd.forcePowerLevel[MB_FORCE_SABER_THROW]   = 1;
+		ps->fd.forcePowersKnown |= (1 << FP_PUSH);
+		ps->fd.forcePowerLevel[MB_FORCE_PUSH] = 2;
+		ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = 2;
+		ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
+		ps->fd.forcePowerLevel[FP_LIGHTNING] = 2;
+		ps->fd.forcePowersKnown |= (1 << FP_LEVITATION);
+		ps->fd.forcePowerLevel[FP_LEVITATION] = 3;
+		ps->fd.forcePowerMax = 200;
+		ps->fd.forcePower = 200;
+		ps->fd.forcePowersActive |= (1 << FP_LIGHTNING);
+		cl->gentity->playerState->stats[STAT_ARMOR] = 500;
+		cl->gentity->playerState->stats[STAT_HEALTH] = 500;
+		cl->gentity->playerState->iModelScale = 150;
+
+
+		SV_WannaGiveWeapon(cl, WP_CLONE_PISTOL);
+		SV_WannaGiveWeapon(cl, WP_SABER);
+
+		// Give a broader set of weapons
+		SV_WannaGiveWeapon(cl, WP_BRYAR_PISTOL);
+		SV_WannaGiveWeapon(cl, WP_MANDO_PISTOL);
+		SV_WannaGiveWeapon(cl, WP_HEAVY_PISTOL);
+		SV_WannaGiveWeapon(cl, WP_BLASTER);
+		SV_WannaGiveWeapon(cl, WP_DISRUPTOR);
+		SV_WannaGiveWeapon(cl, WP_BOWCASTER);
+		SV_WannaGiveWeapon(cl, WP_REPEATER);
+		SV_WannaGiveWeapon(cl, WP_CLONE_RIFLE);
+		SV_WannaGiveWeapon(cl, WP_A280);
+		SV_WannaGiveWeapon(cl, WP_DLT19);
+		SV_WannaGiveWeapon(cl, WP_SHOTGUN);
+		SV_WannaGiveWeapon(cl, WP_MINIGUN);
+		SV_WannaGiveWeapon(cl, WP_ROCKET_LAUNCHER);
+
+		// Give ammo for the weapons we provided so they can be used immediately
+		Spin_GiveWeaponAmmo(cl, WP_CLONE_PISTOL);
+		Spin_GiveWeaponAmmo(cl, WP_BRYAR_PISTOL);
+		Spin_GiveWeaponAmmo(cl, WP_MANDO_PISTOL);
+		Spin_GiveWeaponAmmo(cl, WP_HEAVY_PISTOL);
+		Spin_GiveWeaponAmmo(cl, WP_BLASTER);
+		Spin_GiveWeaponAmmo(cl, WP_DISRUPTOR);
+		Spin_GiveWeaponAmmo(cl, WP_BOWCASTER);
+		Spin_GiveWeaponAmmo(cl, WP_REPEATER);
+		Spin_GiveWeaponAmmo(cl, WP_CLONE_RIFLE);
+		Spin_GiveWeaponAmmo(cl, WP_A280);
+		Spin_GiveWeaponAmmo(cl, WP_DLT19);
+		Spin_GiveWeaponAmmo(cl, WP_SHOTGUN);
+		Spin_GiveWeaponAmmo(cl, WP_MINIGUN);
+		Spin_GiveWeaponAmmo(cl, WP_ROCKET_LAUNCHER);
+
+		char userinfo[MAX_INFO_STRING];
+		SV_GetUserinfo(cl - svs.clients, userinfo, sizeof(userinfo));
+		Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
+		Info_SetValueForKey(userinfo, "color1", "red");
+		// Set player model to Tavion
+		Info_SetValueForKey(userinfo, "model", "tavion");
+		Info_SetValueForKey(userinfo, "pmodel", "tavion");
+		SV_SetUserinfo(cl - svs.clients, userinfo);
+		GVM_ClientUserinfoChanged(cl - svs.clients);
+
+			// Give the player an immediate force jump boost
+			SV_ExecuteClientCommandDelayed_h(cl, std::string("force jump 3"), 1);
+	}
+
+	if (!cheats) {
+		Cvar_Set("sv_cheats", "0");
+		GVM_RunFrame(sv.time);
+	}
+
+	return qtrue;
+}
+
 // Admin-only: list entities or other map info. Usage: !nx list e
 qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;

@@ -25,6 +25,7 @@ qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_register( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_account( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor );
 // Non-admin: report player position
