@@ -56,8 +56,8 @@ qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor ) {
 	std::string filename = dir + "/" + std::string(map) + ".json";
 
 	// Read lines
-	std::ifstream ifs(filename);
 	std::vector<std::string> lines;
+	std::ifstream ifs(filename);
 	if (ifs.is_open()) {
 		std::string line;
 		while (std::getline(ifs, line)) { if (!line.empty()) lines.push_back(line); }

@@ -2,6 +2,8 @@
 #include "server/nxrp/nxrp_main.h"
 #include <fstream>
 #include <cctype>
+#include "server/sv_gameapi.h"
+#include "sys/sys_loadlib.h"
 #include <vector>
 #include <algorithm>
 #include <sys/stat.h>
@@ -31,7 +33,8 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 		if (!m) continue;
 		m = strchr(m, ':'); if (!m) continue; m++;
 		while (*m && isspace((unsigned char)*m)) m++;
-		if (*m != '"') continue; m++;
+		if (*m != '"') { continue; }
+		m++;
 		const char* modelStart = m;
 		const char* modelEnd = strchr(modelStart, '"');
 		if (!modelEnd) continue;
