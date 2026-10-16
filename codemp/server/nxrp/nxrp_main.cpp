@@ -144,29 +144,27 @@ int SV_SpawnModelAtClient(client_t* cl, const char* modelPath)
 
 qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const char *chatCursor ) {
 	if ( !commandName ) return qfalse;
+	// Legacy "!nx" prefix is no longer supported — ignore commands using it
+	if ( !Q_stricmp( commandName, "nx" ) ) {
+		return qtrue;
+	}
 
-	qboolean viaNx = !Q_stricmp( commandName, "nx" );
 	char subcmd[MAX_TOKEN_CHARS] = {0};
 	char arg[MAX_TOKEN_CHARS] = {0};
 	char normalizedCursor[1024] = {0};
 	const char *dispatchCursor = chatCursor ? chatCursor : "";
 
-	if ( viaNx ) {
-		if ( sscanf( dispatchCursor, "%31s %31s", subcmd, arg ) < 1 ) {
-			return qtrue;
-		}
-	} else {
-		Q_strncpyz( subcmd, commandName, sizeof(subcmd) );
-		Com_sprintf(
-			normalizedCursor,
-			sizeof(normalizedCursor),
-			"%s%s%s",
-			subcmd,
-			(dispatchCursor[0] ? " " : ""),
-			dispatchCursor
-		);
-		dispatchCursor = normalizedCursor;
-	}
+	// For direct commands (no legacy "nx" prefix), the commandName is the subcommand
+	Q_strncpyz( subcmd, commandName, sizeof(subcmd) );
+	Com_sprintf(
+		normalizedCursor,
+		sizeof(normalizedCursor),
+		"%s%s%s",
+		subcmd,
+		(dispatchCursor[0] ? " " : ""),
+		dispatchCursor
+	);
+	dispatchCursor = normalizedCursor;
 
 	NXRP_SubCmd sc = NXRP_ParseSubcmd( subcmd );
 
@@ -293,10 +291,6 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 	case NXRP_SUB_ACCOUNT:
 		return NXRP_cmd_account( cl, dispatchCursor );
 	case NXRP_SUB_GIVEALL:
-		// Disallow legacy "!nx giveall"; require direct "!giveall".
-		if ( viaNx ) {
-			return qtrue;
-		}
 		return NXRP_cmdAdmin_giveall( cl, dispatchCursor );
 	case NXRP_SUB_NOCLIP:
 		return NXRP_cmdAdmin_noclip( cl, dispatchCursor );
@@ -309,7 +303,7 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 		break;
 	}
 
-	return viaNx ? qtrue : qfalse;
+	return qtrue;
 }
 
 extern "C" qboolean NXRP_HandleChat( client_t *cl, const char *commandName, const char *chatCursor );
@@ -327,7 +321,7 @@ static qboolean NXRP_HandleNpcSpawn( client_t *cl, const char *chatCursor ) {
 	}
 
 	if ( arg[0] == '\0' ) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx spawn <npc_type>");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !spawn <npc_type>");
 		return qtrue;
 	}
 

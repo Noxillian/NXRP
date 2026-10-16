@@ -30,13 +30,13 @@ qboolean NXRP_cmd_account( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor );
 // Non-admin: report player position
 qboolean NXRP_cmd_pos( client_t *cl, const char *chatCursor );
-// Admin-only: spawn a model with a provided path (command: !nx mspawn)
+// Admin-only: spawn a model with a provided path (command: !mspawn)
 qboolean NXRP_cmdAdmin_mspawn( client_t *cl, const char *chatCursor );
 // New prop-style spawn command (wrapper for backward compatibility)
 qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor );
 // Remove a saved prop spawn by index
 qboolean NXRP_cmdAdmin_prop_r( client_t *cl, const char *chatCursor );
-// Move last spawned prop: !nx prop m <x> <y> <z>
+// Move last spawned prop: !prop m <x> <y> <z>
 qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor );
 // Load saved prop spawns for the current map
 qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor );
@@ -65,7 +65,7 @@ qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_ffa( client_t *cl, const char *chatCursor );
 // Admin-only: strip the invoking player of weapons and force powers
 qboolean NXRP_cmdAdmin_strip( client_t *cl, const char *chatCursor );
-// Admin-only: list entities or other map info (usage: !nx list e)
+// Admin-only: list entities or other map info (usage: !list e)
 qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor );
 // NXRP-specific listing of saved map spawns
 void NXRP_ListSavedSpawnsForPlayer(client_t* cl);

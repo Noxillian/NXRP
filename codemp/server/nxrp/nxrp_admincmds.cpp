@@ -15,7 +15,7 @@ void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 // Forward-declare weapon give helper from sv_ccmds.cpp
 extern void SV_WannaGiveWeapon(client_t* cl, int wnum);
 
-// Handler: !nx noclip
+// Handler: !noclip
 qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 
@@ -26,13 +26,13 @@ qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor ) {
 }
 
 // Directional move for a specific saved prop index using cardinal words up/down/left/right/forward/back
-// Usage: called via parser when first token is a number: !nx prop <index> <dir> <amount>
+// Usage: called via parser when first token is a number: !prop <index> <dir> <amount>
 qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
 	if (!args || !*args) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx prop <index> <up|down|left|right|forward|back> <amount>");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !prop <index> <up|down|left|right|forward|back> <amount>");
 		return qtrue;
 	}
 
@@ -41,7 +41,7 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
 	float amount = 0.0f;
 	int scanned = sscanf(args, "%31s %f", dirTok, &amount);
 	if (scanned < 2) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx prop <index> <dir> <amount>");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !prop <index> <dir> <amount>");
 		return qtrue;
 	}
 
@@ -153,20 +153,20 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
 }
 
 // Admin-only: move the last spawned prop to specified x y z (world coordinates)
-// Usage: !nx prop m <x> <y> <z>
+// Usage: !prop m <x> <y> <z>
 qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
 	if (!chatCursor || !*chatCursor) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx prop m <x> <y> <z>");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !prop m <x> <y> <z>");
 		return qtrue;
 	}
 
 	float x=0,y=0,z=0;
 	int cnt = sscanf(chatCursor, "%f %f %f", &x, &y, &z);
 	if (cnt != 3) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx prop m <x> <y> <z>");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !prop m <x> <y> <z>");
 		return qtrue;
 	}
 
@@ -327,7 +327,7 @@ qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: load saved prop spawns for the current map: !nx prop load
+// Admin-only: load saved prop spawns for the current map: !prop load
 qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
@@ -338,7 +338,7 @@ qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: remove a saved spawn by index. Usage: !nx prop r <index>
+// Admin-only: remove a saved spawn by index. Usage: !prop r <index>
 qboolean NXRP_cmdAdmin_prop_r( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
@@ -347,7 +347,7 @@ qboolean NXRP_cmdAdmin_prop_r( client_t *cl, const char *chatCursor ) {
 	if (!chatCursor || sscanf(chatCursor, "%*s %d", &idx) < 1) {
 		// Try plain number
 		if (!chatCursor || sscanf(chatCursor, "%d", &idx) < 1) {
-			NXRP_PrintConsoleToPlayer(cl, "Usage: !nx prop r <index>");
+			NXRP_PrintConsoleToPlayer(cl, "Usage: !prop r <index>");
 			return qtrue;
 		}
 	}
@@ -395,31 +395,8 @@ qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 
 		char userinfo[MAX_INFO_STRING];
 		SV_GetUserinfo(cl - svs.clients, userinfo, sizeof(userinfo));
-			// boss gives saber style same as giveall can (default single)
-			char styleTok[32] = {0};
-			const char* style = "single";
-			// allow optional argument for style
-			if (chatCursor && sscanf(chatCursor, "%31s", styleTok) == 1) {
-				if (!Q_stricmp(styleTok, "dual")) style = "dual";
-				else if (!Q_stricmp(styleTok, "staff")) style = "staff";
-			}
-			if (!Q_stricmp(style, "dual")) {
-				Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
-				Info_SetValueForKey(userinfo, "saber2", DEFAULT_SABER);
-				Info_SetValueForKey(userinfo, "color1", "red");
-				Info_SetValueForKey(userinfo, "saber2_color", "red");
-				Info_SetValueForKey(userinfo, "saber_type", "dual");
-			} else if (!Q_stricmp(style, "staff")) {
-				Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER_STAFF);
-				Info_SetValueForKey(userinfo, "saber2", "none");
-				Info_SetValueForKey(userinfo, "color1", "red");
-				Info_SetValueForKey(userinfo, "saber_type", "staff");
-			} else {
-				Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
-				Info_SetValueForKey(userinfo, "saber2", "none");
-				Info_SetValueForKey(userinfo, "color1", "red");
-				Info_SetValueForKey(userinfo, "saber_type", "single");
-			}
+			Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
+			Info_SetValueForKey(userinfo, "color1", "red");
 		// Set player model to Tavion
 		Info_SetValueForKey(userinfo, "model", "tavion");
 		Info_SetValueForKey(userinfo, "pmodel", "tavion");
@@ -450,7 +427,7 @@ qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: list entities or other map info. Usage: !nx list e
+// Admin-only: list entities or other map info. Usage: !list e
 qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
@@ -462,7 +439,7 @@ qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor ) {
 
 	// expect: !nx list e
 	if (arg[0] == '\0' || (arg[0] != 'e' && arg[0] != 'E')) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx list e   -- list entities on the map");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !list e   -- list entities on the map");
 		return qtrue;
 	}
 
@@ -535,7 +512,7 @@ qboolean NXRP_cmdAdmin_strip( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: handle !nx spawn <npc_type>
+// Admin-only: handle !spawn <npc_type>
 qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor ) {
 	char subcmd[MAX_TOKEN_CHARS] = {0};
 	char arg[MAX_TOKEN_CHARS] = {0};
@@ -548,7 +525,7 @@ qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor ) {
 	}
 
 	if ( arg[0] == '\0' ) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx spawn <npc_type>");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !spawn <npc_type>");
 		return qtrue;
 	}
 
@@ -559,7 +536,7 @@ qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: handle !nx test (spawn a default model)
+// Admin-only: handle !test (spawn a default model)
 qboolean NXRP_cmdAdmin_test( client_t *cl, const char *chatCursor ) {
 	// Accept optional model path: "modelpath" or "model <path>"
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
@@ -655,14 +632,13 @@ qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor ) {
 	int src = -1, dst = -1;
 	int cnt = sscanf(chatCursor, "%d %d", &src, &dst);
 	if (cnt == 1) {
-		// teleport invoking player to dst
+		// teleport invoking player to dst (dst is client slot index from rcon/status)
 		dst = src; // reuse variable
-		if (dst < 0 || dst >= MAX_CLIENTS) { NXRP_PrintConsoleToPlayer(cl, "Invalid target client number"); return qtrue; }
+		if (dst < 0 || dst >= sv_maxclients->integer) { NXRP_PrintConsoleToPlayer(cl, "Invalid target client number"); return qtrue; }
+		if (svs.clients[dst].state < CS_CONNECTED || !svs.clients[dst].gentity) { NXRP_PrintConsoleToPlayer(cl, "Target player not found or not active"); return qtrue; }
 		if (!cl || !cl->gentity || !cl->gentity->playerState) { NXRP_PrintConsoleToPlayer(cl, "Teleport failed: no player entity"); return qtrue; }
 
-		sharedEntity_t* destEnt = SV_GentityNum(dst);
-		if (!destEnt || !destEnt->r.linked || !destEnt->playerState) { NXRP_PrintConsoleToPlayer(cl, "Target player not found or not active"); return qtrue; }
-
+		sharedEntity_t* destEnt = svs.clients[dst].gentity;
 		vec3_t targetOrg;
 		VectorCopy(destEnt->playerState->origin, targetOrg);
 
@@ -688,12 +664,13 @@ qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor ) {
 		NXRP_PrintConsoleToPlayer(cl, va("Teleported you to player %d (direct)", dst));
 		return qtrue;
 	} else if (cnt == 2) {
-		// teleport src to dst
-		if (src < 0 || src >= MAX_CLIENTS || dst < 0 || dst >= MAX_CLIENTS) { NXRP_PrintConsoleToPlayer(cl, "Invalid client numbers"); return qtrue; }
-		sharedEntity_t* srcEnt = SV_GentityNum(src);
-		sharedEntity_t* destEnt = SV_GentityNum(dst);
-		if (!srcEnt || !srcEnt->r.linked || !srcEnt->playerState) { NXRP_PrintConsoleToPlayer(cl, "Source player not found or not active"); return qtrue; }
-		if (!destEnt || !destEnt->r.linked || !destEnt->playerState) { NXRP_PrintConsoleToPlayer(cl, "Target player not found or not active"); return qtrue; }
+		// teleport src to dst (both are client slot indices)
+		if (src < 0 || src >= sv_maxclients->integer || dst < 0 || dst >= sv_maxclients->integer) { NXRP_PrintConsoleToPlayer(cl, "Invalid client numbers"); return qtrue; }
+		if (svs.clients[src].state < CS_CONNECTED || !svs.clients[src].gentity) { NXRP_PrintConsoleToPlayer(cl, "Source player not found or not active"); return qtrue; }
+		if (svs.clients[dst].state < CS_CONNECTED || !svs.clients[dst].gentity) { NXRP_PrintConsoleToPlayer(cl, "Target player not found or not active"); return qtrue; }
+
+		sharedEntity_t* srcEnt = svs.clients[src].gentity;
+		sharedEntity_t* destEnt = svs.clients[dst].gentity;
 
 		vec3_t targetOrg;
 		VectorCopy(destEnt->playerState->origin, targetOrg);
@@ -726,13 +703,13 @@ qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor ) {
 }
 
 // Admin-only: spawn model at client with provided path
-// New command: !nx prop s <model_path> [angle]
+// New command: !prop s <model_path> [angle]
 qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 	// chatCursor may be: "model <path> [angle]" or "<path> [angle]"
 	if (!chatCursor) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx prop s <model_path> [angle]");
+	NXRP_PrintConsoleToPlayer(cl, "Usage: !prop s <model_path> [angle]");
 		return qtrue;
 	}
 
@@ -752,7 +729,7 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 	}
 
 	if (!p || !*p) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx prop s <model_path> [angle]");
+	NXRP_PrintConsoleToPlayer(cl, "Usage: !prop s <model_path> [angle]");
 		return qtrue;
 	}
 
@@ -761,7 +738,7 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 	float angle = 0.0f;
 	int scanned = sscanf(p, "%511s %f", path, &angle);
 	if (scanned < 1) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx prop s <model_path> [angle]");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !prop s <model_path> [angle]");
 		return qtrue;
 	}
 
@@ -794,7 +771,7 @@ qboolean NXRP_cmdAdmin_mmove( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
 	if (!chatCursor || !*chatCursor) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx mmove <x> <y> <z>    (deltas in world units)");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !mmove <x> <y> <z>    (deltas in world units)");
 		return qtrue;
 	}
 
@@ -807,7 +784,7 @@ qboolean NXRP_cmdAdmin_mmove( client_t *cl, const char *chatCursor ) {
 		else NXRP_PrintConsoleToPlayer(cl, "Failed to move last spawned model");
 		return qtrue;
 	}
-	NXRP_PrintConsoleToPlayer(cl, "Usage: !nx mmove <x> <y> <z>    (deltas in world units)");
+	NXRP_PrintConsoleToPlayer(cl, "Usage: !mmove <x> <y> <z>    (deltas in world units)");
 	return qtrue;
 }
 
@@ -870,7 +847,7 @@ qboolean NXRP_cmdAdmin_prop_list( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: handle !nx test2 - spawn a prop using social-style place logic
+// Admin-only: handle !test2 - spawn a prop using social-style place logic
 qboolean NXRP_cmdAdmin_test2( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
@@ -907,7 +884,7 @@ qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {
 	}
 
 	if ( arg[0] == '\0' ) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx vehicle <vehicle_name>");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !vehicle <vehicle_name>");
 		return qtrue;
 	}
 
@@ -938,10 +915,11 @@ qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Handler: !nx giveall
-qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
-	(void)chatCursor;
+// Handler: !giveall
 
+qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
+	// Optional numeric argument: target client slot index (as shown by rcon status)
+	// Usage: !giveall [clientIndex]
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
 	// Some give commands are gated behind sv_cheats. Temporarily enable
@@ -952,17 +930,32 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		GVM_RunFrame(sv.time);
 	}
 
-	// Allow optional argument to choose saber style: single (default), dual, staff
-	char styleTok[32] = {0};
-	const char* style = "single";
-	if (chatCursor && sscanf(chatCursor, "%31s", styleTok) == 1) {
-		if (!Q_stricmp(styleTok, "dual")) style = "dual";
-		else if (!Q_stricmp(styleTok, "staff")) style = "staff";
+	// Determine target client (default: the invoking admin)
+	client_t* target = cl;
+	int targetIdx = (int)(cl - svs.clients);
+	if (chatCursor && *chatCursor) {
+		char tok[32] = {0};
+		if (sscanf(chatCursor, "%31s", tok) == 1) {
+			// token must be all digits to be considered a client index
+			bool allDigits = true;
+			for (size_t i = 0; tok[i]; ++i) { if (!isdigit((unsigned char)tok[i])) { allDigits = false; break; } }
+			if (allDigits) {
+				int idx = atoi(tok);
+				if (idx >= 0 && idx < sv_maxclients->integer && svs.clients[idx].state >= CS_CONNECTED) {
+					target = &svs.clients[idx];
+					targetIdx = idx;
+					NXRP_PrintConsoleToPlayer(cl, va("Applied giveall to client %d", idx));
+				} else {
+					NXRP_PrintConsoleToPlayer(cl, "Invalid client index or client not connected");
+					return qtrue;
+				}
+			}
+		}
 	}
-	NXRP_PrintConsoleToPlayer(cl, va("You have been given a Lightsaber (%s)", style));
+	NXRP_PrintConsoleToPlayer(target, "You have been given a Lightsaber");
 
-	if (cl && cl->gentity && cl->gentity->playerState) {
-		playerState_t* ps = cl->gentity->playerState;
+	if (target && target->gentity && target->gentity->playerState) {
+		playerState_t* ps = target->gentity->playerState;
 
 		ps->stats[STAT_WEAPONS] |= (1 << WP_SABER);
 		ps->weapon = WP_SABER;
@@ -983,64 +976,49 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePower = 100;
 		ps->fd.forcePowersActive |= (1 << FP_LIGHTNING);
 
-		SV_WannaGiveWeapon(cl, WP_CLONE_PISTOL);
-		SV_WannaGiveWeapon(cl, WP_SABER);
+		SV_WannaGiveWeapon(target, WP_CLONE_PISTOL);
+		SV_WannaGiveWeapon(target, WP_SABER);
 
 		// Give a broader set of weapons
-		SV_WannaGiveWeapon(cl, WP_BRYAR_PISTOL);
-		SV_WannaGiveWeapon(cl, WP_MANDO_PISTOL);
-		SV_WannaGiveWeapon(cl, WP_HEAVY_PISTOL);
-		SV_WannaGiveWeapon(cl, WP_BLASTER);
-		SV_WannaGiveWeapon(cl, WP_DISRUPTOR);
-		SV_WannaGiveWeapon(cl, WP_BOWCASTER);
-		SV_WannaGiveWeapon(cl, WP_REPEATER);
-		SV_WannaGiveWeapon(cl, WP_CLONE_RIFLE);
-		SV_WannaGiveWeapon(cl, WP_A280);
-		SV_WannaGiveWeapon(cl, WP_DLT19);
-		SV_WannaGiveWeapon(cl, WP_SHOTGUN);
-		SV_WannaGiveWeapon(cl, WP_MINIGUN);
-		SV_WannaGiveWeapon(cl, WP_ROCKET_LAUNCHER);
+		SV_WannaGiveWeapon(target, WP_BRYAR_PISTOL);
+		SV_WannaGiveWeapon(target, WP_MANDO_PISTOL);
+		SV_WannaGiveWeapon(target, WP_HEAVY_PISTOL);
+		SV_WannaGiveWeapon(target, WP_BLASTER);
+		SV_WannaGiveWeapon(target, WP_DISRUPTOR);
+		SV_WannaGiveWeapon(target, WP_BOWCASTER);
+		SV_WannaGiveWeapon(target, WP_REPEATER);
+		SV_WannaGiveWeapon(target, WP_CLONE_RIFLE);
+		SV_WannaGiveWeapon(target, WP_A280);
+		SV_WannaGiveWeapon(target, WP_DLT19);
+		SV_WannaGiveWeapon(target, WP_SHOTGUN);
+		SV_WannaGiveWeapon(target, WP_MINIGUN);
+		SV_WannaGiveWeapon(target, WP_ROCKET_LAUNCHER);
 
 		// Give ammo for the weapons we provided so they can be used immediately
-		Spin_GiveWeaponAmmo(cl, WP_CLONE_PISTOL);
-		Spin_GiveWeaponAmmo(cl, WP_BRYAR_PISTOL);
-		Spin_GiveWeaponAmmo(cl, WP_MANDO_PISTOL);
-		Spin_GiveWeaponAmmo(cl, WP_HEAVY_PISTOL);
-		Spin_GiveWeaponAmmo(cl, WP_BLASTER);
-		Spin_GiveWeaponAmmo(cl, WP_DISRUPTOR);
-		Spin_GiveWeaponAmmo(cl, WP_BOWCASTER);
-		Spin_GiveWeaponAmmo(cl, WP_REPEATER);
-		Spin_GiveWeaponAmmo(cl, WP_CLONE_RIFLE);
-		Spin_GiveWeaponAmmo(cl, WP_A280);
-		Spin_GiveWeaponAmmo(cl, WP_DLT19);
-		Spin_GiveWeaponAmmo(cl, WP_SHOTGUN);
-		Spin_GiveWeaponAmmo(cl, WP_MINIGUN);
-		Spin_GiveWeaponAmmo(cl, WP_ROCKET_LAUNCHER);
+		Spin_GiveWeaponAmmo(target, WP_CLONE_PISTOL);
+		Spin_GiveWeaponAmmo(target, WP_BRYAR_PISTOL);
+		Spin_GiveWeaponAmmo(target, WP_MANDO_PISTOL);
+		Spin_GiveWeaponAmmo(target, WP_HEAVY_PISTOL);
+		Spin_GiveWeaponAmmo(target, WP_BLASTER);
+		Spin_GiveWeaponAmmo(target, WP_DISRUPTOR);
+		Spin_GiveWeaponAmmo(target, WP_BOWCASTER);
+		Spin_GiveWeaponAmmo(target, WP_REPEATER);
+		Spin_GiveWeaponAmmo(target, WP_CLONE_RIFLE);
+		Spin_GiveWeaponAmmo(target, WP_A280);
+		Spin_GiveWeaponAmmo(target, WP_DLT19);
+		Spin_GiveWeaponAmmo(target, WP_SHOTGUN);
+		Spin_GiveWeaponAmmo(target, WP_MINIGUN);
+		Spin_GiveWeaponAmmo(target, WP_ROCKET_LAUNCHER);
 
 		char userinfo[MAX_INFO_STRING];
-		SV_GetUserinfo(cl - svs.clients, userinfo, sizeof(userinfo));
-			if (!Q_stricmp(style, "dual")) {
-				Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
-				Info_SetValueForKey(userinfo, "saber2", DEFAULT_SABER);
-				Info_SetValueForKey(userinfo, "color1", "red");
-				Info_SetValueForKey(userinfo, "saber2_color", "red");
-				Info_SetValueForKey(userinfo, "saber_type", "dual");
-			} else if (!Q_stricmp(style, "staff")) {
-				Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER_STAFF);
-				Info_SetValueForKey(userinfo, "saber2", "none");
-				Info_SetValueForKey(userinfo, "color1", "red");
-				Info_SetValueForKey(userinfo, "saber_type", "staff");
-			} else {
-				Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
-				Info_SetValueForKey(userinfo, "saber2", "none");
-				Info_SetValueForKey(userinfo, "color1", "red");
-				Info_SetValueForKey(userinfo, "saber_type", "single");
-			}
-		SV_SetUserinfo(cl - svs.clients, userinfo);
-		GVM_ClientUserinfoChanged(cl - svs.clients);
+		SV_GetUserinfo(targetIdx, userinfo, sizeof(userinfo));
+			Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
+			Info_SetValueForKey(userinfo, "color1", "red");
+		SV_SetUserinfo(targetIdx, userinfo);
+		GVM_ClientUserinfoChanged(targetIdx);
 
-			// Give the player an immediate force jump boost
-			SV_ExecuteClientCommandDelayed_h(cl, std::string("force jump 3"), 1);
+		// Give the player an immediate force jump boost
+		SV_ExecuteClientCommandDelayed_h(target, std::string("force jump 3"), 1);
 	}
 
 	if (!cheats) {

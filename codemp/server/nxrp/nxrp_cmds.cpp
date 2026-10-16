@@ -1,5 +1,5 @@
 /* nxrp_cmds.cpp - additional NXRP chat commands
- * Implements: !nx info (prints NXRP version)
+ * Implements: !info (prints NXRP version)
  */
 
 #include "server/nxrp/nxrp_main.h"
@@ -68,18 +68,18 @@ static bool parse_user_pass(const char *chatCursor, std::string &outUser, std::s
 	return false;
 }
 
-// Handler for: !nx info
+// Handler for: !info
 qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	NXRP_PrintConsoleToPlayer(cl, va("NXRP version: %s", NXRP_VERSION));
 	return qtrue;
 }
 
-// Handler for: !nx register <user> <pass>
+// Handler for: !register <user> <pass>
 qboolean NXRP_cmd_register( client_t *cl, const char *chatCursor ) {
 	std::string user, pass;
 	if (!parse_user_pass(chatCursor, user, pass)) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx register <user> <pass>");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !register <user> <pass>");
 		return qtrue;
 	}
 
@@ -153,11 +153,11 @@ qboolean NXRP_cmd_register( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Handler for: !nx login <user> <pass>
+// Handler for: !login <user> <pass>
 qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor ) {
 	std::string user, pass;
 	if (!parse_user_pass(chatCursor, user, pass)) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx login <user> <pass>");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !login <user> <pass>");
 		return qtrue;
 	}
 
@@ -225,7 +225,7 @@ qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Handler for: !nx account
+// Handler for: !account
 qboolean NXRP_cmd_account( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!cl || cl->state != CS_ACTIVE) {
@@ -278,7 +278,7 @@ qboolean NXRP_cmd_account( client_t *cl, const char *chatCursor ) {
 
 // Non-admin commands remain here (info, register, login, account)
 
-// Handler for: !nxrp pos
+// Handler for: !pos
 qboolean NXRP_cmd_pos( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!cl || cl->state != CS_ACTIVE) {
