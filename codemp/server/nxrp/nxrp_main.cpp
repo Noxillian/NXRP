@@ -208,7 +208,7 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 			case NXRP_SUB_ACCOUNT:
 				return NXRP_cmd_account( cl, chatCursor );
 			case NXRP_SUB_GIVEALL:
-				return NXRP_cmdAdmin_boss( cl, chatCursor );
+				return NXRP_cmdAdmin_giveall( cl, chatCursor );
 			case NXRP_SUB_NOCLIP:
 				return NXRP_cmdAdmin_noclip( cl, chatCursor );
 			case NXRP_SUB_REGISTER:
