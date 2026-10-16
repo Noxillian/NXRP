@@ -22,6 +22,82 @@ qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
+// Admin-only: list entities or other map info. Usage: !nx list e
+qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	char sub[MAX_TOKEN_CHARS] = {0};
+	char arg[MAX_TOKEN_CHARS] = {0};
+	if (sscanf(chatCursor, "%31s %31s", sub, arg) < 1) return qtrue;
+
+	// expect: !nx list e
+	if (arg[0] == '\0' || (arg[0] != 'e' && arg[0] != 'E')) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx list e   -- list entities on the map");
+		return qtrue;
+	}
+
+	int found = 0;
+	for (int i = 0; i < sv.num_entities; i++) {
+		sharedEntity_t* ent = SV_GentityNum(i);
+		if (!ent) continue;
+		// Only list entities that appear valid and are the expected slot
+		if (ent->s.number != i) continue;
+
+		const char* cls = ent->classname ? ent->classname : "<none>";
+		// print basic info: id, eType, modelindex, classname, origin
+		NXRP_PrintConsoleToPlayer(cl, va("%3d: type=%d model=%d cls=%s pos=%.1f %.1f %.1f",
+			i, ent->s.eType, ent->s.modelindex, cls,
+			ent->r.currentOrigin[0], ent->r.currentOrigin[1], ent->r.currentOrigin[2]));
+		found++;
+	}
+
+	NXRP_PrintConsoleToPlayer(cl, va("Listed %d entities", found));
+	return qtrue;
+}
+
+// Admin-only: remove all weapons and forcepowers from the invoking player
+qboolean NXRP_cmdAdmin_strip( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	if (!cl || !cl->gentity || !cl->gentity->playerState) {
+		NXRP_PrintConsoleToPlayer(cl, "Strip failed: no player entity");
+		return qtrue;
+	}
+
+	playerState_t* ps = cl->gentity->playerState;
+
+	// Remove weapon flags and set to no weapon
+	ps->stats[STAT_WEAPONS] = 0;
+	ps->weapon = WP_NONE;
+	ps->weaponstate = WEAPON_READY;
+
+	// Clear force powers
+	ps->fd.forcePowersKnown = 0;
+	ps->fd.forcePowersActive = 0;
+	ps->fd.forcePower = 0;
+	ps->fd.forcePowerMax = 0;
+	// Zero all per-power levels
+	const int numPowers = (int)(sizeof(ps->fd.forcePowerLevel) / sizeof(ps->fd.forcePowerLevel[0]));
+	for (int i = 0; i < numPowers; i++) ps->fd.forcePowerLevel[i] = 0;
+
+	// Ensure the client's userinfo and server state reflect the change
+	if (cl - svs.clients >= 0) {
+		char userinfo[MAX_INFO_STRING];
+		SV_GetUserinfo(cl - svs.clients, userinfo, sizeof(userinfo));
+		// Optionally clear saber info
+		Info_SetValueForKey(userinfo, "saber1", "");
+		SV_SetUserinfo(cl - svs.clients, userinfo);
+		GVM_ClientUserinfoChanged(cl - svs.clients);
+	}
+
+	NXRP_PrintConsoleToPlayer(cl, "You have been stripped of weapons and Force powers");
+	return qtrue;
+}
+
 // Admin-only: handle !nx spawn <npc_type>
 qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor ) {
 	char subcmd[MAX_TOKEN_CHARS] = {0};
@@ -460,6 +536,9 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePowerMax = 150;
 		ps->fd.forcePower = 100;
 		ps->fd.forcePowersActive |= (1 << FP_LIGHTNING);
+		cl->gentity->playerState->stats[STAT_ARMOR] = 200;
+		cl->gentity->playerState->stats[STAT_HEALTH] = 200;
+
 
 		SV_WannaGiveWeapon(cl, WP_CLONE_PISTOL);
 		SV_WannaGiveWeapon(cl, WP_SABER);

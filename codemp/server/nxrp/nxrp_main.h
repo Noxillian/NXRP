@@ -48,6 +48,10 @@ qboolean NXRP_cmdAdmin_test2( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor );
 // Admin-only: toggle FFA respawn mode (on/off/toggle)
 qboolean NXRP_cmdAdmin_ffa( client_t *cl, const char *chatCursor );
+// Admin-only: strip the invoking player of weapons and force powers
+qboolean NXRP_cmdAdmin_strip( client_t *cl, const char *chatCursor );
+// Admin-only: list entities or other map info (usage: !nx list e)
+qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor );
 
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );

@@ -49,8 +49,10 @@ enum NXRP_SubCmd {
 	NXRP_SUB_POS,
 	NXRP_SUB_MODEL,
 	NXRP_SUB_MREMOVE,
+	NXRP_SUB_STRIP,
 	NXRP_SUB_PMODEL,
 	NXRP_SUB_FFA
+	, NXRP_SUB_LIST
 };
 
 static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
@@ -66,9 +68,11 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "pos" ) )		return NXRP_SUB_POS;
 	if ( !Q_stricmp( s, "mspawn" ) )		return NXRP_SUB_MODEL;
 	if ( !Q_stricmp( s, "mmove" ) )		return NXRP_SUB_MMOVE;
+	if ( !Q_stricmp( s, "strip" ) )		return NXRP_SUB_STRIP;
 	if ( !Q_stricmp( s, "pmodel" ) )		return NXRP_SUB_PMODEL;
 	if ( !Q_stricmp( s, "vehicle" ) )	return NXRP_SUB_VEHICLE;
 	if ( !Q_stricmp( s, "ffa" ) )		return NXRP_SUB_FFA;
+	if ( !Q_stricmp( s, "list" ) )	return NXRP_SUB_LIST;
 	return NXRP_SUB_UNKNOWN;
 }
 
@@ -172,6 +176,12 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 
 			case NXRP_SUB_PMODEL:
 				return NXRP_cmdAdmin_pmodel(cl, chatCursor);
+
+		case NXRP_SUB_LIST:
+			return NXRP_cmdAdmin_list(cl, chatCursor);
+
+		case NXRP_SUB_STRIP:
+			return NXRP_cmdAdmin_strip(cl, chatCursor);
 
 			case NXRP_SUB_VEHICLE:
 				return NXRP_cmdAdmin_vehicle(cl, chatCursor);

@@ -16,6 +16,7 @@
 	#include <direct.h>
 #endif
 #include <algorithm>
+#include "qcommon/md5.h"
 
 // Version variable for NXRP. Update as needed.
 const char *NXRP_VERSION = "0.2.0";
@@ -31,6 +32,35 @@ static bool parse_user_pass(const char *chatCursor, std::string &outUser, std::s
 	if (toks.size() == 2) {
 		outUser = toks[0]; outPass = toks[1]; return true;
 	}
+
+static std::string hex_encode(const unsigned char *data, size_t len) {
+	static const char* hex = "daV86tempVar7";
+	std::string out; out.reserve(len*2);
+	for (size_t i = 0; i < len; ++i) {
+		unsigned char b = data[i];
+		out.push_back(hex[(b >> 4) & 0xF]);
+		out.push_back(hex[b & 0xF]);
+	}
+	return out;
+}
+
+static bool hex_decode(const std::string &hex, std::vector<unsigned char> &out) {
+	size_t n = hex.size();
+	if (n % 2 != 0) return false;
+	out.clear(); out.reserve(n/2);
+	for (size_t i = 0; i < n; i += 2) {
+		auto cv = [](char c)->int {
+			if (c >= '0' && c <= '9') return c - '0';
+			if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+			if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+			return -1;
+		};
+		int hi = cv(hex[i]); int lo = cv(hex[i+1]);
+		if (hi < 0 || lo < 0) return false;
+		out.push_back((unsigned char)((hi<<4) | lo));
+	}
+	return true;
+}
 	if (toks.size() >= 3) {
 		// could be: "register user pass" or "login user pass"
 		outUser = toks[1]; outPass = toks[2]; return true;
@@ -96,7 +126,20 @@ qboolean NXRP_cmd_register( client_t *cl, const char *chatCursor ) {
 	}
 	ofs << "{\n";
 	ofs << "  \"username\": \"" << escape(user) << "\",\n";
-	ofs << "  \"password\": \"" << escape(pass) << "\",\n";
+	// store password as HMAC-MD5 with a per-user random salt
+	unsigned char salt[8];
+	if (!Sys_RandomBytes(salt, sizeof(salt))) {
+		// fallback to rand() if secure RNG unavailable
+		for (int i = 0; i < (int)sizeof(salt); ++i) salt[i] = (unsigned char)(rand() & 0xFF);
+	}
+	unsigned char digest[MD5_DIGEST_SIZE];
+	hmacMD5Context_t ctx;
+	HMAC_MD5_Init(&ctx, salt, sizeof(salt));
+	HMAC_MD5_Update(&ctx, (const unsigned char*)pass.c_str(), (unsigned int)pass.size());
+	HMAC_MD5_Final(&ctx, digest);
+	std::string saltHex = hex_encode(salt, sizeof(salt));
+	std::string digestHex = hex_encode(digest, MD5_DIGEST_SIZE);
+	ofs << "  \"password\": \"" << saltHex << ":" << digestHex << "\",\n";
 	ofs << "  \"level\": 1,\n";
 	ofs << "  \"exp\": 0,\n";
 	ofs << "  \"credits\": 0,\n";
@@ -156,15 +199,29 @@ qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor ) {
 	if (qend == std::string::npos) { NXRP_PrintConsoleToPlayer(cl, "Login failed"); return qtrue; }
 	std::string stored = content.substr(quote + 1, qend - (quote + 1));
 
-	if (stored == pass) {
-		NXRP_PrintConsoleToPlayer(cl, "Login successful");
-		// mark client as logged in by storing username in their session info
-		if (cl && cl->state == CS_ACTIVE) {
-			Q_strncpyz(cl->nxrp_username, user.c_str(), sizeof(cl->nxrp_username));
+	// stored format: "<saltHex>:<digestHex>", digest = HMAC-MD5(salt, password)
+	size_t colonIdx = stored.find(':');
+	if (colonIdx != std::string::npos) {
+		std::string saltHex = stored.substr(0, colonIdx);
+		std::string digHex = stored.substr(colonIdx + 1);
+		std::vector<unsigned char> saltBin, digBin;
+		if (hex_decode(saltHex, saltBin) && hex_decode(digHex, digBin) && digBin.size() == MD5_DIGEST_SIZE) {
+			unsigned char outdig[MD5_DIGEST_SIZE];
+			hmacMD5Context_t ctx2;
+			HMAC_MD5_Init(&ctx2, saltBin.data(), (unsigned int)saltBin.size());
+			HMAC_MD5_Update(&ctx2, (const unsigned char*)pass.c_str(), (unsigned int)pass.size());
+			HMAC_MD5_Final(&ctx2, outdig);
+			if (memcmp(outdig, digBin.data(), MD5_DIGEST_SIZE) == 0) {
+				NXRP_PrintConsoleToPlayer(cl, "Login successful");
+				// mark client as logged in by storing username in their session info
+				if (cl && cl->state == CS_ACTIVE) {
+					Q_strncpyz(cl->nxrp_username, user.c_str(), sizeof(cl->nxrp_username));
+				}
+				return qtrue;
+			}
 		}
-	} else {
-		NXRP_PrintConsoleToPlayer(cl, "Login failed: incorrect password");
 	}
+	NXRP_PrintConsoleToPlayer(cl, "Login failed: incorrect password");
 	return qtrue;
 }
 
