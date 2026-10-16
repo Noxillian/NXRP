@@ -495,7 +495,33 @@ qboolean NXRP_cmdAdmin_ffa( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
-	NXRP_PrintConsoleToPlayer(cl, "FFA feature is currently disabled");
+	// Commands: !nx ffa on|off|toggle|status
+	char arg[MAX_TOKEN_CHARS] = {0};
+	if (!chatCursor || !*chatCursor) {
+		// show status
+		NXRP_PrintConsoleToPlayer(cl, va("FFA respawn is %s", NXRP_FFA_IsEnabled() ? "ENABLED" : "DISABLED"));
+		return qtrue;
+	}
+
+	if (sscanf(chatCursor, "%31s", arg) < 1) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx ffa <on|off|toggle|status>");
+		return qtrue;
+	}
+
+	if (!Q_stricmp(arg, "on")) {
+		NXRP_FFA_SetEnabled(qtrue);
+		NXRP_PrintConsoleToPlayer(cl, "FFA respawn enabled");
+	} else if (!Q_stricmp(arg, "off")) {
+		NXRP_FFA_SetEnabled(qfalse);
+		NXRP_PrintConsoleToPlayer(cl, "FFA respawn disabled");
+	} else if (!Q_stricmp(arg, "toggle")) {
+		NXRP_FFA_SetEnabled(!NXRP_FFA_IsEnabled());
+		NXRP_PrintConsoleToPlayer(cl, va("FFA respawn is now %s", NXRP_FFA_IsEnabled() ? "ENABLED" : "DISABLED"));
+	} else if (!Q_stricmp(arg, "status")) {
+		NXRP_PrintConsoleToPlayer(cl, va("FFA respawn is %s", NXRP_FFA_IsEnabled() ? "ENABLED" : "DISABLED"));
+	} else {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx ffa <on|off|toggle|status>");
+	}
 	return qtrue;
 }
 

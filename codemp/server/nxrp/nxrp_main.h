@@ -77,6 +77,8 @@ void SV_NXRP_ScoreFrame(void);
 
 // FFA respawn helpers
 void NXRP_FFA_Init(void);
+void NXRP_FFA_SetEnabled(qboolean enable);
+qboolean NXRP_FFA_IsEnabled(void);
 // FFA helpers are optional; commented out while disabled
 //void NXRP_FFA_SetEnabled(qboolean enable);
 //qboolean NXRP_FFA_IsEnabled(void);
