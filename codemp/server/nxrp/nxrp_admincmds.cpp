@@ -167,7 +167,20 @@ qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	vec3_t newFloor = { x, y, z };
+	// Parse saved origin from the removed line and add the provided offsets (x,y,z)
+	float savedOx = 0.0f, savedOy = 0.0f, savedOz = 0.0f;
+	const char* originKey = "\"origin\"";
+	const char* o = strstr(removedLine.c_str(), originKey);
+	if (o) {
+		o = strchr(o, '[');
+		if (o) {
+			o++;
+			sscanf(o, "%f %*[, ] %f %*[, ] %f", &savedOx, &savedOy, &savedOz);
+		}
+	}
+
+	// Compute the new floor as saved origin + provided offsets
+	vec3_t newFloor = { savedOx + x, savedOy + y, savedOz + z };
 	// snap to integers like spawn/save behavior
 	newFloor[0] = roundf(newFloor[0]); newFloor[1] = roundf(newFloor[1]); newFloor[2] = roundf(newFloor[2]);
 
