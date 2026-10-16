@@ -195,7 +195,19 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 						++p;
 					}
 
-					if (!Q_stricmp(action, "s")) {
+			// If action is numeric, treat as index for directional prop move: "!nx prop <index> <dir> <amount>"
+			bool actionIsNumber = false;
+			if (action[0] == '-' || (action[0] >= '0' && action[0] <= '9')) {
+				actionIsNumber = true;
+				for (int ai = 1; action[ai]; ++ai) {
+					if (!(action[ai] >= '0' && action[ai] <= '9')) { actionIsNumber = false; break; }
+				}
+			}
+			if (actionIsNumber) {
+				int idx = atoi(action);
+				return NXRP_cmdAdmin_prop_dir(cl, idx, p);
+			}
+			if (!Q_stricmp(action, "s")) {
 						return NXRP_cmdAdmin_prop_s(cl, p);
 					} else if (!Q_stricmp(action, "r")) {
 						return NXRP_cmdAdmin_prop_r(cl, p);

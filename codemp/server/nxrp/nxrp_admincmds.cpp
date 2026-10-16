@@ -25,6 +25,100 @@ qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
+// Directional move for a specific saved prop index using cardinal words up/down/left/right/forward/back
+// Usage: called via parser when first token is a number: !nx prop <index> <dir> <amount>
+qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	if (!args || !*args) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx prop <index> <up|down|left|right|forward|back> <amount>");
+		return qtrue;
+	}
+
+	// parse direction and amount
+	char dirTok[32] = {0};
+	float amount = 0.0f;
+	int scanned = sscanf(args, "%31s %f", dirTok, &amount);
+	if (scanned < 2) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx prop <index> <dir> <amount>");
+		return qtrue;
+	}
+
+	// load saved file and locate entry by index
+	const char* home = Cvar_VariableString("fs_homepath");
+	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
+	const char* map = Cvar_VariableString("mapname");
+	if (!map || !map[0]) map = "nomap";
+	std::string filename = dir + "/" + std::string(map) + ".json";
+
+	std::ifstream ifs(filename);
+	if (!ifs.is_open()) { NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map"); return qtrue; }
+	std::vector<std::string> lines;
+	std::string line;
+	while (std::getline(ifs, line)) { if (!line.empty()) lines.push_back(line); }
+	ifs.close();
+
+	if (index < 0 || index >= (int)lines.size()) { NXRP_PrintConsoleToPlayer(cl, "Invalid saved spawn index"); return qtrue; }
+
+	std::string target = lines[index];
+
+	// parse model and origin
+	const char* s = target.c_str();
+	std::string modelPath;
+	float ox=0, oy=0, oz=0;
+	const char* modelKey = "\"model\"";
+	const char* originKey = "\"origin\"";
+	const char* m = strstr(s, modelKey);
+	if (m) { m = strchr(m, ':'); if (m) m++; while (m && *m && isspace((unsigned char)*m)) m++; if (m && *m == '"') { m++; const char* me = strchr(m, '"'); if (me && me > m) modelPath.assign(m, me - m); } }
+	const char* o = strstr(s, originKey);
+	if (o) { o = strchr(o, '['); if (o) { o++; sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz); } }
+
+	if (modelPath.empty()) { NXRP_PrintConsoleToPlayer(cl, "Saved entry missing model path"); return qtrue; }
+
+	// compute delta vector based on direction
+	float dx=0, dy=0, dz=0;
+	if (!Q_stricmp(dirTok, "up")) dz = amount;
+	else if (!Q_stricmp(dirTok, "down")) dz = -amount;
+	else if (!Q_stricmp(dirTok, "left")) dx = -amount;
+	else if (!Q_stricmp(dirTok, "right")) dx = amount;
+	else if (!Q_stricmp(dirTok, "forward")) dy = amount;
+	else if (!Q_stricmp(dirTok, "back")) dy = -amount;
+	else { NXRP_PrintConsoleToPlayer(cl, "Unknown direction; use up/down/left/right/forward/back"); return qtrue; }
+
+	// compute new position and respawn using NXRP_PlaceModel
+	vec3_t newFloor = { ox + dx, oy + dy, oz + dz };
+	newFloor[0] = roundf(newFloor[0]); newFloor[1] = roundf(newFloor[1]); newFloor[2] = roundf(newFloor[2]);
+
+	vec3_t mins = { -24.0f, -24.0f, -8.0f };
+	vec3_t maxs = { 24.0f, 24.0f, 24.0f };
+	float yaw = 0.0f;
+	// try to parse saved yaw from entry
+	const char* anglesKey = "\"angles\"";
+	const char* a = strstr(s, anglesKey);
+	if (a) { a = strchr(a, '['); if (a) { a++; float ax=0, ay=0, az=0; sscanf(a, "%f %*[, ] %f %*[, ] %f", &ax, &ay, &az); yaw = ay; } }
+
+	int ent = NXRP_PlaceModel(modelPath.c_str(), mins, maxs, yaw, newFloor);
+	if (ent >= 0) {
+		NXRP_RegisterSpawn(ent);
+		// update saved entry with new origin
+		char buf[1024];
+		snprintf(buf, sizeof(buf), "{ \"ent\": %d, \"id\": %d, \"index\": %d, \"model\": \"%s\", \"origin\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f] }",
+			ent, ent, index, modelPath.c_str(), newFloor[0], newFloor[1], newFloor[2], 0.0f, yaw, 0.0f);
+		lines[index] = std::string(buf);
+		FILE* f = fopen(filename.c_str(), "w");
+		if (f) {
+			for (const auto &ll : lines) { fputs(ll.c_str(), f); fputc('\n', f); }
+			fclose(f);
+		}
+		NXRP_PrintConsoleToPlayer(cl, va("Moved saved spawn %d by %s %.1f", index, dirTok, amount));
+	} else {
+		NXRP_PrintConsoleToPlayer(cl, "Failed to respawn model at new location");
+	}
+
+	return qtrue;
+}
+
 // Admin-only: move the last spawned prop to specified x y z (world coordinates)
 // Usage: !nx prop m <x> <y> <z>
 qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor ) {

@@ -42,6 +42,10 @@ qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor );
 // List saved prop spawns for the current map (admin)
 qboolean NXRP_cmdAdmin_prop_list( client_t *cl, const char *chatCursor );
+// Move a specific saved prop entry by a cardinal direction and amount
+qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args );
+// Expose new directional move through chat parser (internal)
+qboolean NXRP_cmdAdmin_prop_dir_chat( client_t *cl, const char *chatCursor );
 // Admin-only: remove the last spawned model (!nx mremove)
 qboolean NXRP_cmdAdmin_mremove( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_mmove( client_t *cl, const char *chatCursor );
