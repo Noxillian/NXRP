@@ -27,9 +27,6 @@ qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
-
-	// Some give commands are gated behind sv_cheats. Temporarily enable
-	// sv_cheats like other modules do (see social.cpp's Holo_CheatCommand)
 	const qboolean cheats = Cvar_VariableIntegerValue("sv_cheats") ? qtrue : qfalse;
 	if (!cheats) {
 		Cvar_Set("sv_cheats", "1");
@@ -105,6 +102,11 @@ qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 		Info_SetValueForKey(userinfo, "model", "tavion");
 		Info_SetValueForKey(userinfo, "pmodel", "tavion");
 		SV_SetUserinfo(cl - svs.clients, userinfo);
+		// Ensure server-side parsing of the new userinfo occurs so the
+		// client's server state and derived fields update before notifying
+		// the game VM. This mirrors SV_UpdateUserinfo_f which calls
+		// SV_UserinfoChanged() then GVM_ClientUserinfoChanged().
+		SV_UserinfoChanged(cl);
 		GVM_ClientUserinfoChanged(cl - svs.clients);
 
 			// Give the player an immediate force jump boost
@@ -584,9 +586,6 @@ qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Note: !nx ffa admin command removed. FFA respawn is applied automatically
-// on map start (see nxrp_events.cpp).
-
 // Handler: !nx giveall
 qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
@@ -624,9 +623,6 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePowerMax = 150;
 		ps->fd.forcePower = 100;
 		ps->fd.forcePowersActive |= (1 << FP_LIGHTNING);
-		cl->gentity->playerState->stats[STAT_ARMOR] = 200;
-		cl->gentity->playerState->stats[STAT_HEALTH] = 200;
-
 
 		SV_WannaGiveWeapon(cl, WP_CLONE_PISTOL);
 		SV_WannaGiveWeapon(cl, WP_SABER);
