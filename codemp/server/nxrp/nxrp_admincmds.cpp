@@ -61,12 +61,11 @@ qboolean NXRP_cmdAdmin_prop_t( client_t *cl, const char *chatCursor ) {
 	vec3_t floor = { 0.0f, 0.0f, 0.0f };
 	if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
 
-	int ent = NXRP_SpawnPropAtClient(cl, path, mins, maxs, angle);
+	int ent = NXRP_SpawnPropAtClientWithExtents(cl, path, mins, maxs, angle);
 	if (ent >= 0) {
 		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s with extents as entity %d", path, ent));
 		NXRP_RegisterSpawn(ent);
-		// persistence temporarily disabled; remove or re-enable after resolving linker
-		NXRP_PrintConsoleToPlayer(cl, "Spawn persistence disabled (temporary)");
+		NXRP_SaveSpawnToMap(ent, path);
 	} else {
 		NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model with extents.");
 	}
