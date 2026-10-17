@@ -30,6 +30,13 @@ static std::string hex_encode(const unsigned char *data, size_t len) {
 	return out;
 }
 
+// Test command: !test - list detailed skills from repo skills.json
+qboolean NXRP_cmd_test( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
+	NXRP_Skills_TestImpl(cl);
+	return qtrue;
+}
+
 // Minimal skills listing handler
 qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;

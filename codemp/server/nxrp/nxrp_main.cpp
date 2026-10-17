@@ -304,7 +304,7 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 		return NXRP_cmd_info( cl, dispatchCursor );
 
 	case NXRP_SUB_TEST:
-		return NXRP_cmdAdmin_test(cl, dispatchCursor);
+		return NXRP_cmd_test(cl, dispatchCursor);
 
 	case NXRP_SUB_ACCOUNT:
 		return NXRP_cmd_account( cl, dispatchCursor );

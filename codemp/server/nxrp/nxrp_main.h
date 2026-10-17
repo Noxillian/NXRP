@@ -75,13 +75,35 @@ void NXRP_ListSavedSpawnsForPlayer(client_t* cl);
 qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_skill( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_test( client_t *cl, const char *chatCursor );
 
 // Internal implementations for skills handling (implemented in nxrp_skills.cpp)
 qboolean NXRP_Skills_ListImpl( client_t *cl, const char *homepath );
 qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char *skillToken );
+void NXRP_Skills_TestImpl(client_t* cl);
 // Ensure runtime skills.json exists under fs_homepath/nxrp by copying from
 // installed or repository locations when missing. Called at server startup.
 void NXRP_EnsureRuntimeSkills(void);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+// Repo skill accessors (hardcoded skill data provided by nxrp_skills.cpp)
+void NXRP_LoadRepoSkills(void);
+int NXRP_GetRepoSkillCount(void);
+int NXRP_FindRepoSkillIndexById(const char *id);
+const char* NXRP_GetRepoSkillIdByIndex(int idx);
+const char* NXRP_GetRepoSkillNameByIndex(int idx);
+const char* NXRP_GetRepoSkillDescriptionByIndex(int idx);
+int NXRP_GetRepoSkillMaxLevelByIndex(int idx);
+int NXRP_GetRepoSkillLevelCount(int skillIdx);
+int NXRP_GetRepoSkillLevelCost(int skillIdx, int levelIdx);
+int NXRP_GetRepoSkillLevelEffectsCount(int skillIdx, int levelIdx);
+const char* NXRP_GetRepoSkillLevelEffectKey(int skillIdx, int levelIdx, int effectIdx);
+const char* NXRP_GetRepoSkillLevelEffectValue(int skillIdx, int levelIdx, int effectIdx);
+#ifdef __cplusplus
+}
+#endif
 
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );

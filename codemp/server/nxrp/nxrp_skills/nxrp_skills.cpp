@@ -6,6 +6,7 @@
 #include <sstream>
 #include <cctype>
 #include <algorithm>
+#include <map>
 #include <vector>
 #if defined(_WIN32)
   #include <direct.h>
@@ -17,6 +18,8 @@
 struct NXRP_RepoSkillLevel {
 	int level = 0;
 	int cost = 0;
+	// store simple effects as map<string,string> for printing
+	std::map<std::string,std::string> effects;
 };
 
 struct NXRP_RepoSkillDef {
@@ -24,10 +27,38 @@ struct NXRP_RepoSkillDef {
 	std::string name;
 	bool enabled = true;
 	int maxLevel = 0;
+	std::string description;
 	std::vector<NXRP_RepoSkillLevel> levels;
 };
 
 static std::vector<NXRP_RepoSkillDef> g_nxrpRepoSkills;
+
+// Print a single effect key/value in readable form
+static void NXRP_PrintEffect(client_t* cl, const std::string &k, const std::string &v) {
+	NXRP_PrintConsoleToPlayer(cl, va("    %s: %s", k.c_str(), v.c_str()));
+}
+
+// Test listing implementation: prints all repo skills in a readable format
+void NXRP_Skills_TestImpl(client_t* cl) {
+	if (g_nxrpRepoSkills.empty()) NXRP_LoadRepoSkills();
+	if (g_nxrpRepoSkills.empty()) { NXRP_PrintConsoleToPlayer(cl, "No skills available"); return; }
+
+	int idx = 1;
+	for (const auto &def : g_nxrpRepoSkills) {
+		NXRP_PrintConsoleToPlayer(cl, va("%d) %s (id: %s) [levels: %d]", idx, def.name.c_str(), def.id.c_str(), def.maxLevel));
+		if (!def.description.empty()) NXRP_PrintConsoleToPlayer(cl, va("  Desc: %s", def.description.c_str()));
+		NXRP_PrintConsoleToPlayer(cl, "  Levels:");
+		for (const auto &lvl : def.levels) {
+			NXRP_PrintConsoleToPlayer(cl, va("    L%d: cost %d", lvl.level, lvl.cost));
+			if (!lvl.effects.empty()) {
+				for (const auto &ef : lvl.effects) {
+					NXRP_PrintEffect(cl, ef.first, ef.second);
+				}
+			}
+		}
+		++idx;
+	}
+}
 
 static std::string NXRP_ToLowerCopy( const std::string &in ) {
 	std::string out = in;
@@ -48,26 +79,248 @@ void NXRP_EnsureRuntimeSkills(void) {
 	return;
 }
 
-static void NXRP_LoadRepoSkills() {
-	// Hardcoded repo skills to avoid runtime file dependencies.
+void NXRP_LoadRepoSkills() {
+	// Try to load repo skills.json from the source tree at runtime.
+	const std::string repoPath = "codemp/server/nxrp/nxrp_skills/skills.json";
+	std::ifstream ifs(repoPath);
 	g_nxrpRepoSkills.clear();
+	if (!ifs.is_open()) {
+		// fallback to hardcoded if the repo file is missing
+		NXRP_RepoSkillDef jump;
+		jump.id = "skill_jump";
+		jump.name = "Jump";
+		jump.enabled = true;
+		jump.maxLevel = 3;
+		jump.description = "Increases player's jump height.";
+		jump.levels = { {1,1, { {"jumpMultiplier", "1.10"} }}, {2,2, { {"jumpMultiplier", "1.25"} }}, {3,3, { {"jumpMultiplier", "1.50"} }} };
 
-	NXRP_RepoSkillDef jump;
-	jump.id = "skill_jump";
-	jump.name = "Jump";
-	jump.enabled = true;
-	jump.maxLevel = 3;
-	jump.levels = { {1,1}, {2,2}, {3,3} };
+		NXRP_RepoSkillDef pistol;
+		pistol.id = "skill_pistol";
+		pistol.name = "Pistol";
+		pistol.enabled = true;
+		pistol.maxLevel = 2;
+		pistol.description = "Improves pistol damage/handling.";
+		pistol.levels = { {1,1, {{"damageMultiplier","1.10"}}}, {2,2, {{"damageMultiplier","1.25"}}} };
 
-	NXRP_RepoSkillDef pistol;
-	pistol.id = "skill_pistol";
-	pistol.name = "Pistol";
-	pistol.enabled = true;
-	pistol.maxLevel = 2;
-	pistol.levels = { {1,1}, {2,2} };
+		g_nxrpRepoSkills.push_back(jump);
+		g_nxrpRepoSkills.push_back(pistol);
+		return;
+	}
 
-	g_nxrpRepoSkills.push_back(jump);
-	g_nxrpRepoSkills.push_back(pistol);
+	std::string scont((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+	ifs.close();
+
+	// crude JSON parsing tailored to the expected schema:
+	// { "skills": [ { "id":"..", "name":"..", "enabled":true, "maxLevel":N, "description":"..", "levels": [ {"level":1, "cost":1, "effects": { ... } }, ... ] }, ... ] }
+	size_t pos = 0;
+	size_t skillsPos = scont.find("\"skills\"");
+	if (skillsPos == std::string::npos) return;
+	size_t arrStart = scont.find('[', skillsPos);
+	if (arrStart == std::string::npos) return;
+	pos = arrStart + 1;
+
+	while (true) {
+		size_t idpos = scont.find("\"id\"", pos);
+		if (idpos == std::string::npos) break;
+		NXRP_RepoSkillDef def;
+		// id
+		size_t q1 = scont.find('"', idpos + 4);
+		if (q1 == std::string::npos) break;
+		size_t q2 = scont.find('"', q1 + 1);
+		if (q2 == std::string::npos) break;
+		def.id = scont.substr(q1+1, q2-q1-1);
+
+		// name
+		size_t namepos = scont.find("\"name\"", idpos);
+		if (namepos != std::string::npos) {
+			q1 = scont.find('"', namepos + 6);
+			q2 = scont.find('"', q1 + 1);
+			if (q1 != std::string::npos && q2 != std::string::npos) def.name = scont.substr(q1+1, q2-q1-1);
+		}
+
+		// enabled
+		size_t enpos = scont.find("\"enabled\"", idpos);
+		if (enpos != std::string::npos) {
+			size_t colon = scont.find(':', enpos);
+			if (colon != std::string::npos) {
+				size_t vstart = colon+1;
+				while (vstart < scont.size() && isspace((unsigned char)scont[vstart])) ++vstart;
+				if (scont.compare(vstart, 4, "true") == 0) def.enabled = true;
+				else def.enabled = false;
+			}
+		}
+
+		// maxLevel
+		size_t mlpos = scont.find("\"maxLevel\"", idpos);
+		if (mlpos != std::string::npos) {
+			size_t colon = scont.find(':', mlpos);
+			if (colon != std::string::npos) def.maxLevel = atoi(scont.c_str() + colon + 1);
+		}
+
+		// description
+		size_t descpos = scont.find("\"description\"", idpos);
+		if (descpos != std::string::npos) {
+			q1 = scont.find('"', descpos + 13);
+			q2 = scont.find('"', q1 + 1);
+			if (q1 != std::string::npos && q2 != std::string::npos) def.description = scont.substr(q1+1, q2-q1-1);
+		}
+
+		// levels
+		size_t levelspos = scont.find("\"levels\"", idpos);
+		if (levelspos != std::string::npos) {
+			size_t lb = scont.find('[', levelspos);
+			size_t rb = (lb == std::string::npos) ? std::string::npos : scont.find(']', lb);
+			if (lb != std::string::npos && rb != std::string::npos) {
+				size_t p = lb + 1;
+				while (p < rb) {
+					size_t levelKey = scont.find("\"level\"", p);
+					if (levelKey == std::string::npos || levelKey > rb) break;
+					NXRP_RepoSkillLevel lvl;
+					size_t colon = scont.find(':', levelKey);
+					if (colon != std::string::npos) lvl.level = atoi(scont.c_str() + colon + 1);
+					// cost
+					size_t costKey = scont.find("\"cost\"", levelKey);
+					if (costKey != std::string::npos && costKey < rb) {
+						colon = scont.find(':', costKey);
+						if (colon != std::string::npos) lvl.cost = atoi(scont.c_str() + colon + 1);
+					}
+					// effects
+					size_t effKey = scont.find("\"effects\"", levelKey);
+					if (effKey != std::string::npos && effKey < rb) {
+						size_t ob = scont.find('{', effKey);
+						size_t cb = (ob == std::string::npos) ? std::string::npos : scont.find('}', ob);
+						if (ob != std::string::npos && cb != std::string::npos) {
+							size_t epos = ob + 1;
+							while (epos < cb) {
+								size_t kq1 = scont.find('"', epos);
+								if (kq1 == std::string::npos || kq1 > cb) break;
+								size_t kq2 = scont.find('"', kq1 + 1);
+								if (kq2 == std::string::npos || kq2 > cb) break;
+								std::string k = scont.substr(kq1+1, kq2-kq1-1);
+								size_t ccol = scont.find(':', kq2);
+								if (ccol == std::string::npos || ccol > cb) break;
+								size_t vstart = ccol + 1;
+								while (vstart < scont.size() && isspace((unsigned char)scont[vstart])) ++vstart;
+								std::string val;
+								if (scont[vstart] == '"') {
+									size_t vq = scont.find('"', vstart+1);
+									if (vq == std::string::npos || vq > cb) break;
+									val = scont.substr(vstart+1, vq-vstart-1);
+									epos = vq + 1;
+								} else {
+									// number or bare token
+									size_t vend = vstart;
+									while (vend < scont.size() && (std::isdigit((unsigned char)scont[vend]) || scont[vend]=='.' || scont[vend]=='-' )) ++vend;
+									val = scont.substr(vstart, vend - vstart);
+									epos = vend + 1;
+								}
+								lvl.effects[k] = val;
+							}
+						}
+					}
+					def.levels.push_back(lvl);
+					p = levelKey + 6;
+				}
+			}
+		}
+
+		g_nxrpRepoSkills.push_back(def);
+		pos = idpos + 1;
+	}
+	// if parsing failed to produce entries, leave g_nxrpRepoSkills empty so callers may fallback
+}
+
+// Exported accessors for hardcoded repo skills
+int NXRP_GetRepoSkillCount(void) {
+	if (g_nxrpRepoSkills.empty()) NXRP_LoadRepoSkills();
+	return (int)g_nxrpRepoSkills.size();
+}
+
+int NXRP_FindRepoSkillIndexById(const char *id) {
+	if (!id) return -1;
+	if (g_nxrpRepoSkills.empty()) NXRP_LoadRepoSkills();
+	std::string idl = NXRP_ToLowerCopy(std::string(id));
+	for (size_t i = 0; i < g_nxrpRepoSkills.size(); ++i) {
+		if (NXRP_ToLowerCopy(g_nxrpRepoSkills[i].id) == idl) return (int)i;
+	}
+	return -1;
+}
+
+const char* NXRP_GetRepoSkillIdByIndex(int idx) {
+	if (idx < 0) return nullptr;
+	if (g_nxrpRepoSkills.empty()) NXRP_LoadRepoSkills();
+	if (idx >= (int)g_nxrpRepoSkills.size()) return nullptr;
+	return g_nxrpRepoSkills[idx].id.c_str();
+}
+
+const char* NXRP_GetRepoSkillNameByIndex(int idx) {
+	if (idx < 0) return nullptr;
+	if (g_nxrpRepoSkills.empty()) NXRP_LoadRepoSkills();
+	if (idx >= (int)g_nxrpRepoSkills.size()) return nullptr;
+	return g_nxrpRepoSkills[idx].name.c_str();
+}
+
+const char* NXRP_GetRepoSkillDescriptionByIndex(int idx) {
+	if (idx < 0) return nullptr;
+	if (g_nxrpRepoSkills.empty()) NXRP_LoadRepoSkills();
+	if (idx >= (int)g_nxrpRepoSkills.size()) return nullptr;
+	return g_nxrpRepoSkills[idx].description.c_str();
+}
+
+int NXRP_GetRepoSkillMaxLevelByIndex(int idx) {
+	if (idx < 0) return 0;
+	if (g_nxrpRepoSkills.empty()) NXRP_LoadRepoSkills();
+	if (idx >= (int)g_nxrpRepoSkills.size()) return 0;
+	return g_nxrpRepoSkills[idx].maxLevel;
+}
+
+int NXRP_GetRepoSkillLevelCount(int skillIdx) {
+	if (skillIdx < 0) return 0;
+	if (g_nxrpRepoSkills.empty()) NXRP_LoadRepoSkills();
+	if (skillIdx >= (int)g_nxrpRepoSkills.size()) return 0;
+	return (int)g_nxrpRepoSkills[skillIdx].levels.size();
+}
+
+int NXRP_GetRepoSkillLevelCost(int skillIdx, int levelIdx) {
+	if (skillIdx < 0 || levelIdx < 0) return 0;
+	if (g_nxrpRepoSkills.empty()) NXRP_LoadRepoSkills();
+	if (skillIdx >= (int)g_nxrpRepoSkills.size()) return 0;
+	const auto &lv = g_nxrpRepoSkills[skillIdx].levels;
+	if (levelIdx >= (int)lv.size()) return 0;
+	return lv[levelIdx].cost;
+}
+
+int NXRP_GetRepoSkillLevelEffectsCount(int skillIdx, int levelIdx) {
+	if (skillIdx < 0 || levelIdx < 0) return 0;
+	if (g_nxrpRepoSkills.empty()) NXRP_LoadRepoSkills();
+	if (skillIdx >= (int)g_nxrpRepoSkills.size()) return 0;
+	const auto &lv = g_nxrpRepoSkills[skillIdx].levels;
+	if (levelIdx >= (int)lv.size()) return 0;
+	return (int)lv[levelIdx].effects.size();
+}
+
+const char* NXRP_GetRepoSkillLevelEffectKey(int skillIdx, int levelIdx, int effectIdx) {
+	if (skillIdx < 0 || levelIdx < 0 || effectIdx < 0) return nullptr;
+	if (g_nxrpRepoSkills.empty()) NXRP_LoadRepoSkills();
+	if (skillIdx >= (int)g_nxrpRepoSkills.size()) return nullptr;
+	if (levelIdx >= (int)g_nxrpRepoSkills[skillIdx].levels.size()) return nullptr;
+	const auto &effects = g_nxrpRepoSkills[skillIdx].levels[levelIdx].effects;
+	if (effectIdx >= (int)effects.size()) return nullptr;
+	auto it = effects.begin();
+	std::advance(it, effectIdx);
+	return it->first.c_str();
+}
+
+const char* NXRP_GetRepoSkillLevelEffectValue(int skillIdx, int levelIdx, int effectIdx) {
+	if (skillIdx < 0 || levelIdx < 0 || effectIdx < 0) return nullptr;
+	if (g_nxrpRepoSkills.empty()) NXRP_LoadRepoSkills();
+	if (skillIdx >= (int)g_nxrpRepoSkills.size()) return nullptr;
+	if (levelIdx >= (int)g_nxrpRepoSkills[skillIdx].levels.size()) return nullptr;
+	const auto &effects = g_nxrpRepoSkills[skillIdx].levels[levelIdx].effects;
+	if (effectIdx >= (int)effects.size()) return nullptr;
+	auto it = effects.begin();
+	std::advance(it, effectIdx);
+	return it->second.c_str();
 }
 
 static const NXRP_RepoSkillDef *NXRP_FindRepoSkillById( const std::string &idLower ) {
