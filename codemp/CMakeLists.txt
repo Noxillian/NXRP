@@ -682,13 +682,13 @@ if(BuildMPDed)
 		"${MPDir}/server/nxrp/nxrp_main.cpp"
 		"${MPDir}/server/nxrp/nxrp_cmds.cpp"
 		"${MPDir}/server/nxrp/nxrp_admincmds.cpp"
-		"${MPDir}/server/nxrp/nxrp_utils.cpp"
+		"${MPDir}/server/nxrp/nxrp_utils/nxrp_utils.cpp"
 		"${MPDir}/server/nxrp/nxrp_npcs.cpp"
 		"${MPDir}/server/nxrp/nxrp_utils_props.cpp"
 		"${MPDir}/server/nxrp/nxrp_events.cpp"
 		"${MPDir}/server/nxrp/nxrp_ffa.cpp"
 		"${MPDir}/server/nxrp/nxrp_skills/nxrp_skills.cpp"
-		"${MPDir}/server/nxrp/nxrp_jsonreader.cpp"
+		"${MPDir}/server/nxrp/nxrp_utils/nxrp_jsonreader.cpp"
 		# nxrp_accounts_sql.cpp removed while SQLite support is disabled
 		)
 	source_group("server/nxrp" FILES ${MPDedNxrpFiles})
