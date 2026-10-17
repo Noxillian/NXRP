@@ -27,6 +27,9 @@ static std::string hex_encode(const unsigned char *data, size_t len) {
 		out.push_back(hex[b & 0xF]);
 	}
 
+	return out;
+}
+
 // Minimal skills listing handler
 qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
@@ -229,8 +232,7 @@ qboolean NXRP_cmd_skill( client_t *cl, const char *chatCursor ) {
 	NXRP_PrintConsoleToPlayer(cl, va("Purchased skill_jump. Remaining skillpoints: %d", newsp));
 	return qtrue;
 }
-	return out;
-}
+
 
 static bool hex_decode(const std::string &hex, std::vector<unsigned char> &out) {
 	size_t n = hex.size();
