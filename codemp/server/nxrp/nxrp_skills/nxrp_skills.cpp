@@ -43,107 +43,31 @@ void NXRP_EnsureRuntimeSkills(void) {
 	std::ifstream ifs(filepath);
 	if (ifs.is_open()) { ifs.close(); return; }
 
-	// Try installed/system locations first
-	std::vector<std::string> candidates;
-	candidates.push_back("${CMAKE_INSTALL_PREFIX}/share/caded/nxrp/skills.json"); // placeholder, resolved by CMake configure
-	candidates.push_back("codemp/server/nxrp/nxrp_skills/skills.json");
-#if !defined(_WIN32)
-	candidates.push_back("/usr/share/caded/nxrp/skills.json");
-	candidates.push_back("/usr/local/share/caded/nxrp/skills.json");
-#endif
-
-	for (const auto &src : candidates) {
-		std::ifstream s(src);
-		if (!s.is_open()) continue;
-		// ensure target dir exists
-#if defined(_WIN32)
-		_mkdir(nxrpDir.c_str());
-#else
-		mkdir(nxrpDir.c_str(), 0755);
-#endif
-		std::ofstream ofs(filepath, std::ios::trunc);
-		if (ofs.is_open()) {
-			ofs << s.rdbuf();
-			ofs.close();
-		}
-		s.close();
-		break;
-	}
+	// Startup no longer copies skills.json from any candidate paths.
+	// Skill definitions are provided by hardcoded repo skills when needed.
+	return;
 }
 
 static void NXRP_LoadRepoSkills() {
+	// Hardcoded repo skills to avoid runtime file dependencies.
 	g_nxrpRepoSkills.clear();
 
-	const std::string repoPath = "codemp/server/nxrp/nxrp_skills/skills.json";
-	std::ifstream ifs(repoPath);
-	if (!ifs.is_open()) return;
-	std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
-	ifs.close();
+	NXRP_RepoSkillDef jump;
+	jump.id = "skill_jump";
+	jump.name = "Jump";
+	jump.enabled = true;
+	jump.maxLevel = 3;
+	jump.levels = { {1,1}, {2,2}, {3,3} };
 
-	size_t pos = 0;
-	while (true) {
-		size_t idpos = content.find("\"id\"", pos);
-		if (idpos == std::string::npos) break;
+	NXRP_RepoSkillDef pistol;
+	pistol.id = "skill_pistol";
+	pistol.name = "Pistol";
+	pistol.enabled = true;
+	pistol.maxLevel = 2;
+	pistol.levels = { {1,1}, {2,2} };
 
-		size_t namepos = content.find("\"name\"", idpos);
-		size_t enabledpos = content.find("\"enabled\"", idpos);
-		size_t maxLevelPos = content.find("\"maxLevel\"", idpos);
-		size_t levelspos = content.find("\"levels\"", idpos);
-		if (namepos == std::string::npos || levelspos == std::string::npos) break;
-
-		NXRP_RepoSkillDef def;
-		size_t q1 = content.find('"', idpos + 4);
-		size_t q2 = content.find('"', q1 + 1);
-		if (q1 != std::string::npos && q2 != std::string::npos) def.id = content.substr(q1 + 1, q2 - q1 - 1);
-
-		q1 = content.find('"', namepos + 6);
-		q2 = content.find('"', q1 + 1);
-		if (q1 != std::string::npos && q2 != std::string::npos) def.name = content.substr(q1 + 1, q2 - q1 - 1);
-
-		if (enabledpos != std::string::npos) {
-			size_t colon = content.find(':', enabledpos);
-			if (colon != std::string::npos) {
-				size_t v = colon + 1;
-				while (v < content.size() && std::isspace((unsigned char)content[v])) ++v;
-				def.enabled = (content.compare(v, 4, "true") == 0);
-			}
-		}
-
-		if (maxLevelPos != std::string::npos) {
-			size_t colon = content.find(':', maxLevelPos);
-			if (colon != std::string::npos) def.maxLevel = atoi(content.c_str() + colon + 1);
-		}
-
-		size_t lvlEnd = content.find(']', levelspos);
-		if (lvlEnd != std::string::npos) {
-			size_t p = levelspos;
-			while (true) {
-				size_t l = content.find("\"level\"", p);
-				if (l == std::string::npos || l > lvlEnd) break;
-				size_t c1 = content.find(':', l);
-				int lvl = 0;
-				if (c1 != std::string::npos) lvl = atoi(content.c_str() + c1 + 1);
-
-				size_t costPos = content.find("\"cost\"", l);
-				int cost = 0;
-				if (costPos != std::string::npos && costPos < lvlEnd) {
-					size_t c2 = content.find(':', costPos);
-					if (c2 != std::string::npos) cost = atoi(content.c_str() + c2 + 1);
-				}
-
-				NXRP_RepoSkillLevel sl;
-				sl.level = lvl;
-				sl.cost = cost;
-				def.levels.push_back(sl);
-				p = l + 7;
-			}
-		}
-
-		if (def.maxLevel <= 0 && !def.levels.empty()) def.maxLevel = (int)def.levels.size();
-		if (!def.id.empty()) g_nxrpRepoSkills.push_back(def);
-
-		pos = levelspos + 1;
-	}
+	g_nxrpRepoSkills.push_back(jump);
+	g_nxrpRepoSkills.push_back(pistol);
 }
 
 static const NXRP_RepoSkillDef *NXRP_FindRepoSkillById( const std::string &idLower ) {
