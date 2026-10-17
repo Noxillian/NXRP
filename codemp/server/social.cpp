@@ -6394,19 +6394,7 @@ void SV_SocialGameInit(void)
 
 		gNPCSpawnType = (void* (*)(void*, char*, char*, int, int, int))Sys_LoadFunction(dll, "NPC_SpawnType");
 		gNPCLoadParms = (void (*)(void))Sys_LoadFunction(dll, "NPC_LoadParms");
-		// Route frees through NXRP_FreeEntity so server modules can observe NPC removals
 		gFreeEntity = (void (*)(void*))Sys_LoadFunction(dll, "G_FreeEntity");
-		if (gFreeEntity) {
-			// override gFreeEntity pointer to call NXRP_FreeEntity which forwards
-			// to the real VM function after notification. We store the original
-			// pointer in gFreeEntityOriginal for internal use if needed.
-			// Note: cast to avoid strict aliasing warnings.
-			void* orig = (void*)gFreeEntity;
-			// assign the wrapper
-			gFreeEntity = (void (*)(void*))NXRP_FreeEntity;
-			// keep orig pointer in a local static for potential future use
-			static void (*gFreeEntityOriginal)(void*) = (void (*)(void*))orig;
-		}
 		gSetEnemy = (void (*)(void*, void*))Sys_LoadFunction(dll, "G_SetEnemy");
 		gClearEnemy = (void (*)(void*))Sys_LoadFunction(dll, "G_ClearEnemy");
 		gGlobalUse = (void (*)(void*, void*, void*))Sys_LoadFunction(dll, "GlobalUse");
