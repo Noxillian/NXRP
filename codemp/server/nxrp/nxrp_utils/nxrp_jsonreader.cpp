@@ -56,9 +56,9 @@ bool NXRP_ParseSkillsJson(const std::string &content, std::vector<NXRP_SimpleSki
 				while (p < rb) {
 					size_t levelKey = content.find("\"level\"", p);
 					if (levelKey == std::string::npos || levelKey > rb) break;
-					int lvl = 0; int cost = 0;
+					int cost = 0;
 					size_t colon = content.find(':', levelKey);
-					if (colon != std::string::npos) lvl = atoi(content.c_str() + colon + 1);
+					// level value is ignored by the simplified schema; only cost is stored
 					size_t costKey = content.find("\"cost\"", levelKey);
 					if (costKey != std::string::npos && costKey < rb) {
 						colon = content.find(':', costKey);
