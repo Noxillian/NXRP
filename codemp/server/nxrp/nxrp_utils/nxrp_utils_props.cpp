@@ -196,7 +196,21 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 
 		// attempt to find prop extents in catalog
 		vec3_t mins, maxs, origin; float yaw = ay; // use yaw from angles' second component if present
+		float savedYaw = ay;
 		bool hasCatalog = NXRP_GetPropFromCatalog(modelPath.c_str(), modelPath, mins, maxs, origin, yaw);
+
+		// Preserve saved origin/yaw when catalog does not provide them.
+		const float eps = 0.001f;
+		if (hasCatalog) {
+			// If catalog returned an all-zero origin, prefer the saved origin from file
+			if (fabs(origin[0]) < eps && fabs(origin[1]) < eps && fabs(origin[2]) < eps) {
+				origin[0] = ox; origin[1] = oy; origin[2] = oz;
+			}
+			// If catalog left yaw at zero but our saved yaw was non-zero, prefer saved yaw
+			if (fabs(yaw) < eps && fabs(savedYaw) >= eps) {
+				yaw = savedYaw;
+			}
+		}
 
 		// Debug: report what we're about to spawn so admins can see failures
 		if (cl) {
