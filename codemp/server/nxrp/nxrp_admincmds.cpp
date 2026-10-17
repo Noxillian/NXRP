@@ -86,8 +86,10 @@ qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
 	if (sscanf(chatCursor, "%31s", tok) < 1) { return qtrue; }
 
 	if (!Q_stricmp(tok, "load")) {
-		int cnt = NXRP_LoadSavedNPCsForMap(cl);
-		NXRP_PrintConsoleToPlayer(cl, va("Loaded %d saved NPC(s) for this map", cnt));
+		// Loading saved NPCs is temporarily disabled while persistence is
+		// stabilized. Restore NXRP_LoadSavedNPCsForMap when ready.
+		// int cnt = NXRP_LoadSavedNPCsForMap(cl);
+		NXRP_PrintConsoleToPlayer(cl, "Loading saved NPCs is disabled");
 		return qtrue;
 	}
 
