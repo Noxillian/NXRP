@@ -37,6 +37,7 @@ enum NXRP_SubCmd {
 	NXRP_SUB_UNKNOWN = 0,
 	NXRP_SUB_NPC,
 	NXRP_SUB_SPAWN,
+	NXRP_SUB_SKILLS,
 	NXRP_SUB_MMOVE,
 	NXRP_SUB_TP,
 	NXRP_SUB_VEHICLE,
@@ -241,9 +242,6 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 	case NXRP_SUB_TP:
 		return NXRP_cmdAdmin_tp(cl, dispatchCursor);
 
-	case NXRP_SUB_MMOVE:
-		return NXRP_cmdAdmin_mmove(cl, dispatchCursor);
-
 	case NXRP_SUB_SPAWN:
 		return NXRP_cmdAdmin_spawn(cl, dispatchCursor);
 
@@ -277,9 +275,6 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 
 	case NXRP_SUB_MREMOVE:
 		return NXRP_cmdAdmin_mremove(cl, dispatchCursor);
-
-	case NXRP_SUB_PMODEL:
-		return NXRP_cmdAdmin_pmodel(cl, dispatchCursor);
 
 	case NXRP_SUB_BOSS:
 		return NXRP_cmdAdmin_boss(cl, dispatchCursor);

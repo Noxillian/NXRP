@@ -26,6 +26,16 @@ static std::string hex_encode(const unsigned char *data, size_t len) {
 		out.push_back(hex[(b >> 4) & 0xF]);
 		out.push_back(hex[b & 0xF]);
 	}
+
+// Minimal skills listing handler
+qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	NXRP_PrintConsoleToPlayer(cl, "Available skills:");
+	NXRP_PrintConsoleToPlayer(cl, "1. Jump Boost - Increases jump height (cost 1)");
+	NXRP_PrintConsoleToPlayer(cl, "Use /skills to view this list in console or chat: !skills");
+	return qtrue;
+}
 	return out;
 }
 
@@ -70,8 +80,31 @@ static bool parse_user_pass(const char *chatCursor, std::string &outUser, std::s
 
 // Handler for: !info
 qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor ) {
-	(void)chatCursor;
-	NXRP_PrintConsoleToPlayer(cl, va("NXRP version: %s", NXRP_VERSION));
+	// Support subcommands: cmds, acmds, help
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	const char* s = chatCursor ? chatCursor : "";
+	if (s && *s) {
+		// Trim leading spaces
+		while (*s == ' ' || *s == '\t') ++s;
+		if (!Q_stricmp(s, "cmds") || !Q_stricmp(s, "commands")) {
+			NXRP_PrintConsoleToPlayer(cl, "General commands:\n  !info | !nxrp | /info - show info/help\n  !register <user> <pass> - create account\n  !login <user> <pass> - login\n  !pos - show position\n  !skills - list skills");
+			return qtrue;
+		}
+		if (!Q_stricmp(s, "acmds") || !Q_stricmp(s, "admin")) {
+			NXRP_PrintConsoleToPlayer(cl, "Admin commands:\n  !prop s/t/m - spawn/manage props\n  !npc - spawn/load NPCs\n  !tp - teleport\n  !list - list entities\n  (admin only)");
+			return qtrue;
+		}
+	}
+
+	// Default info block
+	NXRP_PrintConsoleToPlayer(cl, "------ NXRP ------");
+	const char* username = (cl && cl->nxrp_username[0]) ? cl->nxrp_username : "<not logged in>";
+	NXRP_PrintConsoleToPlayer(cl, va("%s %d/50", username, 1));
+	NXRP_PrintConsoleToPlayer(cl, va("%d/100 Credits: %d", 0, 0));
+	NXRP_PrintConsoleToPlayer(cl, "------------------");
+	NXRP_PrintConsoleToPlayer(cl, "1. /info cmds\t- General Commands");
+	NXRP_PrintConsoleToPlayer(cl, "2. /info acmds\t- Admin Commands");
+	NXRP_PrintConsoleToPlayer(cl, "3. /skills\t\t- List Skills");
 	return qtrue;
 }
 

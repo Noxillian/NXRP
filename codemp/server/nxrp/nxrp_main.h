@@ -50,8 +50,6 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args );
 qboolean NXRP_cmdAdmin_prop_dir_chat( client_t *cl, const char *chatCursor );
 // Admin-only: remove the last spawned model (!nx mremove)
 qboolean NXRP_cmdAdmin_mremove( client_t *cl, const char *chatCursor );
-// mmove command removed
-// pmodel command removed
 // Admin-only: spawn an NPC or misc model test
 qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor );
 // Admin-only: spawn and persist NPC definitions per-map (commands: !npc <type>, !npc load)
@@ -72,6 +70,10 @@ qboolean NXRP_cmdAdmin_strip( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor );
 // NXRP-specific listing of saved map spawns
 void NXRP_ListSavedSpawnsForPlayer(client_t* cl);
+
+// Public info/help/skills commands (usable by logged-in players)
+qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor );
 
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );
