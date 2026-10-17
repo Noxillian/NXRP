@@ -157,6 +157,27 @@ qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char
 	// read skills definitions to find cost and maxLevel for the requested skill id
 	std::string skillsPath = nxrpDir + "/skills.json";
 	std::ifstream sifs(skillsPath);
+	if (!sifs.is_open()) {
+		// If the runtime skills.json was removed (example: nxrp/ deleted), try to copy the repo copy
+		const std::string repoPath = "codemp/server/nxrp/nxrp_skills/skills.json";
+		std::ifstream repoIfs(repoPath);
+		if (repoIfs.is_open()) {
+			// ensure target dir exists
+#if defined(_WIN32)
+			_mkdir(nxrpDir.c_str());
+#else
+			mkdir(nxrpDir.c_str(), 0755);
+#endif
+			std::ofstream ofs(skillsPath, std::ios::trunc);
+			if (ofs.is_open()) {
+				ofs << repoIfs.rdbuf();
+				ofs.close();
+			}
+			repoIfs.close();
+			// reopen the runtime file
+			sifs.open(skillsPath);
+		}
+	}
 	if (!sifs.is_open()) { NXRP_PrintConsoleToPlayer(cl, "Skills definition file missing"); return qtrue; }
 	std::string scont((std::istreambuf_iterator<char>(sifs)), std::istreambuf_iterator<char>());
 	sifs.close();
