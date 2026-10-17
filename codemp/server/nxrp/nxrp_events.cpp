@@ -138,7 +138,7 @@ void NXRP_OnPlayerConnect(int clientNum, qboolean firstTime, qboolean isBot) {
 // Called when a player's persistent kill counter changes (tracked by SV_NXRP_ScoreFrame)
 void NXRP_OnKillsChanged(client_t *cl, int oldKills, int newKills) {
 	const char *name = cl ? (cl->nxrp_username[0] ? cl->nxrp_username : cl->name) : "Unknown";
-	NXRP_PrintConsoleToPlayer(NULL, va("Kill archived: %s %d -> %d\n", name, oldKills, newKills));
+	NXRP_PrintConsoleToPlayer(NULL, va("Kill archived: %s %d -> %d", name, oldKills, newKills));
 	//Com_Printf("Kill archived: %s %d -> %d\n", name, oldKills, newKills);
 
 	// Detect teamkills from the victim-side kill change and restore attacker score.
@@ -261,7 +261,7 @@ void NXRP_OnRoundEnd(int winningTeam) {
 void NXRP_OnRoundStart(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Round started");
 	// Announce in chat as well
-	SV_SendServerCommand(NULL, "chat \"^3[NXRP]^7 Round started\"\n");
+	SV_SendServerCommand(NULL, "chat \"^3[NXRP]^7 Round started\"");
 	// Increment round counter and re-resolve/reapply FFA hooks at round start
 	nxrp_roundNumber++;
 	NXRP_FFA_Init();
