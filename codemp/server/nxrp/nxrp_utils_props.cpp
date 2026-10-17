@@ -127,16 +127,107 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 	return spawned;
 }
 
-// Persist an NPC spawn to a per-map JSON file in the fs_homepath/nxrp_npcs directory.
-void NXRP_SaveNPCToMap(int entnum, const char* npcType) {
-	if (entnum < 0 || !npcType) return;
+// Read the per-map JSON file and send entries to the player as a simple indexed list.
+void NXRP_ListSavedSpawns(client_t* cl) {
+	const char* home = Cvar_VariableString("fs_homepath");
+	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
+	const char* map = Cvar_VariableString("mapname");
+	if (!map || !map[0]) map = "nomap";
+	std::string filename = dir + "/" + std::string(map) + ".json";
+
+	std::ifstream ifs(filename);
+	if (!ifs.is_open()) {
+		NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
+		return;
+	}
+
+	std::string line;
+	int idx = 0;
+	while (std::getline(ifs, line)) {
+		if (line.empty()) continue;
+		// Parse model path and origin from the saved JSON-like line
+		const char* s = line.c_str();
+		std::string modelPath;
+		float ox=0, oy=0, oz=0;
+		const char* modelKey = "\"model\"";
+		const char* originKey = "\"origin\"";
+		const char* m = strstr(s, modelKey);
+		if (m) {
+			m = strchr(m, ':'); if (m) m++;
+			while (m && *m && isspace((unsigned char)*m)) m++;
+			if (m && *m == '"') {
+				m++;
+				const char* me = strchr(m, '"');
+				if (me && me > m) modelPath.assign(m, me - m);
+			}
+		}
+		const char* o = strstr(s, originKey);
+		if (o) {
+			o = strchr(o, '[');
+			if (o) {
+				o++;
+				sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz);
+			}
+		}
+
+		char buf[1024];
+		snprintf(buf, sizeof(buf), "%d.\t%s\t%.0f, %.0f, %.0f", idx, modelPath.c_str(), ox, oy, oz);
+		NXRP_PrintConsoleToPlayer(cl, buf);
+		idx++;
+	}
+	ifs.close();
+	if (idx == 0) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
+}
+
+// Alias: spawn prop at client using explicit extents. Keep same behavior as NXRP_SpawnPropAtClient.
+int NXRP_SpawnPropAtClientWithExtents(client_t* cl, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, float yaw) {
+	return NXRP_SpawnPropAtClient(cl, modelPath, propMins, propMaxs, yaw);
+}
+
+// Remove a saved spawn entry by its zero-based index. This rewrites the
+// per-map file excluding the requested index. Returns true on success.
+bool NXRP_RemoveSavedSpawnByIndex(int index) {
+	const char* home = Cvar_VariableString("fs_homepath");
+	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
+	const char* map = Cvar_VariableString("mapname");
+	if (!map || !map[0]) map = "nomap";
+	std::string filename = dir + "/" + std::string(map) + ".json";
+
+	std::ifstream ifs(filename);
+	if (!ifs.is_open()) return false;
+
+	std::vector<std::string> lines;
+	std::string line;
+	while (std::getline(ifs, line)) {
+		if (!line.empty()) lines.push_back(line);
+	}
+	ifs.close();
+
+	if (index < 0 || index >= (int)lines.size()) return false;
+
+	// Remove the selected entry and rewrite file
+	lines.erase(lines.begin() + index);
+	FILE* f = fopen(filename.c_str(), "w");
+	if (!f) return false;
+	for (const auto &l : lines) {
+		fputs(l.c_str(), f);
+		fputc('\n', f);
+	}
+	fclose(f);
+	return true;
+}
+
+// Persist a spawn to a per-map JSON file in the fs_homepath/nxrp_props directory.
+void NXRP_SaveSpawnToMap(int entnum, const char* modelPath) {
+	if (entnum < 0 || !modelPath) return;
 
 	sharedEntity_t* e = SV_GentityNum(entnum);
 	if (!e) return;
 
+	// Build JSON entry: { "ent": N, "model": "path", "origin": [x,y,z], "angles": [x,y,z] }
 	char buf[1024];
 	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_npcs" : std::string("nxrp_npcs");
+	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
 #if defined(_WIN32)
 	CreateDirectoryA(dir.c_str(), NULL);
 #else
@@ -147,70 +238,14 @@ void NXRP_SaveNPCToMap(int entnum, const char* npcType) {
 	if (!map || !map[0]) map = "nomap";
 	std::string filename = dir + "/" + std::string(map) + ".json";
 
-	int nextIndex = 0;
-	{
-		std::ifstream existing(filename);
-		if (existing.is_open()) {
-			std::string l;
-			while (std::getline(existing, l)) { if (!l.empty()) nextIndex++; }
-			existing.close();
-		}
-	}
-
+	// Append the entry to the map file.
 	FILE* f = fopen(filename.c_str(), "a");
 	if (!f) return;
 
-	snprintf(buf, sizeof(buf), "{ \"ent\": %d, \"id\": %d, \"index\": %d, \"npc\": \"%s\", \"origin\": [%.0f, %.0f, %.0f] }\n",
-		entnum, entnum, nextIndex, npcType,
-		e->s.pos.trBase[0], e->s.pos.trBase[1], e->s.pos.trBase[2]);
+	snprintf(buf, sizeof(buf), "{ \"ent\": %d, \"model\": \"%s\", \"origin\": [%.1f, %.1f, %.1f], \"angles\": [%.1f, %.1f, %.1f] }\n",
+		entnum, modelPath,
+		e->s.pos.trBase[0], e->s.pos.trBase[1], e->s.pos.trBase[2],
+		e->s.apos.trBase[0], e->s.apos.trBase[1], e->s.apos.trBase[2]);
 	fputs(buf, f);
 	fclose(f);
-}
-
-// Load saved NPC entries for the current map and spawn them. Returns how many were spawned.
-int NXRP_LoadSavedNPCsForMap(client_t* cl) {
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_npcs" : std::string("nxrp_npcs");
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
-
-	std::ifstream ifs(filename);
-	if (!ifs.is_open()) return 0;
-
-	std::string line;
-	int spawned = 0;
-	while (std::getline(ifs, line)) {
-		if (line.empty()) continue;
-		const char* s = line.c_str();
-		const char* npcKey = "\"npc\"";
-		const char* originKey = "\"origin\"";
-		const char* n = strstr(s, npcKey);
-		if (!n) continue;
-		n = strchr(n, ':'); if (!n) continue; n++;
-		while (*n && isspace((unsigned char)*n)) n++;
-		if (*n != '"') continue;
-		n++;
-		const char* nend = strchr(n, '"'); if (!nend) continue;
-		std::string npcType(n, nend - n);
-
-		float ox=0, oy=0, oz=0;
-		const char* o = strstr(s, originKey);
-		if (o) {
-			o = strchr(o, '[');
-			if (o) {
-				o++;
-				sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz);
-			}
-		}
-
-		// Construct npc spawn command and execute via delayed client command helper
-		char cmdBuf[128];
-		Com_sprintf(cmdBuf, sizeof(cmdBuf), "npc spawn %s", npcType.c_str());
-		NXRP_PrintConsoleToPlayer(cl, "^3Spawning NPC from saved file");
-		SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
-		spawned++;
-	}
-	ifs.close();
-	return spawned;
 }
