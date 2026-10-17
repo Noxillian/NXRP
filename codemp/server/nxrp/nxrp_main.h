@@ -74,6 +74,7 @@ void NXRP_ListSavedSpawnsForPlayer(client_t* cl);
 // Public info/help/skills commands (usable by logged-in players)
 qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_skill( client_t *cl, const char *chatCursor );
 
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );

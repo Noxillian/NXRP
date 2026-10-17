@@ -36,6 +36,126 @@ qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
 	NXRP_PrintConsoleToPlayer(cl, "Use /skills to view this list in console or chat: !skills");
 	return qtrue;
 }
+
+// Handler for: !skill <skillname>
+qboolean NXRP_cmd_skill( client_t *cl, const char *chatCursor ) {
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!chatCursor || !*chatCursor) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !skill <skillname>");
+		return qtrue;
+	}
+
+	// parse first token as skill name
+	char tok[MAX_TOKEN_CHARS] = {0};
+	if (sscanf(chatCursor, "%31s", tok) < 1) { NXRP_PrintConsoleToPlayer(cl, "Usage: !skill <skillname>"); return qtrue; }
+
+	std::string skill = tok;
+	for (auto &c : skill) c = (char)tolower((unsigned char)c);
+
+	// simple implementation: only support "jump"
+	if (skill != "jump" && skill != "skill_jump") {
+		NXRP_PrintConsoleToPlayer(cl, "Unknown skill. Use /skills to list available skills.");
+		return qtrue;
+	}
+
+	// locate account file and read then update skillpoints and skills array
+	const char *home = Cvar_VariableString("fs_homepath");
+	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_accounts" : std::string("nxrp_accounts");
+	std::string safe;
+	{
+		const char *username = cl->nxrp_username;
+		if (!username || !username[0]) { NXRP_PrintConsoleToPlayer(cl, "You must be logged in to buy skills"); return qtrue; }
+		// create safe filename like registration does
+		for (const char *p = username; *p; ++p) {
+			char ch = *p;
+			if (std::isalnum((unsigned char)ch) || ch == '_') safe.push_back((char)std::tolower((unsigned char)ch));
+		}
+		if (safe.empty()) { NXRP_PrintConsoleToPlayer(cl, "Invalid account name"); return qtrue; }
+	}
+
+	std::string filepath = dir + "/" + safe + ".json";
+
+	// read file
+	std::ifstream ifs(filepath);
+	if (!ifs.is_open()) { NXRP_PrintConsoleToPlayer(cl, "Account file not found"); return qtrue; }
+	std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+	ifs.close();
+
+	// extract skillpoints value (basic parse)
+	auto extract_number = [&](const char* key)->int {
+		std::string ks = key;
+		size_t pos = content.find(ks);
+		if (pos == std::string::npos) return -99999;
+		size_t colon = content.find(':', pos + ks.size()); if (colon == std::string::npos) return -99999;
+		size_t vstart = colon + 1; while (vstart < content.size() && isspace((unsigned char)content[vstart])) ++vstart;
+		int val = 0; if (vstart < content.size()) { val = atoi(content.c_str()+vstart); }
+		return val;
+	};
+
+	int sp = extract_number("\"skillpoints\"");
+	if (sp == -99999) { NXRP_PrintConsoleToPlayer(cl, "Account missing skillpoints field"); return qtrue; }
+	if (sp <= 0) { NXRP_PrintConsoleToPlayer(cl, "Not enough skill points"); return qtrue; }
+
+	// deduct one point and add skill entry (simple append or replace)
+	int newsp = sp - 1;
+
+	// naive JSON patch: replace "skillpoints": N with newsp
+	auto repl = content;
+	size_t spPos = repl.find("\"skillpoints\"");
+	if (spPos != std::string::npos) {
+		size_t colon = repl.find(':', spPos);
+		size_t lineEnd = repl.find_first_of("\n", colon);
+		if (colon != std::string::npos && lineEnd != std::string::npos) {
+			std::string before = repl.substr(0, colon+1);
+			std::string after = repl.substr(lineEnd);
+			repl = before + " " + std::to_string(newsp) + "," + after;
+		}
+	}
+
+	// add skills object if missing
+	if (repl.find("\"skills\"") == std::string::npos) {
+		// insert before final closing brace
+		size_t brace = repl.rfind('}');
+		if (brace != std::string::npos) {
+			std::string add = "  ,\"skills\": {\"skill_jump\": { \"level\": 1 } }\n";
+			repl.insert(brace, add);
+		}
+	} else {
+		// if skills exists, try to add/upgrade skill_jump level
+		// find skill_jump entry
+		size_t sj = repl.find("\"skill_jump\"");
+		if (sj == std::string::npos) {
+			// insert into skills object naively after "skills": {
+			size_t ks = repl.find("\"skills\"");
+			size_t ob = repl.find('{', ks);
+			if (ob != std::string::npos) {
+				repl.insert(ob+1, " \"skill_jump\": { \"level\": 1 },");
+			}
+		} else {
+			// upgrade existing level value by 1
+			size_t col = repl.find(':', sj);
+			size_t lvl = repl.find("\"level\"", sj);
+			if (lvl != std::string::npos) {
+				size_t c2 = repl.find(':', lvl);
+				size_t end = repl.find_first_of(",}\n", c2);
+				if (c2 != std::string::npos && end != std::string::npos) {
+					int cur = atoi(repl.c_str()+c2+1);
+					int nxt = cur + 1;
+					repl.replace(c2+1, end-(c2+1), " " + std::to_string(nxt));
+				}
+			}
+		}
+	}
+
+	// write back
+	std::ofstream ofs(filepath, std::ios::trunc);
+	if (!ofs.is_open()) { NXRP_PrintConsoleToPlayer(cl, "Failed to write account file"); return qtrue; }
+	ofs << repl;
+	ofs.close();
+
+	NXRP_PrintConsoleToPlayer(cl, va("Purchased skill_jump. Remaining skillpoints: %d", newsp));
+	return qtrue;
+}
 	return out;
 }
 
