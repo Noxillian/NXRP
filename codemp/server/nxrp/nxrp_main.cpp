@@ -62,6 +62,7 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !s || !s[0] )					return NXRP_SUB_UNKNOWN;
 	if ( !Q_stricmp( s, "spawn" ) )		return NXRP_SUB_SPAWN;
 	if ( !Q_stricmp( s, "info" ) )		return NXRP_SUB_INFO;
+	if ( !Q_stricmp( s, "skills" ) )		return NXRP_SUB_SKILLS;
 	if ( !Q_stricmp( s, "test" ) )		return NXRP_SUB_TEST;
 	if ( !Q_stricmp( s, "account" ) )	return NXRP_SUB_ACCOUNT;
 	if ( !Q_stricmp( s, "giveall" ) )	return NXRP_SUB_GIVEALL;
@@ -292,6 +293,9 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 
 	case NXRP_SUB_POS:
 		return NXRP_cmd_pos(cl, dispatchCursor);
+
+	case NXRP_SUB_SKILLS:
+		return NXRP_cmd_skills(cl, dispatchCursor);
 
 	case NXRP_SUB_INFO:
 		return NXRP_cmd_info( cl, dispatchCursor );
