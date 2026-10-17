@@ -31,9 +31,82 @@ static std::string hex_encode(const unsigned char *data, size_t len) {
 qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-	NXRP_PrintConsoleToPlayer(cl, "Available skills:");
-	NXRP_PrintConsoleToPlayer(cl, "1. Jump Boost - Increases jump height (cost 1)");
-	NXRP_PrintConsoleToPlayer(cl, "Use /skills to view this list in console or chat: !skills");
+
+	// Read skills.json from nxrp folder
+	const char *home = Cvar_VariableString("fs_homepath");
+	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp" : std::string("nxrp");
+	std::string filepath = dir + "/skills.json";
+	std::ifstream ifs(filepath);
+	if (!ifs.is_open()) {
+		NXRP_PrintConsoleToPlayer(cl, "Failed to open skills.json");
+		return qtrue;
+	}
+	std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+	ifs.close();
+
+	// Very simple parsing to list skills and costs
+	NXRP_PrintConsoleToPlayer(cl, "----- Skills -----");
+	size_t pos = 0; int idx = 1;
+	const char *username = cl->nxrp_username[0] ? cl->nxrp_username : nullptr;
+	// load user's skill level from account file if present
+	std::string accountSkills;
+	if (username) {
+		std::string safe;
+		for (const char *p = username; *p; ++p) if (std::isalnum((unsigned char)*p) || *p == '_') safe.push_back((char)std::tolower((unsigned char)*p));
+		std::string accPath = dir + "/nxrp_accounts/" + safe + ".json";
+		std::ifstream aifs(accPath);
+		if (aifs.is_open()) { accountSkills.assign((std::istreambuf_iterator<char>(aifs)), std::istreambuf_iterator<char>()); aifs.close(); }
+	}
+
+	while (true) {
+		size_t idpos = content.find("\"id\"", pos);
+		if (idpos == std::string::npos) break;
+		size_t namepos = content.find("\"name\"", idpos);
+		size_t levelspos = content.find("\"levels\"", idpos);
+		if (namepos == std::string::npos || levelspos == std::string::npos) break;
+		// extract skill name
+		size_t q1 = content.find('"', namepos + 6);
+		size_t q2 = content.find('"', q1 + 1);
+		std::string sname = (q1 != std::string::npos && q2 != std::string::npos) ? content.substr(q1+1, q2-q1-1) : std::string("<unknown>");
+		// find first level cost
+		size_t lvl = content.find("\"level\"", levelspos);
+		size_t cost = content.find("\"cost\"", levelspos);
+		int maxLevel = 0;
+		int costVal = 0;
+		// parse maxLevel by counting level entries until next ']' or '}'
+		size_t lvlEnd = content.find(']', levelspos);
+		if (lvlEnd != std::string::npos) {
+			size_t p = levelspos;
+			while (true) {
+				size_t l = content.find("\"level\"", p);
+				if (l == std::string::npos || l > lvlEnd) break;
+				++maxLevel; p = l + 6;
+			}
+		}
+		if (cost != std::string::npos && cost < (levelspos + 512)) {
+			size_t ccolon = content.find(':', cost);
+			if (ccolon != std::string::npos) costVal = atoi(content.c_str() + ccolon + 1);
+		}
+
+		// determine user's current level for this skill
+		int userLevel = 0;
+		if (!accountSkills.empty()) {
+			std::string key = "\"" + sname + "\"";
+			size_t kpos = accountSkills.find(key);
+			if (kpos != std::string::npos) {
+				size_t lpos = accountSkills.find("\"level\"", kpos);
+				if (lpos != std::string::npos) {
+					size_t ccolon = accountSkills.find(':', lpos);
+					if (ccolon != std::string::npos) userLevel = atoi(accountSkills.c_str() + ccolon + 1);
+				}
+			}
+		}
+
+		NXRP_PrintConsoleToPlayer(cl, va("%d. %s [%d/%d]\t- Cost: %d", idx, sname.c_str(), userLevel, maxLevel, costVal));
+		pos = levelspos + 1; ++idx;
+	}
+	NXRP_PrintConsoleToPlayer(cl, "------------------");
+	NXRP_PrintConsoleToPlayer(cl, "type !skill <skillname> to");
 	return qtrue;
 }
 
