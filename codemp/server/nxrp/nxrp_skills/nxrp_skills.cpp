@@ -12,6 +12,25 @@ qboolean NXRP_Skills_ListImpl( client_t *cl, const char *homepath ) {
 	std::string dir = (homepath && homepath[0]) ? std::string(homepath) + "/nxrp" : std::string("nxrp");
 	std::string filepath = dir + "/skills.json";
 
+	// If a repository copy exists under codemp/server/nxrp/nxrp_skills/skills.json,
+	// copy it into the runtime homepath so the running server sees edits made in the project.
+	const std::string repoPath = "codemp/server/nxrp/nxrp_skills/skills.json";
+	std::ifstream repoIfs(repoPath);
+	if (repoIfs.is_open()) {
+		// ensure target dir exists
+#if defined(_WIN32)
+		_mkdir(dir.c_str());
+#else
+		mkdir(dir.c_str(), 0755);
+#endif
+		std::ofstream ofs(filepath, std::ios::trunc);
+		if (ofs.is_open()) {
+			ofs << repoIfs.rdbuf();
+			ofs.close();
+		}
+		repoIfs.close();
+	}
+
 	std::ifstream ifs(filepath);
 	if (!ifs.is_open()) return qfalse;
 	std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
