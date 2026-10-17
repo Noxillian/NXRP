@@ -297,6 +297,9 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 	case NXRP_SUB_SKILLS:
 		return NXRP_cmd_skills(cl, dispatchCursor);
 
+	case NXRP_SUB_SKILL:
+		return NXRP_cmd_skill(cl, dispatchCursor);
+
 	case NXRP_SUB_INFO:
 		return NXRP_cmd_info( cl, dispatchCursor );
 
