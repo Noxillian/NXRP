@@ -26,16 +26,20 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 
 	std::string line;
 	int idx = 0;
-	const size_t maxContent = 900; // reserve within NXRP_PrintConsoleToPlayer internal buffer
+	const size_t chunk = 200;
+	bool any = false;
 	while (std::getline(ifs, line)) {
 		if (line.empty()) continue;
-		std::string out = line;
-		if (out.size() > maxContent) out = out.substr(0, maxContent - 3) + "...";
-		char buf[1024];
-		snprintf(buf, sizeof(buf), "%d: %s", idx, out.c_str());
-		NXRP_PrintConsoleToPlayer(cl, buf);
+		any = true;
+		// Print the index on its own line, then the JSON content in 200-char chunks
+		SV_SendServerCommand(cl, "print \"%d:\\n\"", idx);
+		for (size_t off = 0; off < line.size(); off += chunk) {
+			std::string part = line.substr(off, std::min(chunk, line.size() - off));
+			SV_SendServerCommand(cl, "print \"%s\\n\"", part.c_str());
+		}
 		idx++;
 	}
+	if (!any) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
 	ifs.close();
 	if (idx == 0) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
 }
