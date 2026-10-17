@@ -78,10 +78,24 @@ inline void NXRP_PrintConsoleToPlayerFmt(client_t* cl, const char* fmt, ...) {
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 
-	if (cl)
-		SV_SendServerCommand(cl, "print \"^0[^6N^7X^0]^8 %s\\n\"", buf);
-	else
-		SV_SendServerCommand(NULL, "print \"^0[^6N^7X^0]^8 %s\\n\"", buf);
+	// Split the formatted buffer on literal newlines and send one server command per line
+	std::string s = buf;
+	size_t start = 0;
+	while (start < s.size()) {
+		size_t pos = s.find('\n', start);
+		std::string line;
+		if (pos == std::string::npos) {
+			line = s.substr(start);
+			start = s.size();
+		} else {
+			line = s.substr(start, pos - start);
+			start = pos + 1;
+		}
+		if (cl)
+			SV_SendServerCommand(cl, "print \"^0[^6N^7X^0]^8 %s\\n\"", line.c_str());
+		else
+			SV_SendServerCommand(NULL, "print \"^0[^6N^7X^0]^8 %s\\n\"", line.c_str());
+	}
 }
 
 inline void NXRP_PrintConsoleToPlayer(client_t* cl, const char* text) {
