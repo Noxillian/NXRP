@@ -6,6 +6,12 @@
 #include <sstream>
 #include <cctype>
 #include <algorithm>
+#if defined(_WIN32)
+  #include <direct.h>
+#else
+  #include <sys/stat.h>
+  #include <sys/types.h>
+#endif
 
 // List skills implementation. homepath is Cvar_VariableString("fs_homepath") or fallback.
 qboolean NXRP_Skills_ListImpl( client_t *cl, const char *homepath ) {
