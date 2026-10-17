@@ -9,13 +9,9 @@
 #include <cctype>
 
 // Some build configurations may not expose the VM/system loader prototypes
-// through the expected headers due to include ordering. Provide local
-// forward declarations to ensure this compilation unit can resolve the
-// runtime hooks used when freeing spawned entities.
-extern "C" void* GVM_GetDllHandle();
-extern "C" void* GVM_BeginNative();
-extern "C" void GVM_EndNative(void* old);
-extern "C" void* Sys_LoadFunction(void* dll, const char* name);
+// through the expected headers due to include ordering. The sv_gameapi and
+// sys_loadlib headers are included above; avoid duplicate linkage-spec
+// declarations that conflict with those headers.
 
 // Read the per-map JSON file and send entries to the player as a simple indexed list.
 void NXRP_ListSavedSpawns(client_t* cl) {
