@@ -18,17 +18,7 @@
 #include <algorithm>
 #include "qcommon/md5.h"
 
-static std::string hex_encode(const unsigned char *data, size_t len) {
-	static const char* hex = "0123456789abcdef";
-	std::string out; out.reserve(len*2);
-	for (size_t i = 0; i < len; ++i) {
-		unsigned char b = data[i];
-		out.push_back(hex[(b >> 4) & 0xF]);
-		out.push_back(hex[b & 0xF]);
-	}
-
-	return out;
-}
+// hex helpers moved to nxrp_utils.cpp
 
 // Test command: !test - list detailed skills from repo skills.json
 qboolean NXRP_cmd_test( client_t *cl, const char *chatCursor ) {
@@ -64,23 +54,7 @@ qboolean NXRP_cmd_skill( client_t *cl, const char *chatCursor ) {
 }
 
 
-static bool hex_decode(const std::string &hex, std::vector<unsigned char> &out) {
-	size_t n = hex.size();
-	if (n % 2 != 0) return false;
-	out.clear(); out.reserve(n/2);
-	for (size_t i = 0; i < n; i += 2) {
-		auto cv = [](char c)->int {
-			if (c >= '0' && c <= '9') return c - '0';
-			if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-			if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-			return -1;
-		};
-		int hi = cv(hex[i]); int lo = cv(hex[i+1]);
-		if (hi < 0 || lo < 0) return false;
-		out.push_back((unsigned char)((hi<<4) | lo));
-	}
-	return true;
-}
+// hex decode moved to nxrp_utils.cpp
 
 // Version variable for NXRP. Update as needed.
 const char *NXRP_VERSION = "0.2.0";
@@ -167,15 +141,8 @@ qboolean NXRP_cmd_register( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	auto escape = [](const std::string &s){
-		std::string out; out.reserve(s.size()*2);
-		for (char c : s) {
-			if (c == '\\' || c == '"') { out.push_back('\\'); out.push_back(c); }
-			else if (c == '\n') { out += "\\n"; }
-			else out.push_back(c);
-		}
-		return out;
-	};
+	// use shared escape helper
+	// auto escape = [](const std::string &s){ ... };
 
 	std::ofstream ofs(filepath, std::ios::trunc);
 	if (!ofs.is_open()) {
@@ -183,7 +150,7 @@ qboolean NXRP_cmd_register( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 	ofs << "{\n";
-	ofs << "  \"username\": \"" << escape(user) << "\",\n";
+	ofs << "  \"username\": \"" << NXRP_EscapeString(user) << "\",\n";
 	// store password as HMAC-MD5 with a per-user random salt
 	unsigned char salt[8];
 	if (!Sys_RandomBytes(salt, sizeof(salt))) {
@@ -195,8 +162,8 @@ qboolean NXRP_cmd_register( client_t *cl, const char *chatCursor ) {
 	HMAC_MD5_Init(&ctx, salt, sizeof(salt));
 	HMAC_MD5_Update(&ctx, (const unsigned char*)pass.c_str(), (unsigned int)pass.size());
 	HMAC_MD5_Final(&ctx, digest);
-	std::string saltHex = hex_encode(salt, sizeof(salt));
-	std::string digestHex = hex_encode(digest, MD5_DIGEST_SIZE);
+	std::string saltHex = NXRP_HexEncode(salt, sizeof(salt));
+	std::string digestHex = NXRP_HexEncode(digest, MD5_DIGEST_SIZE);
 	ofs << "  \"password\": \"" << saltHex << ":" << digestHex << "\",\n";
 	ofs << "  \"level\": 1,\n";
 	ofs << "  \"exp\": 0,\n";
@@ -263,7 +230,7 @@ qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor ) {
 		std::string saltHex = stored.substr(0, colonIdx);
 		std::string digHex = stored.substr(colonIdx + 1);
 		std::vector<unsigned char> saltBin, digBin;
-		if (hex_decode(saltHex, saltBin) && hex_decode(digHex, digBin) && digBin.size() == MD5_DIGEST_SIZE) {
+		if (NXRP_HexDecode(saltHex, saltBin) && NXRP_HexDecode(digHex, digBin) && digBin.size() == MD5_DIGEST_SIZE) {
 			unsigned char outdig[MD5_DIGEST_SIZE];
 			hmacMD5Context_t ctx2;
 			HMAC_MD5_Init(&ctx2, saltBin.data(), (unsigned int)saltBin.size());

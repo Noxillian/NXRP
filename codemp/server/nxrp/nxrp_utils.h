@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "../server.h"
 #include <cstdarg>
 #include <cstdio>
@@ -45,6 +46,13 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl);
 // Look up a prop definition by name from a per-module catalog file and return
 // model path, extents (mins/maxs), origin and yaw angle when found.
 bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& outMins, vec3_t& outMaxs, vec3_t& outOrigin, float& outYaw);
+
+// Hex encoding helpers (used for password salting storage)
+std::string NXRP_HexEncode(const unsigned char* data, size_t len);
+bool NXRP_HexDecode(const std::string& hex, std::vector<unsigned char>& out);
+
+// String utilities
+std::string NXRP_EscapeString(const std::string& in);
 
 // Wrapper for game VM's G_FreeEntity that allows NXRP to observe freed entities
 // and detect when tracked NPCs are removed. Replace direct G_FreeEntity calls

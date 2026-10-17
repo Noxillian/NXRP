@@ -9,6 +9,7 @@
 #include <vector>
 #include <sys/stat.h>
 #include <map>
+#include <sstream>
 // Returns the new entity number, or -1 on failure.
 int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath)
 {
@@ -193,6 +194,47 @@ void NXRP_RegisterSpawn(int entnum) {
 
 int NXRP_GetLastSpawn() {
 	return nxrp_last_spawn;
+}
+
+// Hex encoding helpers
+std::string NXRP_HexEncode(const unsigned char *data, size_t len) {
+	static const char* hex = "0123456789abcdef";
+	std::string out; out.reserve(len*2);
+	for (size_t i = 0; i < len; ++i) {
+		unsigned char b = data[i];
+		out.push_back(hex[(b >> 4) & 0xF]);
+		out.push_back(hex[b & 0xF]);
+	}
+	return out;
+}
+
+bool NXRP_HexDecode(const std::string &hex, std::vector<unsigned char> &out) {
+	size_t n = hex.size();
+	if (n % 2 != 0) return false;
+	out.clear(); out.reserve(n/2);
+	for (size_t i = 0; i < n; i += 2) {
+		auto cv = [](char c)->int {
+			if (c >= '0' && c <= '9') return c - '0';
+			if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+			if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+			return -1;
+		};
+		int hi = cv(hex[i]); int lo = cv(hex[i+1]);
+		if (hi < 0 || lo < 0) return false;
+		out.push_back((unsigned char)((hi<<4) | lo));
+	}
+	return true;
+}
+
+// Escape string for JSON-like output (minimal)
+std::string NXRP_EscapeString(const std::string &in) {
+	std::string out; out.reserve(in.size()*2);
+	for (char c : in) {
+		if (c == '\\' || c == '"') { out.push_back('\\'); out.push_back(c); }
+		else if (c == '\n') { out += "\\n"; }
+		else out.push_back(c);
+	}
+	return out;
 }
 
 // NPC tracking and VM-free wrapper moved to codemp/server/nxrp/nxrp_npcs.cpp
