@@ -270,6 +270,9 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 				while (*p == ' ' || *p == '\t') ++p;
 				return NXRP_cmdAdmin_prop_t(cl, p);
 			}
+			if (!Q_stricmp(firstTok, "test2")) {
+				return NXRP_cmdAdmin_test2(cl, dispatchCursor);
+			}
 		}
 		break;
 	}
@@ -300,16 +303,6 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 
 	case NXRP_SUB_TEST:
 		return NXRP_cmdAdmin_test(cl, dispatchCursor);
-
-	case NXRP_SUB_UNKNOWN: // allow hooking specific literal "test2" subcommand
-	{
-		// If the parsed subcmd was unknown, inspect raw subcmd text for test2.
-		char firstTok[MAX_TOKEN_CHARS] = {0};
-		if (sscanf(dispatchCursor, "%31s", firstTok) == 1) {
-			if (!Q_stricmp(firstTok, "test2")) return NXRP_cmdAdmin_test2(cl, dispatchCursor);
-		}
-		break;
-	}
 
 	case NXRP_SUB_ACCOUNT:
 		return NXRP_cmd_account( cl, dispatchCursor );
