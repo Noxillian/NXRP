@@ -780,7 +780,9 @@ qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	NXRP_PrintConsoleToPlayer(cl, "Usage: !tp                (teleport self up 5m)\n       !tp <dst>          (teleport you to dst client number)\n       !tp <src> <dst>    (teleport client src to client dst)");
+	NXRP_PrintConsoleToPlayer(cl, "Usage: !tp                (teleport self up 5m)");
+	NXRP_PrintConsoleToPlayer(cl, "       !tp <dst>          (teleport you to dst client number)");
+	NXRP_PrintConsoleToPlayer(cl, "       !tp <src> <dst>    (teleport client src to client dst)");
 	return qtrue;
 }
 
