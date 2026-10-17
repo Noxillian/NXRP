@@ -36,6 +36,19 @@ qboolean NXRP_Skills_ListImpl( client_t *cl, const char *homepath ) {
 	std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
 	ifs.close();
 
+	// load user's account skills if logged in
+	std::string accountSkills;
+	const char *username = cl->nxrp_username[0] ? cl->nxrp_username : nullptr;
+	if (username) {
+		std::string safe;
+		for (const char *p = username; *p; ++p) if (std::isalnum((unsigned char)*p) || *p == '_') safe.push_back((char)std::tolower((unsigned char)*p));
+		if (!safe.empty()) {
+			std::string accPath = dir + "/nxrp_accounts/" + safe + ".json";
+			std::ifstream aifs(accPath);
+			if (aifs.is_open()) { accountSkills.assign((std::istreambuf_iterator<char>(aifs)), std::istreambuf_iterator<char>()); aifs.close(); }
+		}
+	}
+
 	NXRP_PrintConsoleToPlayer(cl, "----- Skills -----");
 	size_t pos = 0; int idx = 1;
 	while (true) {
@@ -71,7 +84,20 @@ qboolean NXRP_Skills_ListImpl( client_t *cl, const char *homepath ) {
 			if (ccolon != std::string::npos) costVal = atoi(content.c_str() + ccolon + 1);
 		}
 
-		NXRP_PrintConsoleToPlayer(cl, va("%d. %s [%d/%d]\t- Cost: %d (id: %s)", idx, sname.c_str(), 0, maxLevel, costVal, id.c_str()));
+		int userLevel = 0;
+		if (!accountSkills.empty()) {
+			std::string key = '"' + id + '"';
+			size_t kpos = accountSkills.find(key);
+			if (kpos != std::string::npos) {
+				size_t lpos = accountSkills.find("\"level\"", kpos);
+				if (lpos != std::string::npos) {
+					size_t ccolon = accountSkills.find(':', lpos);
+					if (ccolon != std::string::npos) userLevel = atoi(accountSkills.c_str() + ccolon + 1);
+				}
+			}
+		}
+
+		NXRP_PrintConsoleToPlayer(cl, va("%d. %s [%d/%d]\t- Cost: %d (id: %s)", idx, sname.c_str(), userLevel, maxLevel, costVal, id.c_str()));
 		pos = levelspos + 1; ++idx;
 	}
 	NXRP_PrintConsoleToPlayer(cl, "------------------");
