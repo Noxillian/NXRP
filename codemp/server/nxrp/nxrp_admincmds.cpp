@@ -854,13 +854,6 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: adjust last spawned model position
-// Admin-only: move last placed model by vector deltas
-// mmove command removed
-
-// Admin-only: pmodel is currently the same as model
-// pmodel command removed
-
 // Admin-only: remove the last NXRP-spawned model
 qboolean NXRP_cmdAdmin_mremove( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
