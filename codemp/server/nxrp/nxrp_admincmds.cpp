@@ -834,10 +834,19 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 	vec3_t maxs = { 24.0f, 24.0f, 24.0f };
 	vec3_t floor = { 0.0f, 0.0f, 0.0f };
 	float catalogYaw = angle;
-	if (NXRP_GetPropFromCatalog(path, modelFromCatalog, mins, maxs, floor, catalogYaw)) {
-		// use catalog model and extents; override angle/pose
+	bool hasCatalog = NXRP_GetPropFromCatalog(path, modelFromCatalog, mins, maxs, floor, catalogYaw);
+	const float eps = 0.001f;
+	if (hasCatalog) {
+		// use catalog model and extents
 		Q_strncpyz(path, modelFromCatalog.c_str(), sizeof(path));
-		angle = catalogYaw;
+		// If the user provided an explicit angle, prefer it. Otherwise use catalog yaw if non-zero.
+		if (scanned < 2) {
+			if (fabsf(catalogYaw) >= eps) angle = catalogYaw;
+		}
+		// If the catalog didn't provide an origin (all zeros), default to client origin when available
+		if (fabsf(floor[0]) < eps && fabsf(floor[1]) < eps && fabsf(floor[2]) < eps) {
+			if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
+		}
 	} else {
 		if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
 	}
