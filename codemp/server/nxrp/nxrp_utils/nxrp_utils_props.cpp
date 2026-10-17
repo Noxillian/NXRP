@@ -1,9 +1,21 @@
 // Restored prop persistence and catalog implementations moved into nxrp_utils
 #include "server/nxrp/nxrp_utils/nxrp_utils.h"
+#include "server/sv_gameapi.h"
+#include "sys/sys_loadlib.h"
 #include <sys/stat.h>
 #include <fstream>
 #include <vector>
 #include <algorithm>
+#include <cctype>
+
+// Some build configurations may not expose the VM/system loader prototypes
+// through the expected headers due to include ordering. Provide local
+// forward declarations to ensure this compilation unit can resolve the
+// runtime hooks used when freeing spawned entities.
+extern "C" void* GVM_GetDllHandle();
+extern "C" void* GVM_BeginNative();
+extern "C" void GVM_EndNative(void* old);
+extern "C" void* Sys_LoadFunction(void* dll, const char* name);
 
 // Read the per-map JSON file and send entries to the player as a simple indexed list.
 void NXRP_ListSavedSpawns(client_t* cl) {
