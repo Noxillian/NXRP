@@ -41,6 +41,21 @@ void NXRP_ListSavedSpawns(client_t* cl);
 bool NXRP_RemoveSavedSpawnByIndex(int index);
 // Load and spawn all saved entries for the current map. Returns number spawned.
 int NXRP_LoadSavedSpawnsForMap(client_t* cl);
+
+// Look up a prop definition by name from a per-module catalog file and return
+// model path, extents (mins/maxs), origin and yaw angle when found.
+bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& outMins, vec3_t& outMaxs, vec3_t& outOrigin, float& outYaw);
+
+// Wrapper for game VM's G_FreeEntity that allows NXRP to observe freed entities
+// and detect when tracked NPCs are removed. Replace direct G_FreeEntity calls
+// in server-side modules with NXRP_FreeEntity to ensure NXRP receives events.
+void NXRP_FreeEntity(void* ent);
+// Track/untrack NPCs spawned by NXRP so the wrapper can identify them
+void NXRP_TrackNPC(int entnum, const char* name);
+void NXRP_UntrackNPC(int entnum);
+// Push a pending NPC name so the next NXRP_RegisterSpawn will associate the
+// registered entnum with this name (used when spawn is asynchronous).
+void NXRP_PushPendingNPCName(const char* name);
 // NPC persistence helpers: save/load NPCs per-map
 void NXRP_SaveNPCToMap(int entnum, const char* npcType);
 int NXRP_LoadSavedNPCsForMap(client_t* cl);

@@ -49,6 +49,58 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 				sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz);
 			}
 
+// Simple catalog lookup: read nxrp_props_catalog.json in module dir and find entry by name.
+bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& outMins, vec3_t& outMaxs, vec3_t& outOrigin, float& outYaw) {
+	if (!name || !name[0]) return false;
+	std::string catalogPath = std::string("codemp/server/nxrp/nxrp_props_catalog.json");
+	std::ifstream ifs(catalogPath);
+	if (!ifs.is_open()) return false;
+
+	// Very small JSON parse: look for "name": { ... }
+	std::string line;
+	std::string block;
+	bool inBlock = false;
+	std::string key = std::string("\"") + name + std::string("\"");
+	while (std::getline(ifs, line)) {
+		if (!inBlock) {
+			if (line.find(key) != std::string::npos && line.find('{') != std::string::npos) {
+				inBlock = true;
+				block = line;
+				if (line.find('}') != std::string::npos) break;
+			}
+		} else {
+			block += line;
+			if (line.find('}') != std::string::npos) break;
+		}
+	}
+	ifs.close();
+	if (!inBlock) return false;
+
+	// Extract model
+	const char* s = block.c_str();
+	const char* modelKey = "\"model\"";
+	const char* m = strstr(s, modelKey);
+	if (m) { m = strchr(m, ':'); if (m) m++; while (m && *m && isspace((unsigned char)*m)) m++; if (m && *m == '"') { m++; const char* me = strchr(m, '"'); if (me && me > m) outModel.assign(m, me - m); } }
+
+	// extents: [sx, sy, sz]
+	const char* extKey = "\"extents\"";
+	const char* e = strstr(s, extKey);
+	if (e) { e = strchr(e, '['); if (e) { e++; float sx=0, sy=0, sz=0; sscanf(e, "%f %*[, ] %f %*[, ] %f", &sx, &sy, &sz); outMins[0] = -sx; outMins[1] = -sy; outMins[2] = -sz; outMaxs[0] = sx; outMaxs[1] = sy; outMaxs[2] = sz; } }
+
+	// origin
+	const char* oKey = "\"origin\"";
+	const char* o = strstr(s, oKey);
+	if (o) { o = strchr(o, '['); if (o) { o++; float ox=0, oy=0, oz=0; sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz); outOrigin[0] = ox; outOrigin[1] = oy; outOrigin[2] = oz; } }
+
+	// yaw
+	const char* yawKey = "\"yaw\"";
+	const char* y = strstr(s, yawKey);
+	outYaw = 0.0f;
+	if (y) { y = strchr(y, ':'); if (y) { y++; float yy=0; sscanf(y, "%f", &yy); outYaw = yy; } }
+
+	return true;
+}
+
 // Persist an NPC spawn to a per-map JSON file in the fs_homepath/nxrp_npcs directory.
 void NXRP_SaveNPCToMap(int entnum, const char* npcType) {
 	if (entnum < 0 || !npcType) return;
@@ -206,13 +258,9 @@ bool NXRP_RemoveSavedSpawnByIndex(int index) {
 			if (e) {
 				void* dll = GVM_GetDllHandle();
 				if (dll) {
-					void (*G_FreeEntity_f)(void*) = (void (*)(void*))Sys_LoadFunction(dll, "G_FreeEntity");
-					if (G_FreeEntity_f) {
-						void* old = GVM_BeginNative();
-						G_FreeEntity_f(e);
-						GVM_EndNative(old);
-						NXRP_RegisterSpawn(-1);
-					}
+					// Use NXRP_FreeEntity wrapper to observe and forward frees
+					NXRP_FreeEntity((void*)e);
+					NXRP_RegisterSpawn(-1);
 				}
 			}
 		}

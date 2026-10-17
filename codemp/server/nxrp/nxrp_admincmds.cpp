@@ -178,17 +178,10 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
 	if (entToFree >= 0 && entToFree < sv.num_entities) {
 		sharedEntity_t* oldEnt = SV_GentityNum(entToFree);
 		if (oldEnt) {
-			void* dll = GVM_GetDllHandle();
-			if (dll) {
-				void (*G_FreeEntity_f)(void*) = (void (*)(void*))Sys_LoadFunction(dll, "G_FreeEntity");
-				if (G_FreeEntity_f) {
-					void* old = GVM_BeginNative();
-					G_FreeEntity_f(oldEnt);
-					GVM_EndNative(old);
-					NXRP_RegisterSpawn(-1);
-					NXRP_PrintConsoleToPlayer(cl, va("Freed old saved runtime entity %d", entToFree));
-				}
-			}
+				// Use NXRP_FreeEntity wrapper so NXRP can observe freed entities
+				NXRP_FreeEntity((void*)oldEnt);
+				NXRP_RegisterSpawn(-1);
+				NXRP_PrintConsoleToPlayer(cl, va("Freed old saved runtime entity %d", entToFree));
 		}
 	}
 
@@ -818,12 +811,12 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	// Parse path and optional angle
+	// Parse path and optional angle OR treat first token as a catalog name
 	char path[512] = {0};
 	float angle = 0.0f;
 	int scanned = sscanf(p, "%511s %f", path, &angle);
 	if (scanned < 1) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !prop s <model_path> [angle]");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !prop s <model_path|catalog_name> [angle]");
 		return qtrue;
 	}
 
@@ -831,11 +824,19 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 	while (angle < 0.0f) angle += 360.0f;
 	while (angle >= 360.0f) angle -= 360.0f;
 
-	// Default prop bounds; callers may add variants or extended syntax later
+	// If the provided token matches a catalog entry, use its model and extents
+	std::string modelFromCatalog;
 	vec3_t mins = { -24.0f, -24.0f, -8.0f };
-	vec3_t maxs = {  24.0f,  24.0f, 24.0f };
+	vec3_t maxs = { 24.0f, 24.0f, 24.0f };
 	vec3_t floor = { 0.0f, 0.0f, 0.0f };
-	if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
+	float catalogYaw = angle;
+	if (NXRP_GetPropFromCatalog(path, modelFromCatalog, mins, maxs, floor, catalogYaw)) {
+		// use catalog model and extents; override angle/pose
+		Q_strncpyz(path, modelFromCatalog.c_str(), sizeof(path));
+		angle = catalogYaw;
+	} else {
+		if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
+	}
 
 	int ent = NXRP_PlaceModel(path, mins, maxs, angle, floor);
 	if (ent >= 0) {
@@ -900,21 +901,8 @@ qboolean NXRP_cmdAdmin_mremove( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	void* dll = GVM_GetDllHandle();
-	if (!dll) {
-		NXRP_PrintConsoleToPlayer(cl, "Game VM not available");
-		return qtrue;
-	}
-
-	void (*G_FreeEntity_f)(void*) = (void (*)(void*))Sys_LoadFunction(dll, "G_FreeEntity");
-	if (!G_FreeEntity_f) {
-		NXRP_PrintConsoleToPlayer(cl, "Remove function not available in game VM");
-		return qtrue;
-	}
-
-	void* old = GVM_BeginNative();
-	G_FreeEntity_f(e);
-	GVM_EndNative(old);
+	// Use NXRP_FreeEntity wrapper to ensure NXRP receives notifications
+	NXRP_FreeEntity((void*)e);
 
 	NXRP_RegisterSpawn(-1);
 	NXRP_PrintConsoleToPlayer(cl, va("Removed last spawned model entity %d", last));
@@ -1019,8 +1007,18 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 	client_t* target = cl;
 	int targetIdx = (int)(cl - svs.clients);
 	if (chatCursor && *chatCursor) {
-		char tok[32] = {0};
-		if (sscanf(chatCursor, "%31s", tok) == 1) {
+		char firstTok[32] = {0};
+		char secondTok[32] = {0};
+		int parts = sscanf(chatCursor, "%31s %31s", firstTok, secondTok);
+		const char* tok = NULL;
+		if (parts == 1) {
+			tok = firstTok;
+		} else if (parts >= 2) {
+			// If the chatCursor begins with the subcommand name (e.g., "giveall <idx>"), prefer the second token.
+			if (!Q_stricmp(firstTok, "giveall")) tok = secondTok;
+			else tok = firstTok;
+		}
+		if (tok && tok[0]) {
 			// token must be all digits to be considered a client index
 			bool allDigits = true;
 			for (size_t i = 0; tok[i]; ++i) { if (!isdigit((unsigned char)tok[i])) { allDigits = false; break; } }
