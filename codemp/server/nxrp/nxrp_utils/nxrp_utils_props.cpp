@@ -197,6 +197,12 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 		// attempt to find prop extents in catalog
 		vec3_t mins, maxs, origin; float yaw = ay; // use yaw from angles' second component if present
 		bool hasCatalog = NXRP_GetPropFromCatalog(modelPath.c_str(), modelPath, mins, maxs, origin, yaw);
+
+		// Debug: report what we're about to spawn so admins can see failures
+		if (cl) {
+			NXRP_PrintConsoleToPlayer(cl, va("NXRP: attempting spawn: model=%s catalog=%d origin=%.1f,%.1f,%.1f yaw=%.1f",
+				modelPath.c_str(), hasCatalog ? 1 : 0, origin[0], origin[1], origin[2], yaw));
+		}
 		if (!hasCatalog) {
 			VectorCopy(defaultMins, mins);
 			VectorCopy(defaultMaxs, maxs);
@@ -207,6 +213,9 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 		if (ent >= 0) {
 			NXRP_RegisterSpawn(ent);
 			spawned++;
+			if (cl) NXRP_PrintConsoleToPlayer(cl, va("NXRP: spawned entity %d for model %s", ent, modelPath.c_str()));
+		} else {
+			if (cl) NXRP_PrintConsoleToPlayer(cl, va("NXRP: failed to spawn model %s", modelPath.c_str()));
 		}
 	}
 	ifs.close();

@@ -414,7 +414,7 @@ qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
-
+	NXRP_PrintConsoleToPlayer(cl, "Loading saved spawns...");
 	int count = NXRP_LoadSavedSpawnsForMap(cl);
 	NXRP_PrintConsoleToPlayer(cl, va("Loaded %d saved spawns for this map", count));
 	return qtrue;
