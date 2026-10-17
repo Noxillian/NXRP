@@ -50,9 +50,8 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args );
 qboolean NXRP_cmdAdmin_prop_dir_chat( client_t *cl, const char *chatCursor );
 // Admin-only: remove the last spawned model (!nx mremove)
 qboolean NXRP_cmdAdmin_mremove( client_t *cl, const char *chatCursor );
-qboolean NXRP_cmdAdmin_mmove( client_t *cl, const char *chatCursor );
-// Admin-only: player-model placeholder command (currently same as NXRP_admincmdNxModel)
-qboolean NXRP_cmdAdmin_pmodel( client_t *cl, const char *chatCursor );
+// mmove command removed
+// pmodel command removed
 // Admin-only: spawn an NPC or misc model test
 qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor );
 // Admin-only: spawn and persist NPC definitions per-map (commands: !npc <type>, !npc load)

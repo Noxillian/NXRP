@@ -68,10 +68,8 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "login" ) )		return NXRP_SUB_LOGIN;
 	if ( !Q_stricmp( s, "pos" ) )		return NXRP_SUB_POS;
 	if ( !Q_stricmp( s, "prop" ) )		return NXRP_SUB_MODEL;
-	if ( !Q_stricmp( s, "mmove" ) )		return NXRP_SUB_MMOVE;
 	if ( !Q_stricmp( s, "npc" ) )		return NXRP_SUB_NPC;
 	if ( !Q_stricmp( s, "strip" ) )		return NXRP_SUB_STRIP;
-	if ( !Q_stricmp( s, "pmodel" ) )		return NXRP_SUB_PMODEL;
 	if ( !Q_stricmp( s, "boss" ) )		return NXRP_SUB_BOSS;
 	if ( !Q_stricmp( s, "vehicle" ) )	return NXRP_SUB_VEHICLE;
 	if ( !Q_stricmp( s, "list" ) )	return NXRP_SUB_LIST;

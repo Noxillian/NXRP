@@ -856,32 +856,10 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 
 // Admin-only: adjust last spawned model position
 // Admin-only: move last placed model by vector deltas
-qboolean NXRP_cmdAdmin_mmove( client_t *cl, const char *chatCursor ) {
-	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-	if (!NXRP_IsClientAdmin(cl)) return qtrue;
-
-	if (!chatCursor || !*chatCursor) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !mmove <x> <y> <z>    (deltas in world units)");
-		return qtrue;
-	}
-
-	// Allow only three numeric args; legacy direction handling was removed
-	float x=0.0f,y=0.0f,z=0.0f;
-	// Try parse three floats
-	int cnt = sscanf(chatCursor, "%f %f %f", &x, &y, &z);
-	if (cnt == 3) {
-		if (NXRP_MoveLastSpawnByVec(cl, x, y, z)) NXRP_PrintConsoleToPlayer(cl, "Moved last spawned model");
-		else NXRP_PrintConsoleToPlayer(cl, "Failed to move last spawned model");
-		return qtrue;
-	}
-	NXRP_PrintConsoleToPlayer(cl, "Usage: !mmove <x> <y> <z>    (deltas in world units)");
-	return qtrue;
-}
+// mmove command removed
 
 // Admin-only: pmodel is currently the same as model
-qboolean NXRP_cmdAdmin_pmodel( client_t *cl, const char *chatCursor ) {
-	return NXRP_cmdAdmin_prop_s(cl, chatCursor);
-}
+// pmodel command removed
 
 // Admin-only: remove the last NXRP-spawned model
 qboolean NXRP_cmdAdmin_mremove( client_t *cl, const char *chatCursor ) {
