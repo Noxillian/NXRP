@@ -41,8 +41,53 @@ qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
 	std::string filepath = dir + "/skills.json";
 	std::ifstream ifs(filepath);
 	if (!ifs.is_open()) {
-		NXRP_PrintConsoleToPlayer(cl, "Failed to open skills.json");
-		return qtrue;
+		// Attempt to create the nxrp directory and write a default skills.json
+		#if defined(_WIN32)
+			_mkdir(dir.c_str());
+		#else
+			mkdir(dir.c_str(), 0755);
+		#endif
+
+		const char *defaultSkills = R"json({
+  "skills": [
+	{
+	  "id": "skill_jump",
+	  "name": "Jump",
+	  "enabled": true,
+	  "maxLevel": 3,
+	  "description": "Increases player's jump height.",
+	  "levels": [
+		{ "level": 1, "cost": 1, "jumpMultiplier": 1.1 },
+		{ "level": 2, "cost": 2, "jumpMultiplier": 1.25 },
+		{ "level": 3, "cost": 3, "jumpMultiplier": 1.5 }
+	  ]
+	},
+	{
+	  "id": "skill_pistol",
+	  "name": "Pistol",
+	  "enabled": true,
+	  "maxLevel": 2,
+	  "description": "Improves pistol damage/handling.",
+	  "levels": [
+		{ "level": 1, "cost": 1, "damageMultiplier": 1.1 },
+		{ "level": 2, "cost": 2, "damageMultiplier": 1.25 }
+	  ]
+	}
+  ]
+})json";
+
+		std::ofstream ofs_default(filepath, std::ios::trunc);
+		if (ofs_default.is_open()) {
+			ofs_default << defaultSkills;
+			ofs_default.close();
+		}
+
+		// try opening again
+		ifs.open(filepath);
+		if (!ifs.is_open()) {
+			NXRP_PrintConsoleToPlayer(cl, "Failed to open skills.json");
+			return qtrue;
+		}
 	}
 	std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
 	ifs.close();
