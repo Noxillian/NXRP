@@ -1,0 +1,27 @@
+{
+  "skills": [
+    {
+      "id": "skill_jump",
+      "name": "Jump",
+      "enabled": true,
+      "maxLevel": 3,
+      "description": "Increases player's jump height.",
+      "levels": [
+        { "level": 1, "cost": 1, "effects": { "jumpMultiplier": 1.10 } },
+        { "level": 2, "cost": 2, "effects": { "jumpMultiplier": 1.25 } },
+        { "level": 3, "cost": 3, "effects": { "jumpMultiplier": 1.50 } }
+      ]
+    },
+    {
+      "id": "skill_pistol",
+      "name": "Pistol",
+      "enabled": true,
+      "maxLevel": 2,
+      "description": "Improves pistol damage/handling.",
+      "levels": [
+        { "level": 1, "cost": 1, "effects": { "damageMultiplier": 1.10 } },
+        { "level": 2, "cost": 2, "effects": { "damageMultiplier": 1.25 } }
+      ]
+    }
+  ]
+}

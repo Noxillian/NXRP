@@ -1,5 +1,5 @@
 /* nxrp_cmds.cpp - additional NXRP chat commands
- * Implements: !nx info (prints NXRP version)
+ * Implements: !info (prints NXRP version)
  */
 
 #include "server/nxrp/nxrp_main.h"
@@ -16,6 +16,45 @@
 	#include <direct.h>
 #endif
 #include <algorithm>
+#include "qcommon/md5.h"
+
+// hex helpers moved to nxrp_utils.cpp
+
+// Test command: !test - list detailed skills from repo skills.json
+qboolean NXRP_cmd_test( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
+	NXRP_Skills_TestImpl(cl);
+	return qtrue;
+}
+
+// Minimal skills listing handler
+qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	const char *home = Cvar_VariableString("fs_homepath");
+	NXRP_Skills_ListImpl(cl, home);
+	return qtrue;
+}
+
+// Handler for: !skill <skillname>
+qboolean NXRP_cmd_skill( client_t *cl, const char *chatCursor ) {
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!chatCursor || !*chatCursor) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !skill <skillid>");
+		return qtrue;
+	}
+
+	// parse first token as skill id/token
+	char tok[MAX_TOKEN_CHARS] = {0};
+	if (sscanf(chatCursor, "%31s", tok) < 1) { NXRP_PrintConsoleToPlayer(cl, "Usage: !skill <skillid>"); return qtrue; }
+
+	const char *home = Cvar_VariableString("fs_homepath");
+	NXRP_Skill_PurchaseImpl(cl, home, tok);
+	return qtrue;
+}
+
+
+// hex decode moved to nxrp_utils.cpp
 
 // Version variable for NXRP. Update as needed.
 const char *NXRP_VERSION = "0.2.0";
@@ -38,18 +77,41 @@ static bool parse_user_pass(const char *chatCursor, std::string &outUser, std::s
 	return false;
 }
 
-// Handler for: !nx info
-qboolean NXRP_HandleNxInfo( client_t *cl, const char *chatCursor ) {
-	(void)chatCursor;
-	NXRP_PrintConsoleToPlayer(cl, va("NXRP version: %s", NXRP_VERSION));
+// Handler for: !info
+qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor ) {
+	// Support subcommands: cmds, acmds, help
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	const char* s = chatCursor ? chatCursor : "";
+	if (s && *s) {
+		// Trim leading spaces
+		while (*s == ' ' || *s == '\t') ++s;
+		if (!Q_stricmp(s, "cmds") || !Q_stricmp(s, "commands")) {
+			NXRP_PrintConsoleToPlayer(cl, "General commands:\n  !info | !nxrp | /info - show info/help\n  !register <user> <pass> - create account\n  !login <user> <pass> - login\n  !pos - show position\n  !skills - list skills");
+			return qtrue;
+		}
+		if (!Q_stricmp(s, "acmds") || !Q_stricmp(s, "admin")) {
+			NXRP_PrintConsoleToPlayer(cl, "Admin commands:\n  !prop s/t/m - spawn/manage props\n  !npc - spawn/load NPCs\n  !tp - teleport\n  !list - list entities\n  (admin only)");
+			return qtrue;
+		}
+	}
+
+	// Default info block
+	NXRP_PrintConsoleToPlayer(cl, "------ NXRP ------");
+	const char* username = (cl && cl->nxrp_username[0]) ? cl->nxrp_username : "<not logged in>";
+	NXRP_PrintConsoleToPlayer(cl, va("%s %d/50", username, 1));
+	NXRP_PrintConsoleToPlayer(cl, va("%d/100 Credits: %d", 0, 0));
+	NXRP_PrintConsoleToPlayer(cl, "------------------");
+	NXRP_PrintConsoleToPlayer(cl, "1. /info cmds\t- General Commands");
+	NXRP_PrintConsoleToPlayer(cl, "2. /info acmds\t- Admin Commands");
+	NXRP_PrintConsoleToPlayer(cl, "3. /skills\t\t- List Skills");
 	return qtrue;
 }
 
-// Handler for: !nx register <user> <pass>
-qboolean NXRP_HandleNxRegister( client_t *cl, const char *chatCursor ) {
+// Handler for: !register <user> <pass>
+qboolean NXRP_cmd_register( client_t *cl, const char *chatCursor ) {
 	std::string user, pass;
 	if (!parse_user_pass(chatCursor, user, pass)) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx register <user> <pass>");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !register <user> <pass>");
 		return qtrue;
 	}
 
@@ -79,15 +141,8 @@ qboolean NXRP_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	auto escape = [](const std::string &s){
-		std::string out; out.reserve(s.size()*2);
-		for (char c : s) {
-			if (c == '\\' || c == '"') { out.push_back('\\'); out.push_back(c); }
-			else if (c == '\n') { out += "\\n"; }
-			else out.push_back(c);
-		}
-		return out;
-	};
+	// use shared escape helper
+	// auto escape = [](const std::string &s){ ... };
 
 	std::ofstream ofs(filepath, std::ios::trunc);
 	if (!ofs.is_open()) {
@@ -95,8 +150,21 @@ qboolean NXRP_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 	ofs << "{\n";
-	ofs << "  \"username\": \"" << escape(user) << "\",\n";
-	ofs << "  \"password\": \"" << escape(pass) << "\",\n";
+	ofs << "  \"username\": \"" << NXRP_EscapeString(user) << "\",\n";
+	// store password as HMAC-MD5 with a per-user random salt
+	unsigned char salt[8];
+	if (!Sys_RandomBytes(salt, sizeof(salt))) {
+		// fallback to rand() if secure RNG unavailable
+		for (int i = 0; i < (int)sizeof(salt); ++i) salt[i] = (unsigned char)(rand() & 0xFF);
+	}
+	unsigned char digest[MD5_DIGEST_SIZE];
+	hmacMD5Context_t ctx;
+	HMAC_MD5_Init(&ctx, salt, sizeof(salt));
+	HMAC_MD5_Update(&ctx, (const unsigned char*)pass.c_str(), (unsigned int)pass.size());
+	HMAC_MD5_Final(&ctx, digest);
+	std::string saltHex = NXRP_HexEncode(salt, sizeof(salt));
+	std::string digestHex = NXRP_HexEncode(digest, MD5_DIGEST_SIZE);
+	ofs << "  \"password\": \"" << saltHex << ":" << digestHex << "\",\n";
 	ofs << "  \"level\": 1,\n";
 	ofs << "  \"exp\": 0,\n";
 	ofs << "  \"credits\": 0,\n";
@@ -110,11 +178,11 @@ qboolean NXRP_HandleNxRegister( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Handler for: !nx login <user> <pass>
-qboolean NXRP_HandleNxLogin( client_t *cl, const char *chatCursor ) {
+// Handler for: !login <user> <pass>
+qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor ) {
 	std::string user, pass;
 	if (!parse_user_pass(chatCursor, user, pass)) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx login <user> <pass>");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !login <user> <pass>");
 		return qtrue;
 	}
 
@@ -156,20 +224,34 @@ qboolean NXRP_HandleNxLogin( client_t *cl, const char *chatCursor ) {
 	if (qend == std::string::npos) { NXRP_PrintConsoleToPlayer(cl, "Login failed"); return qtrue; }
 	std::string stored = content.substr(quote + 1, qend - (quote + 1));
 
-	if (stored == pass) {
-		NXRP_PrintConsoleToPlayer(cl, "Login successful");
-		// mark client as logged in by storing username in their session info
-		if (cl && cl->state == CS_ACTIVE) {
-			Q_strncpyz(cl->nxrp_username, user.c_str(), sizeof(cl->nxrp_username));
+	// stored format: "<saltHex>:<digestHex>", digest = HMAC-MD5(salt, password)
+	size_t colonIdx = stored.find(':');
+	if (colonIdx != std::string::npos) {
+		std::string saltHex = stored.substr(0, colonIdx);
+		std::string digHex = stored.substr(colonIdx + 1);
+		std::vector<unsigned char> saltBin, digBin;
+		if (NXRP_HexDecode(saltHex, saltBin) && NXRP_HexDecode(digHex, digBin) && digBin.size() == MD5_DIGEST_SIZE) {
+			unsigned char outdig[MD5_DIGEST_SIZE];
+			hmacMD5Context_t ctx2;
+			HMAC_MD5_Init(&ctx2, saltBin.data(), (unsigned int)saltBin.size());
+			HMAC_MD5_Update(&ctx2, (const unsigned char*)pass.c_str(), (unsigned int)pass.size());
+			HMAC_MD5_Final(&ctx2, outdig);
+			if (memcmp(outdig, digBin.data(), MD5_DIGEST_SIZE) == 0) {
+				NXRP_PrintConsoleToPlayer(cl, "Login successful");
+				// mark client as logged in by storing username in their session info
+				if (cl && cl->state == CS_ACTIVE) {
+					Q_strncpyz(cl->nxrp_username, user.c_str(), sizeof(cl->nxrp_username));
+				}
+				return qtrue;
+			}
 		}
-	} else {
-		NXRP_PrintConsoleToPlayer(cl, "Login failed: incorrect password");
 	}
+	NXRP_PrintConsoleToPlayer(cl, "Login failed: incorrect password");
 	return qtrue;
 }
 
-// Handler for: !nx account
-qboolean NXRP_HandleNxAccount( client_t *cl, const char *chatCursor ) {
+// Handler for: !account
+qboolean NXRP_cmd_account( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!cl || cl->state != CS_ACTIVE) {
 		NXRP_PrintConsoleToPlayer(cl, "You must be an active player to use this command");
@@ -221,8 +303,8 @@ qboolean NXRP_HandleNxAccount( client_t *cl, const char *chatCursor ) {
 
 // Non-admin commands remain here (info, register, login, account)
 
-// Handler for: !nxrp pos
-qboolean NXRP_HandleNxrpPos( client_t *cl, const char *chatCursor ) {
+// Handler for: !pos
+qboolean NXRP_cmd_pos( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!cl || cl->state != CS_ACTIVE) {
 		NXRP_PrintConsoleToPlayer(cl, "You must be an active player to use this command");

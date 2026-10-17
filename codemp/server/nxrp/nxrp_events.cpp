@@ -1,5 +1,7 @@
 #include "server/nxrp/nxrp_main.h"
 #include "server/nxrp/nxrp_utils.h"
+#include "server/sv_gameapi.h"
+#include "sys/sys_loadlib.h"
 // <cstdio> not required in this TU; va() is provided by the engine headers included elsewhere
 
 // Ensure the print helper is visible in this translation unit
@@ -14,20 +16,41 @@ static int nxrp_lastScore[MAX_CLIENTS];
 static int nxrp_lastKills[MAX_CLIENTS];
 // Round start tracking - set when round begins (svs.time), reset on intermission
 static int nxrp_roundStartTime = 0;
+// 1-based round counter for the current map; 0 before first round
+static int nxrp_roundNumber = 0;
+// Pointer into the game VM for MBII's gSiegeRoundBegun flag (if available)
+static qboolean* nxrp_gSiegeRoundBegun = NULL;
+// Local cached state to detect transition
+static qboolean nxrp_roundBegunFlag = qfalse;
+// MBII per-round timer pointers (optional)
+static int* nxrp_rebelCountdown = NULL;
+static int* nxrp_imperialCountdown = NULL;
+static int nxrp_prevRebelCountdown = 0;
+static int nxrp_prevImperialCountdown = 0;
 
 void SV_NXRP_ScoreInit(void) {
 	for (int i = 0; i < MAX_CLIENTS; i++) {
 		nxrp_lastScore[i] = 0;
 		nxrp_lastKills[i] = 0;
 	}
+
+	// Per-frame NXRP hooks (keep FFA respawn mode & timers enforced)
+	NXRP_FFA_Frame();
 }
 
 void SV_NXRP_ScoreFrame(void) {
-	if (!svs.clients) return;
 
+	if (!svs.clients) return;
 	// If intermission is active, reset round start state so we trigger again
 	if (sv.configstrings[CS_INTERMISSION] && atoi(sv.configstrings[CS_INTERMISSION]) == 1) {
+		NXRP_PrintConsoleToPlayer(NULL, va("Round Restart"));
 		nxrp_roundStartTime = 0;
+		nxrp_roundBegunFlag = qfalse;
+		nxrp_prevRebelCountdown = 0;
+		nxrp_prevImperialCountdown = 0;
+	// Reset per-map round number
+	nxrp_roundNumber = 0;
+
 	} else {
 		// Not intermission: if we haven't signaled round start yet, trigger once when
 		// we observe the first active player. This mirrors other server systems that
@@ -38,7 +61,11 @@ void SV_NXRP_ScoreFrame(void) {
 				client_t* cl = &svs.clients[i];
 				if (cl->state == CS_ACTIVE && cl->gentity) {
 					nxrp_roundStartTime = svs.time;
+					NXRP_OnMapStart();
+
+					// Also treat this as a round start: first active player seen -> round begins
 					NXRP_OnRoundStart();
+					nxrp_roundBegunFlag = qtrue;
 
 					// Initialize last-kill counters from current persistent values so
 					// we don't trigger spurrious change events at round start.
@@ -50,6 +77,27 @@ void SV_NXRP_ScoreFrame(void) {
 					}
 					break;
 				}
+			}
+		}
+		// Timer-based detection: check MBII's countdowns for a transition
+		if (!nxrp_roundBegunFlag && (nxrp_rebelCountdown || nxrp_imperialCountdown)) {
+			int r = nxrp_rebelCountdown ? *nxrp_rebelCountdown : 0;
+			int im = nxrp_imperialCountdown ? *nxrp_imperialCountdown : 0;
+			// detect transition from non-positive to positive countdown
+			if ((r > 0 && nxrp_prevRebelCountdown <= 0) || (im > 0 && nxrp_prevImperialCountdown <= 0)) {
+				nxrp_roundBegunFlag = qtrue;
+				NXRP_OnRoundStart();
+			}
+			nxrp_prevRebelCountdown = r;
+			nxrp_prevImperialCountdown = im;
+		}
+		// If the game VM exposes a siege-round-begun flag, detect its rising
+		// edge and signal NXRP_OnRoundStart once per round.
+		if (nxrp_gSiegeRoundBegun) {
+			const qboolean begun = (*nxrp_gSiegeRoundBegun) ? qtrue : qfalse;
+			if (begun && !nxrp_roundBegunFlag) {
+				nxrp_roundBegunFlag = qtrue;
+				NXRP_OnRoundStart();
 			}
 		}
 	}
@@ -90,7 +138,36 @@ void NXRP_OnPlayerConnect(int clientNum, qboolean firstTime, qboolean isBot) {
 // Called when a player's persistent kill counter changes (tracked by SV_NXRP_ScoreFrame)
 void NXRP_OnKillsChanged(client_t *cl, int oldKills, int newKills) {
 	const char *name = cl ? (cl->nxrp_username[0] ? cl->nxrp_username : cl->name) : "Unknown";
-	Com_Printf("Kill archived: %s %d -> %d\n", name, oldKills, newKills);
+	NXRP_PrintConsoleToPlayer(NULL, va("Kill archived: %s %d -> %d\n", name, oldKills, newKills));
+	//Com_Printf("Kill archived: %s %d -> %d\n", name, oldKills, newKills);
+
+	// Detect teamkills from the victim-side kill change and restore attacker score.
+	if (!cl || !cl->gentity || !cl->gentity->playerState) return;
+	int attackerNum = cl->gentity->playerState->persistant[PERS_ATTACKER];
+	if (attackerNum < 0 || attackerNum >= sv_maxclients->integer) return;
+
+	client_t *attacker = &svs.clients[attackerNum];
+	if (!attacker || !attacker->gentity || !attacker->gentity->playerState) return;
+
+	int victimTeam = cl->gentity->playerState->persistant[PERS_TEAM];
+	int attackerTeam = attacker->gentity->playerState->persistant[PERS_TEAM];
+	if (victimTeam != attackerTeam) return;
+
+	void *dll = GVM_GetDllHandle();
+	if (!dll) return;
+
+	typedef void (*AddScoreFn)(void *ent, float *origin, int score);
+	AddScoreFn addscore = (AddScoreFn)Sys_LoadFunction(dll, "AddScore");
+	if (!addscore) return;
+
+	float org[3];
+	org[0] = attacker->gentity->r.currentOrigin[0];
+	org[1] = attacker->gentity->r.currentOrigin[1];
+	org[2] = attacker->gentity->r.currentOrigin[2];
+
+	void *old = GVM_BeginNative();
+	addscore(attacker->gentity, org, 1);
+	GVM_EndNative(old);
 }
 
 void NXRP_OnPlayerUserinfoChanged(int clientNum) {
@@ -151,20 +228,57 @@ void NXRP_OnNPCSpawned(const char *npcName) {
 	NXRP_PrintConsoleToPlayer(NULL, va("NPC spawned: %s", npcName ? npcName : "<unknown>"));
 }
 
-void NXRP_OnVehicleDestroyed(int vehicleEntNum, client_t *killer) {
-	NXRP_PrintConsoleToPlayer(NULL, va("Vehicle destroyed: ent %d", vehicleEntNum));
-}
+void NXRP_OnMapStart(void) {
+	NXRP_PrintConsoleToPlayer(NULL, "Map started");
+	// Attempt to resolve MBII's gSiegeRoundBegun global in the game VM so
+	// we can detect the exact round-begin transition when available.
+	void* dll = GVM_GetDllHandle();
+	if (dll) {
+		nxrp_gSiegeRoundBegun = (qboolean*)Sys_LoadFunction(dll, "gSiegeRoundBegun");
+		nxrp_rebelCountdown = (int*)Sys_LoadFunction(dll, "gRebelCountdown");
+		nxrp_imperialCountdown = (int*)Sys_LoadFunction(dll, "gImperialCountdown");
+	} else {
+		nxrp_gSiegeRoundBegun = NULL;
+	}
+	nxrp_roundBegunFlag = qfalse;
+	nxrp_prevRebelCountdown = 0;
+	nxrp_prevImperialCountdown = 0;
 
-void NXRP_OnRoundStart(void) {
-	NXRP_PrintConsoleToPlayer(NULL, "Round started");
+	// Initialize NXRP FFA hooks for this map and apply immediately
+	NXRP_FFA_Init();
+	NXRP_FFA_Frame();
 }
 
 void NXRP_OnRoundEnd(int winningTeam) {
 	NXRP_PrintConsoleToPlayer(NULL, va("Round ended, winning team %d", winningTeam));
+	// Reset round-detection state so subsequent rounds fire correctly
+	nxrp_roundBegunFlag = qfalse;
+	nxrp_roundStartTime = 0;
+	nxrp_prevRebelCountdown = 0;
+	nxrp_prevImperialCountdown = 0;
+}
+
+void NXRP_OnRoundStart(void) {
+	NXRP_PrintConsoleToPlayer(NULL, "Round started");
+	// Announce in chat as well
+	SV_SendServerCommand(NULL, "chat \"^3[NXRP]^7 Round started\"\n");
+	// Increment round counter and re-resolve/reapply FFA hooks at round start
+	nxrp_roundNumber++;
+	NXRP_FFA_Init();
+	NXRP_FFA_Frame();
 }
 
 void NXRP_OnRoundRestart(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Round restart");
+	// Reset round-detection state so the next round start is detected
+	nxrp_roundBegunFlag = qfalse;
+	nxrp_roundStartTime = 0;
+	nxrp_prevRebelCountdown = 0;
+	nxrp_prevImperialCountdown = 0;
+
+	// Ensure FFA helpers reinitialize on round restart
+	NXRP_FFA_Init();
+	NXRP_FFA_Frame();
 }
 
 void NXRP_OnMatchStart(void) {
@@ -174,6 +288,11 @@ void NXRP_OnMatchStart(void) {
 void NXRP_OnMatchEnd(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Match end");
 }
+
+int NXRP_GetRoundNumber(void) {
+	return nxrp_roundNumber;
+}
+
 
 // Called when an NPC is killed by a player. Work in Progress
 void NXRP_OnNPCKilled(client_t *killer, const char *npcName) {

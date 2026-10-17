@@ -27,52 +27,60 @@ void SV_WannaGiveWeapon(client_t* cl, int wnum);
 void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 
 // Forward declarations for the extracted command handlers
-qboolean NXRP_HandleNxNoclip( client_t *cl, const char *chatCursor );
-qboolean NXRP_HandleNxInfo( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor );
 static qboolean NXRP_HandleNpcSpawn( client_t *cl, const char *chatCursor );
 // forward-declare the spawn helper we will implement in this module
 int SV_SpawnModelAtClient(client_t* cl, const char* modelPath);
 
 enum NXRP_SubCmd {
 	NXRP_SUB_UNKNOWN = 0,
+	NXRP_SUB_NPC,
 	NXRP_SUB_SPAWN,
+	NXRP_SUB_SKILLS,
+	NXRP_SUB_SKILL,
+	NXRP_SUB_MMOVE,
 	NXRP_SUB_TP,
 	NXRP_SUB_VEHICLE,
 	NXRP_SUB_INFO,
 	NXRP_SUB_TEST,
 	NXRP_SUB_ACCOUNT,
 	NXRP_SUB_GIVEALL,
+	NXRP_SUB_BOSS,
 	NXRP_SUB_NOCLIP,
 	NXRP_SUB_REGISTER,
 	NXRP_SUB_LOGIN,
 	NXRP_SUB_POS,
 	NXRP_SUB_MODEL,
+	NXRP_SUB_MREMOVE,
+	NXRP_SUB_STRIP,
 	NXRP_SUB_PMODEL,
-	NXRP_SUB_FFA
+	NXRP_SUB_LIST
 };
 
 static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !s || !s[0] )					return NXRP_SUB_UNKNOWN;
 	if ( !Q_stricmp( s, "spawn" ) )		return NXRP_SUB_SPAWN;
 	if ( !Q_stricmp( s, "info" ) )		return NXRP_SUB_INFO;
+	if ( !Q_stricmp( s, "skills" ) )		return NXRP_SUB_SKILLS;
 	if ( !Q_stricmp( s, "test" ) )		return NXRP_SUB_TEST;
 	if ( !Q_stricmp( s, "account" ) )	return NXRP_SUB_ACCOUNT;
 	if ( !Q_stricmp( s, "giveall" ) )	return NXRP_SUB_GIVEALL;
 	if ( !Q_stricmp( s, "noclip" ) )	return NXRP_SUB_NOCLIP;
 	if ( !Q_stricmp( s, "register" ) )	return NXRP_SUB_REGISTER;
 	if ( !Q_stricmp( s, "login" ) )		return NXRP_SUB_LOGIN;
+	if ( !Q_stricmp( s, "skill" ) )		return NXRP_SUB_SKILL;
 	if ( !Q_stricmp( s, "pos" ) )		return NXRP_SUB_POS;
-	if ( !Q_stricmp( s, "model" ) )		return NXRP_SUB_MODEL;
-	if ( !Q_stricmp( s, "pmodel" ) )		return NXRP_SUB_PMODEL;
+	if ( !Q_stricmp( s, "prop" ) )		return NXRP_SUB_MODEL;
+	if ( !Q_stricmp( s, "npc" ) )		return NXRP_SUB_NPC;
+	if ( !Q_stricmp( s, "strip" ) )		return NXRP_SUB_STRIP;
+	if ( !Q_stricmp( s, "boss" ) )		return NXRP_SUB_BOSS;
 	if ( !Q_stricmp( s, "vehicle" ) )	return NXRP_SUB_VEHICLE;
-	if ( !Q_stricmp( s, "ffa" ) )		return NXRP_SUB_FFA;
+	if ( !Q_stricmp( s, "list" ) )	return NXRP_SUB_LIST;
 	return NXRP_SUB_UNKNOWN;
 }
 
-// Initialize FFA helpers (resolve MBII symbols if present)
-void NXRP_FFA_Init(void) {
-	// noop here; nxrp_ffa.cpp implements actual init when loaded
-}
+// Initialize FFA helpers (implemented in nxrp_ffa.cpp)
 
 // Spawn a misc model near a client using the game module's spawn helpers.
 // Returns the new entity number, or -1 on failure.
@@ -140,55 +148,180 @@ int SV_SpawnModelAtClient(client_t* cl, const char* modelPath)
 
 qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const char *chatCursor ) {
 	if ( !commandName ) return qfalse;
-
+	// Legacy "!nx" prefix is no longer supported — ignore commands using it
 	if ( !Q_stricmp( commandName, "nx" ) ) {
-		// Remove diagnostic prints in main build; keep parsing logic.
-		char subcmd[MAX_TOKEN_CHARS] = {0};
-		char arg[MAX_TOKEN_CHARS] = {0};
-
-		if ( sscanf( chatCursor, "%31s %31s", subcmd, arg ) >= 1 ) {
-			NXRP_SubCmd sc = NXRP_ParseSubcmd( subcmd );
-
-
-
-			switch ( sc ) {
-			case NXRP_SUB_TP:
-				return NXRP_HandleNxTp(cl, chatCursor);
-
-			case NXRP_SUB_SPAWN:
-				return NXRP_HandleNxSpawn(cl, chatCursor);
-			case NXRP_SUB_MODEL:
-				return NXRP_HandleNxModel(cl, chatCursor);
-			case NXRP_SUB_PMODEL:
-				return NXRP_HandleNxPModel(cl, chatCursor);
-			case NXRP_SUB_VEHICLE:
-				return NXRP_HandleNxVehicle(cl, chatCursor);
-			case NXRP_SUB_POS:
-				return NXRP_HandleNxrpPos(cl, chatCursor);
-			case NXRP_SUB_INFO:
-				return NXRP_HandleNxInfo( cl, chatCursor );
-			case NXRP_SUB_TEST:
-				return NXRP_HandleNxTest(cl, chatCursor);
-			case NXRP_SUB_ACCOUNT:
-				return NXRP_HandleNxAccount( cl, chatCursor );
-			case NXRP_SUB_GIVEALL:
-				return NXRP_HandleNxGiveAll( cl, chatCursor );
-			case NXRP_SUB_NOCLIP:
-				return NXRP_HandleNxNoclip( cl, chatCursor );
-			case NXRP_SUB_REGISTER:
-				return NXRP_HandleNxRegister( cl, chatCursor );
-			case NXRP_SUB_LOGIN:
-				return NXRP_HandleNxLogin( cl, chatCursor );
-			case NXRP_SUB_FFA:
-				return NXRP_HandleNxFFA( cl, chatCursor );
-			default:
-				break;
-			}
-		}
 		return qtrue;
 	}
 
-	return qfalse;
+	char subcmd[MAX_TOKEN_CHARS] = {0};
+	char arg[MAX_TOKEN_CHARS] = {0};
+	char normalizedCursor[1024] = {0};
+	const char *dispatchCursor = chatCursor ? chatCursor : "";
+
+	// For direct commands (no legacy "nx" prefix), the commandName is the subcommand
+	Q_strncpyz( subcmd, commandName, sizeof(subcmd) );
+	Com_sprintf(
+		normalizedCursor,
+		sizeof(normalizedCursor),
+		"%s%s%s",
+		subcmd,
+		(dispatchCursor[0] ? " " : ""),
+		dispatchCursor
+	);
+	dispatchCursor = normalizedCursor;
+
+	NXRP_SubCmd sc = NXRP_ParseSubcmd( subcmd );
+
+	// Special handling for prop subcommands: support syntax
+	//   !nx prop s <modelpath>
+	//   !nx prop r <index>
+	//   !prop s <modelpath>
+	//   !prop r <index>
+	if (!Q_stricmp(subcmd, "prop")) {
+		// Parse "prop" subcommands manually to avoid fragile sscanf patterns.
+		const char* p = dispatchCursor;
+		while (*p == ' ' || *p == '\t') {
+			++p;
+		}
+
+		char first[MAX_TOKEN_CHARS] = {0};
+		int firstLen = 0;
+		while (*p && *p != ' ' && *p != '\t') {
+			if (firstLen < (MAX_TOKEN_CHARS - 1)) {
+				first[firstLen++] = *p;
+			}
+			++p;
+		}
+		first[firstLen] = '\0';
+
+		while (*p == ' ' || *p == '\t') {
+			++p;
+		}
+
+		char action[MAX_TOKEN_CHARS] = {0};
+		if (!Q_stricmp(first, "prop")) {
+			int actionLen = 0;
+			while (*p && *p != ' ' && *p != '\t') {
+				if (actionLen < (MAX_TOKEN_CHARS - 1)) {
+					action[actionLen++] = *p;
+				}
+				++p;
+			}
+			action[actionLen] = '\0';
+		} else {
+			Q_strncpyz(action, first, sizeof(action));
+		}
+
+		while (*p == ' ' || *p == '\t') {
+			++p;
+		}
+
+		// If action is numeric, treat as index for directional prop move: "!nx prop <index> <dir> <amount>"
+		bool actionIsNumber = false;
+		if (action[0] == '-' || (action[0] >= '0' && action[0] <= '9')) {
+			actionIsNumber = true;
+			for (int ai = 1; action[ai]; ++ai) {
+				if (!(action[ai] >= '0' && action[ai] <= '9')) { actionIsNumber = false; break; }
+			}
+		}
+		if (actionIsNumber) {
+			int idx = atoi(action);
+			return NXRP_cmdAdmin_prop_dir(cl, idx, p);
+		}
+		if (!Q_stricmp(action, "s")) {
+			return NXRP_cmdAdmin_prop_s(cl, p);
+		} else if (!Q_stricmp(action, "r")) {
+			return NXRP_cmdAdmin_prop_r(cl, p);
+		} else if (!Q_stricmp(action, "m")) {
+			return NXRP_cmdAdmin_prop_m(cl, p);
+		} else if (!Q_stricmp(action, "load")) {
+			return NXRP_cmdAdmin_prop_load(cl, dispatchCursor);
+		} else if (!Q_stricmp(action, "list")) {
+			return NXRP_cmdAdmin_prop_list(cl, dispatchCursor);
+		}
+	}
+
+	switch ( sc ) {
+	case NXRP_SUB_TP:
+		return NXRP_cmdAdmin_tp(cl, dispatchCursor);
+
+	case NXRP_SUB_SPAWN:
+		return NXRP_cmdAdmin_spawn(cl, dispatchCursor);
+
+	case NXRP_SUB_NPC:
+		return NXRP_cmdAdmin_npc(cl, dispatchCursor);
+
+	case NXRP_SUB_MODEL:
+		// Keep MODEL routing on prop_s.
+		return NXRP_cmdAdmin_prop_s(cl, dispatchCursor);
+
+	// allow shorthand prop subcommands: support "t" to create prop with explicit extents
+	case NXRP_SUB_UNKNOWN:
+	{
+		char firstTok[MAX_TOKEN_CHARS] = {0};
+		if (sscanf(dispatchCursor, "%31s", firstTok) == 1) {
+			if (!Q_stricmp(firstTok, "t")) {
+				// dispatch to prop_t handler; skip the "t" token
+				const char* p = dispatchCursor;
+				while (*p == ' ' || *p == '\t') ++p;
+				// skip token
+				while (*p && *p != ' ' && *p != '\t') ++p;
+				while (*p == ' ' || *p == '\t') ++p;
+				return NXRP_cmdAdmin_prop_t(cl, p);
+			}
+			if (!Q_stricmp(firstTok, "test2")) {
+				return NXRP_cmdAdmin_test2(cl, dispatchCursor);
+			}
+		}
+		break;
+	}
+
+	case NXRP_SUB_MREMOVE:
+		return NXRP_cmdAdmin_mremove(cl, dispatchCursor);
+
+	case NXRP_SUB_BOSS:
+		return NXRP_cmdAdmin_boss(cl, dispatchCursor);
+
+	case NXRP_SUB_LIST:
+		return NXRP_cmdAdmin_list(cl, dispatchCursor);
+
+	case NXRP_SUB_STRIP:
+		return NXRP_cmdAdmin_strip(cl, dispatchCursor);
+
+	case NXRP_SUB_VEHICLE:
+		return NXRP_cmdAdmin_vehicle(cl, dispatchCursor);
+
+	case NXRP_SUB_POS:
+		return NXRP_cmd_pos(cl, dispatchCursor);
+
+	case NXRP_SUB_SKILLS:
+		return NXRP_cmd_skills(cl, dispatchCursor);
+
+	case NXRP_SUB_SKILL:
+		return NXRP_cmd_skill(cl, dispatchCursor);
+
+	case NXRP_SUB_INFO:
+		return NXRP_cmd_info( cl, dispatchCursor );
+
+	case NXRP_SUB_TEST:
+		return NXRP_cmd_test(cl, dispatchCursor);
+
+	case NXRP_SUB_ACCOUNT:
+		return NXRP_cmd_account( cl, dispatchCursor );
+	case NXRP_SUB_GIVEALL:
+		return NXRP_cmdAdmin_giveall( cl, dispatchCursor );
+	case NXRP_SUB_NOCLIP:
+		return NXRP_cmdAdmin_noclip( cl, dispatchCursor );
+	case NXRP_SUB_REGISTER:
+		return NXRP_cmd_register( cl, dispatchCursor );
+	case NXRP_SUB_LOGIN:
+		return NXRP_cmd_login( cl, dispatchCursor );
+
+	default:
+		break;
+	}
+
+	return qtrue;
 }
 
 extern "C" qboolean NXRP_HandleChat( client_t *cl, const char *commandName, const char *chatCursor );
@@ -206,7 +339,7 @@ static qboolean NXRP_HandleNpcSpawn( client_t *cl, const char *chatCursor ) {
 	}
 
 	if ( arg[0] == '\0' ) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !nx spawn <npc_type>");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !spawn <npc_type>");
 		return qtrue;
 	}
 

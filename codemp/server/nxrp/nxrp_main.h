@@ -6,6 +6,8 @@
 #define NXRP_MAIN_H
 
 #include "../server.h"
+#include <string>
+#include <vector>
 
 // Primary chat handler called from server code.
 // Use the NXRP_ prefix consistently across the project.
@@ -21,28 +23,105 @@ qboolean NXRP_HandleChat( client_t *cl, const char *commandName, const char *cha
 #endif
 
 // additional handlers declared in nxrp_cmds.cpp - renamed to NXRP_ prefix
-qboolean NXRP_HandleNxInfo( client_t *cl, const char *chatCursor );
-qboolean NXRP_HandleNxRegister( client_t *cl, const char *chatCursor );
-qboolean NXRP_HandleNxLogin( client_t *cl, const char *chatCursor );
-qboolean NXRP_HandleNxGiveAll( client_t *cl, const char *chatCursor );
-qboolean NXRP_HandleNxAccount( client_t *cl, const char *chatCursor );
-qboolean NXRP_HandleNxNoclip( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_register( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_account( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor );
 // Non-admin: report player position
-qboolean NXRP_HandleNxrpPos( client_t *cl, const char *chatCursor );
-// Admin-only: spawn a model with a provided path
-qboolean NXRP_HandleNxModel( client_t *cl, const char *chatCursor );
-// Admin-only: player-model placeholder command (currently same as NXRP_HandleNxModel)
-qboolean NXRP_HandleNxPModel( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_pos( client_t *cl, const char *chatCursor );
+// Admin-only: spawn a model with a provided path (command: !mspawn)
+qboolean NXRP_cmdAdmin_mspawn( client_t *cl, const char *chatCursor );
+// New prop-style spawn command (wrapper for backward compatibility)
+qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor );
+// Admin-only: spawn a prop with explicit collider size: !prop t <model_path> <sx> <sy> <sz> [angle]
+qboolean NXRP_cmdAdmin_prop_t( client_t *cl, const char *chatCursor );
+// Remove a saved prop spawn by index
+qboolean NXRP_cmdAdmin_prop_r( client_t *cl, const char *chatCursor );
+// Move last spawned prop: !prop m <x> <y> <z>
+qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor );
+// Load saved prop spawns for the current map
+qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor );
+// List saved prop spawns for the current map (admin)
+qboolean NXRP_cmdAdmin_prop_list( client_t *cl, const char *chatCursor );
+// Move a specific saved prop entry by a cardinal direction and amount
+qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args );
+// Expose new directional move through chat parser (internal)
+qboolean NXRP_cmdAdmin_prop_dir_chat( client_t *cl, const char *chatCursor );
+// Admin-only: remove the last spawned model (!nx mremove)
+qboolean NXRP_cmdAdmin_mremove( client_t *cl, const char *chatCursor );
 // Admin-only: spawn an NPC or misc model test
-qboolean NXRP_HandleNxSpawn( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor );
+// Admin-only: spawn and persist NPC definitions per-map (commands: !npc <type>, !npc load)
+qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor );
 // Admin-only: teleport player upward
-qboolean NXRP_HandleNxTp( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor );
 // Admin-only: test spawn command
-qboolean NXRP_HandleNxTest( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmdAdmin_test( client_t *cl, const char *chatCursor );
+// Admin-only: additional test command (prop placement)
+qboolean NXRP_cmdAdmin_test2( client_t *cl, const char *chatCursor );
 // Admin-only: spawn a vehicle
-qboolean NXRP_HandleNxVehicle( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor );
 // Admin-only: toggle FFA respawn mode (on/off/toggle)
-qboolean NXRP_HandleNxFFA( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmdAdmin_ffa( client_t *cl, const char *chatCursor );
+// Admin-only: strip the invoking player of weapons and force powers
+qboolean NXRP_cmdAdmin_strip( client_t *cl, const char *chatCursor );
+// Admin-only: list entities or other map info (usage: !list e)
+qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor );
+// NXRP-specific listing of saved map spawns
+void NXRP_ListSavedSpawnsForPlayer(client_t* cl);
+
+// Public info/help/skills commands (usable by logged-in players)
+qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_skill( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_test( client_t *cl, const char *chatCursor );
+
+// Internal implementations for skills handling (implemented in nxrp_skills.cpp)
+qboolean NXRP_Skills_ListImpl( client_t *cl, const char *homepath );
+qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char *skillToken );
+void NXRP_Skills_TestImpl(client_t* cl);
+// Ensure runtime skills.json exists under fs_homepath/nxrp by copying from
+// installed or repository locations when missing. Called at server startup.
+void NXRP_EnsureRuntimeSkills(void);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+// Repo skill accessors (hardcoded skill data provided by nxrp_skills.cpp)
+void NXRP_LoadRepoSkills(void);
+int NXRP_GetRepoSkillCount(void);
+int NXRP_FindRepoSkillIndexById(const char *id);
+const char* NXRP_GetRepoSkillIdByIndex(int idx);
+const char* NXRP_GetRepoSkillNameByIndex(int idx);
+const char* NXRP_GetRepoSkillDescriptionByIndex(int idx);
+int NXRP_GetRepoSkillMaxLevelByIndex(int idx);
+int NXRP_GetRepoSkillLevelCount(int skillIdx);
+int NXRP_GetRepoSkillLevelCost(int skillIdx, int levelIdx);
+int NXRP_GetRepoSkillLevelEffectsCount(int skillIdx, int levelIdx);
+const char* NXRP_GetRepoSkillLevelEffectKey(int skillIdx, int levelIdx, int effectIdx);
+const char* NXRP_GetRepoSkillLevelEffectValue(int skillIdx, int levelIdx, int effectIdx);
+
+// Simple file I/O helpers for JSON reading/writing
+bool NXRP_ReadFileToString(const char *path, std::string &out);
+bool NXRP_WriteStringToFile(const char *path, const std::string &content);
+
+// Simple skill struct used by the JSON reader and skills module
+struct NXRP_SimpleSkill {
+	std::string id;
+	std::string name;
+	std::string description;
+	int maxLevel = 0;
+	std::vector<int> costs;
+};
+
+// Parse skills.json content into a vector of NXRP_SimpleSkill. Returns true on success.
+bool NXRP_ParseSkillsJson(const std::string &content, std::vector<NXRP_SimpleSkill> &out);
+#ifdef __cplusplus
+}
+#endif
 
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );
@@ -55,12 +134,16 @@ void NXRP_OnPlayerDisconnect(int clientNum);
 void NXRP_OnPlayerKilled(client_t *attacker, client_t *victim, int meansOfDeath);
 void NXRP_OnScoreChanged(client_t *cl, int oldScore, int newScore);
 void NXRP_OnNPCSpawned(const char *npcName);
-void NXRP_OnVehicleDestroyed(int vehicleEntNum, client_t *killer);
+void NXRP_OnMapStart(void);
 void NXRP_OnRoundStart(void);
 void NXRP_OnRoundEnd(int winningTeam);
 void NXRP_OnRoundRestart(void);
 void NXRP_OnMatchStart(void);
 void NXRP_OnMatchEnd(void);
+
+// Round index helper (1-based within the current map). Returns 0 before
+// the first round has started.
+int NXRP_GetRoundNumber(void);
 
 // Server-side NXRP helpers
 void SV_NXRP_ScoreInit(void);
@@ -68,6 +151,10 @@ void SV_NXRP_ScoreFrame(void);
 
 // FFA respawn helpers
 void NXRP_FFA_Init(void);
+void NXRP_FFA_SetEnabled(qboolean enable);
+qboolean NXRP_FFA_IsEnabled(void);
+// Frame hook to reapply timers/mode each server frame while FFA is enabled
+void NXRP_FFA_Frame(void);
 // FFA helpers are optional; commented out while disabled
 //void NXRP_FFA_SetEnabled(qboolean enable);
 //qboolean NXRP_FFA_IsEnabled(void);
