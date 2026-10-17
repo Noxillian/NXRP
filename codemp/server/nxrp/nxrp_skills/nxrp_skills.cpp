@@ -730,7 +730,10 @@ void NXRP_EnsureRuntimeSkills(void) {
 }
 
 void NXRP_LoadRepoSkills() {
-	if (!g_nxrpSimpleSkills.empty()) return;
+	// Always attempt to load the repository skills.json so runtime reflects
+	// the current repo contents (useful during development). If the repo
+	// file is missing or cannot be parsed, fall back to built-in defaults.
+	g_nxrpSimpleSkills.clear();
 
 	// Try to load repo skills.json using shared helpers.
 	std::string content;
@@ -751,21 +754,29 @@ void NXRP_LoadRepoSkills() {
 
 	// Fallback to hardcoded defaults if file is missing or parse fails.
 	NXRP_SimpleSkillDef jump;
-	jump.id = "skill_jump";
+	jump.id = "jump";
 	jump.name = "Jump";
 	jump.description = "Increases jump height.";
 	jump.maxLevel = 3;
-	jump.costs = {1, 2, 3};
+	jump.costs = {2, 5, 8};
 
 	NXRP_SimpleSkillDef pistol;
-	pistol.id = "skill_pistol";
+	pistol.id = "pistol";
 	pistol.name = "Pistol";
 	pistol.description = "Improves pistol handling.";
 	pistol.maxLevel = 2;
 	pistol.costs = {1, 2};
 
+	NXRP_SimpleSkillDef armor;
+	armor.id = "armor";
+	armor.name = "Armor";
+	armor.description = "Increases damage resistance.";
+	armor.maxLevel = 3;
+	armor.costs = {2, 5, 8};
+
 	g_nxrpSimpleSkills.push_back(jump);
 	g_nxrpSimpleSkills.push_back(pistol);
+	g_nxrpSimpleSkills.push_back(armor);
 }
 
 void NXRP_Skills_TestImpl(client_t* cl) {
