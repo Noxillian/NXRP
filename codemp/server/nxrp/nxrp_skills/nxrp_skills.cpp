@@ -6,6 +6,7 @@
 #include <sstream>
 #include <cctype>
 #include <algorithm>
+#include <vector>
 #if defined(_WIN32)
   #include <direct.h>
 #else
@@ -21,26 +22,35 @@ qboolean NXRP_Skills_ListImpl( client_t *cl, const char *homepath ) {
 	// account files live under <fs_homepath>/nxrp_accounts/<safe>.json (note: different directory)
 	std::string accountsDir = (homepath && homepath[0]) ? std::string(homepath) + "/nxrp_accounts" : std::string("nxrp_accounts");
 
-	// If a repository copy exists under codemp/server/nxrp/nxrp_skills/skills.json,
-	// copy it into the runtime homepath so the running server sees edits made in the project.
-	const std::string repoPath = "codemp/server/nxrp/nxrp_skills/skills.json";
-	std::ifstream repoIfs(repoPath);
-	if (repoIfs.is_open()) {
-		// ensure target dir exists
-#if defined(_WIN32)
-		_mkdir(nxrpDir.c_str());
-#else
-		mkdir(nxrpDir.c_str(), 0755);
-#endif
-		std::ofstream ofs(filepath, std::ios::trunc);
-		if (ofs.is_open()) {
-			ofs << repoIfs.rdbuf();
-			ofs.close();
-		}
-		repoIfs.close();
-	}
-
 	std::ifstream ifs(filepath);
+	if (!ifs.is_open()) {
+		// Fallback source locations for skills.json when runtime copy is missing.
+		const std::string repoPath = "codemp/server/nxrp/nxrp_skills/skills.json";
+		std::vector<std::string> candidates;
+		candidates.push_back(repoPath);
+#if !defined(_WIN32)
+		candidates.push_back("/usr/share/caded/nxrp/skills.json");
+		candidates.push_back("/usr/local/share/caded/nxrp/skills.json");
+#endif
+		for (const auto &src : candidates) {
+			std::ifstream srcIfs(src);
+			if (!srcIfs.is_open()) continue;
+			// ensure target dir exists
+#if defined(_WIN32)
+			_mkdir(nxrpDir.c_str());
+#else
+			mkdir(nxrpDir.c_str(), 0755);
+#endif
+			std::ofstream ofs(filepath, std::ios::trunc);
+			if (ofs.is_open()) {
+				ofs << srcIfs.rdbuf();
+				ofs.close();
+			}
+			srcIfs.close();
+			break;
+		}
+		ifs.open(filepath);
+	}
 	if (!ifs.is_open()) return qfalse;
 	std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
 	ifs.close();
@@ -158,10 +168,17 @@ qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char
 	std::string skillsPath = nxrpDir + "/skills.json";
 	std::ifstream sifs(skillsPath);
 	if (!sifs.is_open()) {
-		// If the runtime skills.json was removed (example: nxrp/ deleted), try to copy the repo copy
+		// If runtime skills.json is missing, try repo copy and system-installed locations.
 		const std::string repoPath = "codemp/server/nxrp/nxrp_skills/skills.json";
-		std::ifstream repoIfs(repoPath);
-		if (repoIfs.is_open()) {
+		std::vector<std::string> candidates;
+		candidates.push_back(repoPath);
+#if !defined(_WIN32)
+		candidates.push_back("/usr/share/caded/nxrp/skills.json");
+		candidates.push_back("/usr/local/share/caded/nxrp/skills.json");
+#endif
+		for (const auto &src : candidates) {
+			std::ifstream srcIfs(src);
+			if (!srcIfs.is_open()) continue;
 			// ensure target dir exists
 #if defined(_WIN32)
 			_mkdir(nxrpDir.c_str());
@@ -170,12 +187,13 @@ qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char
 #endif
 			std::ofstream ofs(skillsPath, std::ios::trunc);
 			if (ofs.is_open()) {
-				ofs << repoIfs.rdbuf();
+				ofs << srcIfs.rdbuf();
 				ofs.close();
 			}
-			repoIfs.close();
+			srcIfs.close();
 			// reopen the runtime file
 			sifs.open(skillsPath);
+			if (sifs.is_open()) break;
 		}
 	}
 	if (!sifs.is_open()) { NXRP_PrintConsoleToPlayer(cl, "Skills definition file missing"); return qtrue; }
