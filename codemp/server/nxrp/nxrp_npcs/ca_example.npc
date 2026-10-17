@@ -4,7 +4,7 @@
 
 npc "nx_example" {
 	displayName "NX Example NPC"
-	model "models/characters/example.md3"    // replace with an existing model
+	model "models/bastilla/example.md3"    // replace with an existing model
 	spawnflags 0
 	health 100
 	team 0
