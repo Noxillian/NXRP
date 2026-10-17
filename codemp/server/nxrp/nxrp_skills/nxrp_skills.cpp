@@ -15,8 +15,11 @@
 
 // List skills implementation. homepath is Cvar_VariableString("fs_homepath") or fallback.
 qboolean NXRP_Skills_ListImpl( client_t *cl, const char *homepath ) {
-	std::string dir = (homepath && homepath[0]) ? std::string(homepath) + "/nxrp" : std::string("nxrp");
-	std::string filepath = dir + "/skills.json";
+	// runtime skills live under <fs_homepath>/nxrp/skills.json
+	std::string nxrpDir = (homepath && homepath[0]) ? std::string(homepath) + "/nxrp" : std::string("nxrp");
+	std::string filepath = nxrpDir + "/skills.json";
+	// account files live under <fs_homepath>/nxrp_accounts/<safe>.json (note: different directory)
+	std::string accountsDir = (homepath && homepath[0]) ? std::string(homepath) + "/nxrp_accounts" : std::string("nxrp_accounts");
 
 	// If a repository copy exists under codemp/server/nxrp/nxrp_skills/skills.json,
 	// copy it into the runtime homepath so the running server sees edits made in the project.
@@ -25,9 +28,9 @@ qboolean NXRP_Skills_ListImpl( client_t *cl, const char *homepath ) {
 	if (repoIfs.is_open()) {
 		// ensure target dir exists
 #if defined(_WIN32)
-		_mkdir(dir.c_str());
+		_mkdir(nxrpDir.c_str());
 #else
-		mkdir(dir.c_str(), 0755);
+		mkdir(nxrpDir.c_str(), 0755);
 #endif
 		std::ofstream ofs(filepath, std::ios::trunc);
 		if (ofs.is_open()) {
@@ -49,7 +52,7 @@ qboolean NXRP_Skills_ListImpl( client_t *cl, const char *homepath ) {
 		std::string safe;
 		for (const char *p = username; *p; ++p) if (std::isalnum((unsigned char)*p) || *p == '_') safe.push_back((char)std::tolower((unsigned char)*p));
 		if (!safe.empty()) {
-			std::string accPath = dir + "/nxrp_accounts/" + safe + ".json";
+			std::string accPath = accountsDir + "/" + safe + ".json";
 			std::ifstream aifs(accPath);
 			if (aifs.is_open()) { accountSkills.assign((std::istreambuf_iterator<char>(aifs)), std::istreambuf_iterator<char>()); aifs.close(); }
 		}
@@ -125,8 +128,11 @@ qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char
 	for (const char *p = username; *p; ++p) if (std::isalnum((unsigned char)*p) || *p == '_') safe.push_back((char)std::tolower((unsigned char)*p));
 	if (safe.empty()) { NXRP_PrintConsoleToPlayer(cl, "Invalid account name"); return qtrue; }
 
-	std::string dir = (homepath && homepath[0]) ? std::string(homepath) + "/nxrp" : std::string("nxrp");
-	std::string accPath = dir + "/nxrp_accounts/" + safe + ".json";
+	// runtime skills live under <fs_homepath>/nxrp/skills.json
+	std::string nxrpDir = (homepath && homepath[0]) ? std::string(homepath) + "/nxrp" : std::string("nxrp");
+	// account files live under <fs_homepath>/nxrp_accounts/<safe>.json (note: different directory)
+	std::string accountsDir = (homepath && homepath[0]) ? std::string(homepath) + "/nxrp_accounts" : std::string("nxrp_accounts");
+	std::string accPath = accountsDir + "/" + safe + ".json";
 
 	std::ifstream aifs(accPath);
 	if (!aifs.is_open()) { NXRP_PrintConsoleToPlayer(cl, "Account file not found"); return qtrue; }
@@ -149,7 +155,7 @@ qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char
 	if (sp <= 0) { NXRP_PrintConsoleToPlayer(cl, "Not enough skill points"); return qtrue; }
 
 	// read skills definitions to find cost and maxLevel for the requested skill id
-	std::string skillsPath = dir + "/skills.json";
+	std::string skillsPath = nxrpDir + "/skills.json";
 	std::ifstream sifs(skillsPath);
 	if (!sifs.is_open()) { NXRP_PrintConsoleToPlayer(cl, "Skills definition file missing"); return qtrue; }
 	std::string scont((std::istreambuf_iterator<char>(sifs)), std::istreambuf_iterator<char>());
