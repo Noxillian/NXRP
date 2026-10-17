@@ -104,8 +104,10 @@ qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
 	// spawn id.
 	int last = NXRP_GetLastSpawn();
 	if (last >= 0) {
-		NXRP_SaveNPCToMap(last, tok);
-		NXRP_PrintConsoleToPlayer(cl, "Saved NPC to map file");
+		// Temporarily disable saving spawned NPCs to the map file while
+		// we stabilize persistence/loading behavior.
+		// NXRP_SaveNPCToMap(last, tok);
+		NXRP_PrintConsoleToPlayer(cl, "Saved NPC to map file (disabled)");
 	}
 	return qtrue;
 }
