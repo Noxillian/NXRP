@@ -76,6 +76,10 @@ qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_skill( client_t *cl, const char *chatCursor );
 
+// Internal implementations for skills handling (implemented in nxrp_skills.cpp)
+qboolean NXRP_Skills_ListImpl( client_t *cl, const char *homepath );
+qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char *skillToken );
+
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );
 void NXRP_OnPlayerSpawned( client_t *cl );
