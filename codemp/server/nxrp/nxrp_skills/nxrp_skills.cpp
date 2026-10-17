@@ -15,6 +15,8 @@
   #include <sys/types.h>
 #endif
 
+#if 0
+
 struct NXRP_RepoSkillLevel {
 	int level = 0;
 	int cost = 0;
@@ -707,4 +709,167 @@ qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char
 		NXRP_PrintConsoleToPlayer(cl, va("Purchased %s. Remaining skillpoints: %d", def->id.c_str(), newsp));
 		return qtrue;
 	}
+}
+#endif
+
+struct NXRP_SimpleSkillDef {
+	std::string id;
+	std::string name;
+	std::string description;
+	int maxLevel = 0;
+	std::vector<int> costs;
+};
+
+static std::vector<NXRP_SimpleSkillDef> g_nxrpSimpleSkills;
+
+static std::string NXRP_ToLowerCopySimple(const std::string &in) {
+	std::string out = in;
+	for (auto &c : out) c = (char)std::tolower((unsigned char)c);
+	return out;
+}
+
+void NXRP_EnsureRuntimeSkills(void) {
+	// skills.json is optional in the minimal implementation
+}
+
+void NXRP_LoadRepoSkills() {
+	if (!g_nxrpSimpleSkills.empty()) return;
+
+	NXRP_SimpleSkillDef jump;
+	jump.id = "skill_jump";
+	jump.name = "Jump";
+	jump.description = "Increases jump height.";
+	jump.maxLevel = 3;
+	jump.costs = {1, 2, 3};
+
+	NXRP_SimpleSkillDef pistol;
+	pistol.id = "skill_pistol";
+	pistol.name = "Pistol";
+	pistol.description = "Improves pistol handling.";
+	pistol.maxLevel = 2;
+	pistol.costs = {1, 2};
+
+	g_nxrpSimpleSkills.push_back(jump);
+	g_nxrpSimpleSkills.push_back(pistol);
+}
+
+void NXRP_Skills_TestImpl(client_t* cl) {
+	NXRP_Skills_ListImpl(cl, nullptr);
+}
+
+int NXRP_GetRepoSkillCount(void) {
+	if (g_nxrpSimpleSkills.empty()) NXRP_LoadRepoSkills();
+	return (int)g_nxrpSimpleSkills.size();
+}
+
+int NXRP_FindRepoSkillIndexById(const char *id) {
+	if (!id) return -1;
+	if (g_nxrpSimpleSkills.empty()) NXRP_LoadRepoSkills();
+	std::string want = NXRP_ToLowerCopySimple(id);
+	for (size_t i = 0; i < g_nxrpSimpleSkills.size(); ++i) {
+		if (NXRP_ToLowerCopySimple(g_nxrpSimpleSkills[i].id) == want) return (int)i;
+	}
+	return -1;
+}
+
+const char* NXRP_GetRepoSkillIdByIndex(int idx) {
+	if (idx < 0) return nullptr;
+	if (g_nxrpSimpleSkills.empty()) NXRP_LoadRepoSkills();
+	if (idx >= (int)g_nxrpSimpleSkills.size()) return nullptr;
+	return g_nxrpSimpleSkills[idx].id.c_str();
+}
+
+const char* NXRP_GetRepoSkillNameByIndex(int idx) {
+	if (idx < 0) return nullptr;
+	if (g_nxrpSimpleSkills.empty()) NXRP_LoadRepoSkills();
+	if (idx >= (int)g_nxrpSimpleSkills.size()) return nullptr;
+	return g_nxrpSimpleSkills[idx].name.c_str();
+}
+
+const char* NXRP_GetRepoSkillDescriptionByIndex(int idx) {
+	if (idx < 0) return nullptr;
+	if (g_nxrpSimpleSkills.empty()) NXRP_LoadRepoSkills();
+	if (idx >= (int)g_nxrpSimpleSkills.size()) return nullptr;
+	return g_nxrpSimpleSkills[idx].description.c_str();
+}
+
+int NXRP_GetRepoSkillMaxLevelByIndex(int idx) {
+	if (idx < 0) return 0;
+	if (g_nxrpSimpleSkills.empty()) NXRP_LoadRepoSkills();
+	if (idx >= (int)g_nxrpSimpleSkills.size()) return 0;
+	return g_nxrpSimpleSkills[idx].maxLevel;
+}
+
+int NXRP_GetRepoSkillLevelCount(int skillIdx) {
+	if (skillIdx < 0) return 0;
+	if (g_nxrpSimpleSkills.empty()) NXRP_LoadRepoSkills();
+	if (skillIdx >= (int)g_nxrpSimpleSkills.size()) return 0;
+	return (int)g_nxrpSimpleSkills[skillIdx].costs.size();
+}
+
+int NXRP_GetRepoSkillLevelCost(int skillIdx, int levelIdx) {
+	if (skillIdx < 0 || levelIdx < 0) return 0;
+	if (g_nxrpSimpleSkills.empty()) NXRP_LoadRepoSkills();
+	if (skillIdx >= (int)g_nxrpSimpleSkills.size()) return 0;
+	if (levelIdx >= (int)g_nxrpSimpleSkills[skillIdx].costs.size()) return 0;
+	return g_nxrpSimpleSkills[skillIdx].costs[levelIdx];
+}
+
+int NXRP_GetRepoSkillLevelEffectsCount(int skillIdx, int levelIdx) {
+	(void)skillIdx;
+	(void)levelIdx;
+	return 0;
+}
+
+const char* NXRP_GetRepoSkillLevelEffectKey(int skillIdx, int levelIdx, int effectIdx) {
+	(void)skillIdx;
+	(void)levelIdx;
+	(void)effectIdx;
+	return nullptr;
+}
+
+const char* NXRP_GetRepoSkillLevelEffectValue(int skillIdx, int levelIdx, int effectIdx) {
+	(void)skillIdx;
+	(void)levelIdx;
+	(void)effectIdx;
+	return nullptr;
+}
+
+qboolean NXRP_Skills_ListImpl( client_t *cl, const char *homepath ) {
+	(void)homepath;
+	if (g_nxrpSimpleSkills.empty()) NXRP_LoadRepoSkills();
+
+	NXRP_PrintConsoleToPlayer(cl, "----- Skills -----");
+	for (int i = 0; i < (int)g_nxrpSimpleSkills.size(); ++i) {
+		const auto &s = g_nxrpSimpleSkills[i];
+		const int firstCost = s.costs.empty() ? 0 : s.costs[0];
+		NXRP_PrintConsoleToPlayer(cl, va("%d. %s [0/%d]\t- Cost: %d (id: %s)", i + 1, s.name.c_str(), s.maxLevel, firstCost, s.id.c_str()));
+	}
+	NXRP_PrintConsoleToPlayer(cl, "------------------");
+	NXRP_PrintConsoleToPlayer(cl, "type !skill <skillid> for details");
+	return qtrue;
+}
+
+qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char *skillToken ) {
+	(void)homepath;
+	if (!skillToken || !skillToken[0]) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !skill <skillid>");
+		return qtrue;
+	}
+	if (g_nxrpSimpleSkills.empty()) NXRP_LoadRepoSkills();
+
+	const int idx = NXRP_FindRepoSkillIndexById(skillToken);
+	if (idx < 0) {
+		NXRP_PrintConsoleToPlayer(cl, "Unknown skill id. Use !skills to list available skills.");
+		return qtrue;
+	}
+
+	const auto &s = g_nxrpSimpleSkills[idx];
+	const int firstCost = s.costs.empty() ? 0 : s.costs[0];
+	NXRP_PrintConsoleToPlayer(cl, va("Skill: %s (id: %s)", s.name.c_str(), s.id.c_str()));
+	NXRP_PrintConsoleToPlayer(cl, va("Description: %s", s.description.c_str()));
+	NXRP_PrintConsoleToPlayer(cl, va("Max level: %d", s.maxLevel));
+	NXRP_PrintConsoleToPlayer(cl, va("First level cost: %d", firstCost));
+	NXRP_PrintConsoleToPlayer(cl, "Purchasing is temporarily disabled.");
+	return qtrue;
 }
