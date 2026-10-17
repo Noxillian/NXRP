@@ -34,6 +34,8 @@ qboolean NXRP_cmd_pos( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_mspawn( client_t *cl, const char *chatCursor );
 // New prop-style spawn command (wrapper for backward compatibility)
 qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor );
+// Admin-only: spawn a prop with explicit collider size: !prop t <model_path> <sx> <sy> <sz> [angle]
+qboolean NXRP_cmdAdmin_prop_t( client_t *cl, const char *chatCursor );
 // Remove a saved prop spawn by index
 qboolean NXRP_cmdAdmin_prop_r( client_t *cl, const char *chatCursor );
 // Move last spawned prop: !prop m <x> <y> <z>
@@ -53,6 +55,8 @@ qboolean NXRP_cmdAdmin_mmove( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_pmodel( client_t *cl, const char *chatCursor );
 // Admin-only: spawn an NPC or misc model test
 qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor );
+// Admin-only: spawn and persist NPC definitions per-map (commands: !npc <type>, !npc load)
+qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor );
 // Admin-only: teleport player upward
 qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor );
 // Admin-only: test spawn command

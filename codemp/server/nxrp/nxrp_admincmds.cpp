@@ -25,6 +25,91 @@ qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
+// Admin-only: spawn prop with explicit collider extents
+// Usage: !prop t <model_path> <sx> <sy> <sz> [angle]
+qboolean NXRP_cmdAdmin_prop_t( client_t *cl, const char *chatCursor ) {
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+	if (!chatCursor || !*chatCursor) { NXRP_PrintConsoleToPlayer(cl, "Usage: !prop t <model_path> <sx> <sy> <sz> [angle]"); return qtrue; }
+
+	// Skip leading spaces
+	const char* p = chatCursor;
+	while (*p == ' ' || *p == '\t') p++;
+
+	// If the first token is "model" or "pmodel", skip it
+	char firstTok[MAX_TOKEN_CHARS] = {0};
+	if (sscanf(p, "%31s", firstTok) == 1) {
+		if (!Q_stricmp(firstTok, "model") || !Q_stricmp(firstTok, "pmodel")) {
+			const char* q = p;
+			while (*q && *q != ' ' && *q != '\t') q++;
+			while (*q == ' ' || *q == '\t') q++;
+			p = q;
+		}
+	}
+
+	char path[512] = {0};
+	float sx=0, sy=0, sz=0, angle=0.0f;
+	int cnt = sscanf(p, "%511s %f %f %f %f", path, &sx, &sy, &sz, &angle);
+	if (cnt < 4) { NXRP_PrintConsoleToPlayer(cl, "Usage: !prop t <model_path> <sx> <sy> <sz> [angle]"); return qtrue; }
+
+	// Normalize angle
+	while (angle < 0.0f) angle += 360.0f;
+	while (angle >= 360.0f) angle -= 360.0f;
+
+	vec3_t mins = { -sx, -sy, -sz };
+	vec3_t maxs = { sx, sy, sz };
+	vec3_t floor = { 0.0f, 0.0f, 0.0f };
+	if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
+
+	int ent = NXRP_SpawnPropAtClientWithExtents(cl, path, mins, maxs, angle);
+	if (ent >= 0) {
+		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s with extents as entity %d", path, ent));
+		NXRP_RegisterSpawn(ent);
+		NXRP_SaveSpawnToMap(ent, path);
+	} else {
+		NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model with extents.");
+	}
+	return qtrue;
+}
+
+// Admin-only: spawn and optionally persist an NPC, or load saved NPCs
+qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	if (!chatCursor || !*chatCursor) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !npc <type>|load");
+		return qtrue;
+	}
+
+	char tok[MAX_TOKEN_CHARS] = {0};
+	if (sscanf(chatCursor, "%31s", tok) < 1) { return qtrue; }
+
+	if (!Q_stricmp(tok, "load")) {
+		int cnt = NXRP_LoadSavedNPCsForMap(cl);
+		NXRP_PrintConsoleToPlayer(cl, va("Loaded %d saved NPC(s) for this map", cnt));
+		return qtrue;
+	}
+
+	// Otherwise treat first token as npc type and spawn it nearby
+	char cmdBuf[128];
+	Com_sprintf(cmdBuf, sizeof(cmdBuf), "npc spawn %s", tok);
+	NXRP_PrintConsoleToPlayer(cl, "^3Spawning NPC");
+	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
+
+	// Attempt to find last spawned entity and save it to map NPC file
+	// Delay a frame slightly: the spawn occurs in the game VM after the command executes.
+	// We can't synchronously get the entnum reliably here, but if the test spawn
+	// helper adds an entity immediately we attempt to persist the last registered
+	// spawn id.
+	int last = NXRP_GetLastSpawn();
+	if (last >= 0) {
+		NXRP_SaveNPCToMap(last, tok);
+		NXRP_PrintConsoleToPlayer(cl, "Saved NPC to map file");
+	}
+	return qtrue;
+}
+
 // Directional move for a specific saved prop index using cardinal words up/down/left/right/forward/back
 // Usage: called via parser when first token is a number: !prop <index> <dir> <amount>
 qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {

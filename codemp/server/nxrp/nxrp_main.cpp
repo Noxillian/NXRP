@@ -35,6 +35,7 @@ int SV_SpawnModelAtClient(client_t* cl, const char* modelPath);
 
 enum NXRP_SubCmd {
 	NXRP_SUB_UNKNOWN = 0,
+	NXRP_SUB_NPC,
 	NXRP_SUB_SPAWN,
 	NXRP_SUB_MMOVE,
 	NXRP_SUB_TP,
@@ -68,6 +69,7 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "pos" ) )		return NXRP_SUB_POS;
 	if ( !Q_stricmp( s, "prop" ) )		return NXRP_SUB_MODEL;
 	if ( !Q_stricmp( s, "mmove" ) )		return NXRP_SUB_MMOVE;
+	if ( !Q_stricmp( s, "npc" ) )		return NXRP_SUB_NPC;
 	if ( !Q_stricmp( s, "strip" ) )		return NXRP_SUB_STRIP;
 	if ( !Q_stricmp( s, "pmodel" ) )		return NXRP_SUB_PMODEL;
 	if ( !Q_stricmp( s, "boss" ) )		return NXRP_SUB_BOSS;
@@ -247,9 +249,30 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 	case NXRP_SUB_SPAWN:
 		return NXRP_cmdAdmin_spawn(cl, dispatchCursor);
 
+	case NXRP_SUB_NPC:
+		return NXRP_cmdAdmin_npc(cl, dispatchCursor);
+
 	case NXRP_SUB_MODEL:
 		// Keep MODEL routing on prop_s.
 		return NXRP_cmdAdmin_prop_s(cl, dispatchCursor);
+
+	// allow shorthand prop subcommands: support "t" to create prop with explicit extents
+	case NXRP_SUB_UNKNOWN:
+	{
+		char firstTok[MAX_TOKEN_CHARS] = {0};
+		if (sscanf(dispatchCursor, "%31s", firstTok) == 1) {
+			if (!Q_stricmp(firstTok, "t")) {
+				// dispatch to prop_t handler; skip the "t" token
+				const char* p = dispatchCursor;
+				while (*p == ' ' || *p == '\t') ++p;
+				// skip token
+				while (*p && *p != ' ' && *p != '\t') ++p;
+				while (*p == ' ' || *p == '\t') ++p;
+				return NXRP_cmdAdmin_prop_t(cl, p);
+			}
+		}
+		break;
+	}
 
 	case NXRP_SUB_MREMOVE:
 		return NXRP_cmdAdmin_mremove(cl, dispatchCursor);
