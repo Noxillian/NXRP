@@ -6,6 +6,8 @@
 #define NXRP_MAIN_H
 
 #include "../server.h"
+#include <string>
+#include <vector>
 
 // Primary chat handler called from server code.
 // Use the NXRP_ prefix consistently across the project.
@@ -105,6 +107,18 @@ const char* NXRP_GetRepoSkillLevelEffectValue(int skillIdx, int levelIdx, int ef
 // Simple file I/O helpers for JSON reading/writing
 bool NXRP_ReadFileToString(const char *path, std::string &out);
 bool NXRP_WriteStringToFile(const char *path, const std::string &content);
+
+// Simple skill struct used by the JSON reader and skills module
+struct NXRP_SimpleSkill {
+	std::string id;
+	std::string name;
+	std::string description;
+	int maxLevel = 0;
+	std::vector<int> costs;
+};
+
+// Parse skills.json content into a vector of NXRP_SimpleSkill. Returns true on success.
+bool NXRP_ParseSkillsJson(const std::string &content, std::vector<NXRP_SimpleSkill> &out);
 #ifdef __cplusplus
 }
 #endif

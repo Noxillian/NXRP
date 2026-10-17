@@ -735,6 +735,24 @@ void NXRP_EnsureRuntimeSkills(void) {
 void NXRP_LoadRepoSkills() {
 	if (!g_nxrpSimpleSkills.empty()) return;
 
+	// Try to load repo skills.json using shared helpers.
+	std::string content;
+	const std::string repoPath = "codemp/server/nxrp/nxrp_skills/skills.json";
+	std::vector<NXRP_SimpleSkill> parsed;
+	if (NXRP_ReadFileToString(repoPath.c_str(), content) && NXRP_ParseSkillsJson(content, parsed)) {
+		for (const auto &ps : parsed) {
+			NXRP_SimpleSkillDef s;
+			s.id = ps.id;
+			s.name = ps.name;
+			s.description = ps.description;
+			s.maxLevel = ps.maxLevel;
+			s.costs = ps.costs;
+			g_nxrpSimpleSkills.push_back(s);
+		}
+		if (!g_nxrpSimpleSkills.empty()) return;
+	}
+
+	// Fallback to hardcoded defaults if file is missing or parse fails.
 	NXRP_SimpleSkillDef jump;
 	jump.id = "skill_jump";
 	jump.name = "Jump";
