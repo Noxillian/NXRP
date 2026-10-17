@@ -731,9 +731,24 @@ if(BuildMPDed)
 	endif(WIN32)
 
 	add_executable(${MPDed} ${MPDedFiles})
+
+	# Ensure server-installed data files (skills.json) are available under share/caded/nxrp
+	# Copy repo skills.json into the build tree on build, and install it with `make install`.
+	add_custom_command(TARGET ${MPDed} POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/share/caded/nxrp"
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			"${MPDir}/server/nxrp/nxrp_skills/skills.json"
+			"${CMAKE_BINARY_DIR}/share/caded/nxrp/skills.json"
+	)
+
 	install(TARGETS ${MPDed}
 		RUNTIME
 		DESTINATION ${JKAInstallDir}
+		COMPONENT ${JKAMPServerComponent})
+
+	# Install skills.json into the system share so runtime copies can find it
+	install(FILES "${MPDir}/server/nxrp/nxrp_skills/skills.json"
+		DESTINATION "share/caded/nxrp"
 		COMPONENT ${JKAMPServerComponent})
 
 	set_target_properties(${MPDed} PROPERTIES COMPILE_DEFINITIONS "${MPDedDefines}")
