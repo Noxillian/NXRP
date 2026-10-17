@@ -385,6 +385,33 @@ qboolean NXRP_Skills_ListImpl( client_t *cl, const char *homepath ) {
 
 	NXRP_PrintConsoleToPlayer(cl, "----- Skills -----");
 	int idx = 1;
+
+	// Prefer the simplified repo-backed skill list when available. This allows
+	// edits to codemp/server/nxrp/nxrp_skills/skills.json to appear at
+	// runtime during development without relying on the runtime copy.
+	if (g_nxrpSimpleSkills.empty()) NXRP_LoadRepoSkills();
+	if (!g_nxrpSimpleSkills.empty()) {
+		for (int i = 0; i < (int)g_nxrpSimpleSkills.size(); ++i) {
+			const auto &s = g_nxrpSimpleSkills[i];
+			int userLevel = 0;
+			if (!accountSkills.empty()) {
+				std::string key = '"' + s.id + '"';
+				size_t kpos = accountSkills.find(key);
+				if (kpos != std::string::npos) {
+					size_t lpos = accountSkills.find("\"level\"", kpos);
+					if (lpos != std::string::npos) {
+						size_t ccolon = accountSkills.find(':', lpos);
+						if (ccolon != std::string::npos) userLevel = atoi(accountSkills.c_str() + ccolon + 1);
+					}
+				}
+			}
+			const int firstCost = s.costs.empty() ? 0 : s.costs[0];
+			NXRP_PrintConsoleToPlayer(cl, va("%d. %s [%d/%d]\t- Cost: %d (id: %s)", i + 1, s.name.c_str(), userLevel, s.maxLevel, firstCost, s.id.c_str()));
+		}
+		NXRP_PrintConsoleToPlayer(cl, "------------------");
+		NXRP_PrintConsoleToPlayer(cl, "type !skill <skillid> to purchase/upgrade");
+		return qtrue;
+	}
 	// Prefer using repo-embedded skills if available
 	if (g_nxrpRepoSkills.empty()) {
 		NXRP_LoadRepoSkills();
