@@ -79,6 +79,9 @@ qboolean NXRP_cmd_skill( client_t *cl, const char *chatCursor );
 // Internal implementations for skills handling (implemented in nxrp_skills.cpp)
 qboolean NXRP_Skills_ListImpl( client_t *cl, const char *homepath );
 qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char *skillToken );
+// Ensure runtime skills.json exists under fs_homepath/nxrp by copying from
+// installed or repository locations when missing. Called at server startup.
+void NXRP_EnsureRuntimeSkills(void);
 
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );

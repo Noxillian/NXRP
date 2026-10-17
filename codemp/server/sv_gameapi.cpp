@@ -2914,6 +2914,9 @@ void SV_InitGame( qboolean restart ) {
 	NXRP_FFA_Init();
 	NXRP_FFA_Frame();
 
+	// Ensure runtime skills.json exists under fs_homepath/nxrp
+	NXRP_EnsureRuntimeSkills();
+
 	// restart == qtrue is a routine round-to-round restart (SV_RestartGame,
 	// via MBII's own "map_restart 0"), not a fresh map load
 	// (SV_InitGameProgs/SV_SpawnServer pass qfalse) - see SV_EconomyRoundRestart

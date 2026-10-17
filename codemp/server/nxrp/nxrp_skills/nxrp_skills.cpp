@@ -35,6 +35,42 @@ static std::string NXRP_ToLowerCopy( const std::string &in ) {
 	return out;
 }
 
+// Called at server startup to ensure <fs_homepath>/nxrp/skills.json exists.
+void NXRP_EnsureRuntimeSkills(void) {
+	const char *homepath = Cvar_VariableString("fs_homepath");
+	std::string nxrpDir = (homepath && homepath[0]) ? std::string(homepath) + "/nxrp" : std::string("nxrp");
+	std::string filepath = nxrpDir + "/skills.json";
+	std::ifstream ifs(filepath);
+	if (ifs.is_open()) { ifs.close(); return; }
+
+	// Try installed/system locations first
+	std::vector<std::string> candidates;
+	candidates.push_back("${CMAKE_INSTALL_PREFIX}/share/caded/nxrp/skills.json"); // placeholder, resolved by CMake configure
+	candidates.push_back("codemp/server/nxrp/nxrp_skills/skills.json");
+#if !defined(_WIN32)
+	candidates.push_back("/usr/share/caded/nxrp/skills.json");
+	candidates.push_back("/usr/local/share/caded/nxrp/skills.json");
+#endif
+
+	for (const auto &src : candidates) {
+		std::ifstream s(src);
+		if (!s.is_open()) continue;
+		// ensure target dir exists
+#if defined(_WIN32)
+		_mkdir(nxrpDir.c_str());
+#else
+		mkdir(nxrpDir.c_str(), 0755);
+#endif
+		std::ofstream ofs(filepath, std::ios::trunc);
+		if (ofs.is_open()) {
+			ofs << s.rdbuf();
+			ofs.close();
+		}
+		s.close();
+		break;
+	}
+}
+
 static void NXRP_LoadRepoSkills() {
 	g_nxrpRepoSkills.clear();
 
