@@ -26,16 +26,14 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 
 	std::string line;
 	int idx = 0;
+	const size_t maxContent = 900; // reserve within NXRP_PrintConsoleToPlayer internal buffer
 	while (std::getline(ifs, line)) {
 		if (line.empty()) continue;
+		std::string out = line;
+		if (out.size() > maxContent) out = out.substr(0, maxContent - 3) + "...";
 		char buf[1024];
-		snprintf(buf, sizeof(buf), "%d:", idx);
+		snprintf(buf, sizeof(buf), "%d: %s", idx, out.c_str());
 		NXRP_PrintConsoleToPlayer(cl, buf);
-		const size_t chunk = 200;
-		for (size_t off = 0; off < line.size(); off += chunk) {
-			std::string part = line.substr(off, std::min(chunk, line.size() - off));
-			NXRP_PrintConsoleToPlayer(cl, part.c_str());
-		}
 		idx++;
 	}
 	ifs.close();
@@ -212,11 +210,6 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 			}
 		}
 
-		// Debug: report what we're about to spawn so admins can see failures
-		if (cl) {
-			NXRP_PrintConsoleToPlayer(cl, va("NXRP: attempting spawn: model=%s catalog=%d origin=%.1f,%.1f,%.1f yaw=%.1f",
-				modelPath.c_str(), hasCatalog ? 1 : 0, origin[0], origin[1], origin[2], yaw));
-		}
 		if (!hasCatalog) {
 			VectorCopy(defaultMins, mins);
 			VectorCopy(defaultMaxs, maxs);
@@ -233,7 +226,6 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 		}
 	}
 	ifs.close();
-	if (cl) NXRP_PrintConsoleToPlayer(cl, va("Loaded %d saved spawns for this map", spawned));
 	return spawned;
 }
 
