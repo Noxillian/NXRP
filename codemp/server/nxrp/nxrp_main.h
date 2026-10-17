@@ -101,6 +101,10 @@ int NXRP_GetRepoSkillLevelCost(int skillIdx, int levelIdx);
 int NXRP_GetRepoSkillLevelEffectsCount(int skillIdx, int levelIdx);
 const char* NXRP_GetRepoSkillLevelEffectKey(int skillIdx, int levelIdx, int effectIdx);
 const char* NXRP_GetRepoSkillLevelEffectValue(int skillIdx, int levelIdx, int effectIdx);
+
+// Simple file I/O helpers for JSON reading/writing
+bool NXRP_ReadFileToString(const char *path, std::string &out);
+bool NXRP_WriteStringToFile(const char *path, const std::string &content);
 #ifdef __cplusplus
 }
 #endif
