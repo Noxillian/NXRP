@@ -1,5 +1,5 @@
 #include "server/nxrp/nxrp_main.h"
-#include "server/nxrp/nxrp_utils.h"
+#include "server/nxrp/nxrp_utils/nxrp_utils.h"
 
 #include <fstream>
 #include <cctype>
