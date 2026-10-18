@@ -51,6 +51,18 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 			}
 		}
 		out.swap(unesc);
+		// additionally replace any remaining literal "\\n" and "\\t" sequences with actual chars
+		for (size_t p = 0; p + 1 < out.size(); ) {
+			if (out[p] == '\\' && out[p+1] == 'n') {
+				out.replace(p, 2, "\n");
+				++p;
+			} else if (out[p] == '\\' && out[p+1] == 't') {
+				out.replace(p, 2, "\t");
+				++p;
+			} else {
+				++p;
+			}
+		}
 		char buf[1024];
 		snprintf(buf, sizeof(buf), "%d: %s", idx, out.c_str());
 		NXRP_PrintConsoleToPlayer(cl, buf);
