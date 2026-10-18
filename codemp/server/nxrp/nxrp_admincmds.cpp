@@ -839,8 +839,9 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 	// Quick diagnostic: check whether the runtime JSON catalog exists and contains the model path
 	const char* home = Cvar_VariableString("fs_homepath");
 	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
-	std::string catalogDir = (home && home[0]) ? std::string(home) + "/nxrp" : std::string("nxrp");
-	std::string jsonPath = catalogDir + "/nxrp_props_catalog.json";
+	std::string jsonPath;
+	if (home && home[0]) jsonPath = std::string(home) + "/nxrp_props_catalog.json";
+	else jsonPath = std::string("nxrp_props_catalog.json");
 	{
 		std::ifstream check(jsonPath);
 		if (!check.is_open()) {
