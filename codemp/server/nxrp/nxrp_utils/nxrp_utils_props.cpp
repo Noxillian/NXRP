@@ -31,42 +31,57 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 	while (std::getline(ifs, line)) {
 		if (line.empty()) continue;
 		any = true;
-		std::string out = line;
-		if (out.size() > maxLen) out = out.substr(0, maxLen - 3) + "...";
-		// Unescape common escape sequences so printed output can contain real newlines/tabs
-		std::string unesc;
-		unesc.reserve(out.size());
-		for (size_t i = 0; i < out.size(); ++i) {
-			char c = out[i];
-			if (c == '\\' && i + 1 < out.size()) {
-				char n = out[i+1];
-				if (n == 'n') { unesc.push_back('\n'); ++i; continue; }
-				if (n == 't') { unesc.push_back('\t'); ++i; continue; }
-				// unknown escape -> keep the backslash and the char
-				unesc.push_back('\\');
-				unesc.push_back(n);
-				++i;
-			} else {
-				unesc.push_back(c);
-			}
+	std::string out = line;
+	if (out.size() > maxLen) out = out.substr(0, maxLen - 3) + "...";
+	// Unescape common escape sequences so printed output can contain real newlines/tabs
+	std::string unesc;
+	unesc.reserve(out.size());
+	for (size_t i = 0; i < out.size(); ++i) {
+		char c = out[i];
+		if (c == '\\' && i + 1 < out.size()) {
+			char n = out[i+1];
+			if (n == 'n') { unesc.push_back('\n'); ++i; continue; }
+			if (n == 't') { unesc.push_back('\t'); ++i; continue; }
+			// unknown escape -> keep the backslash and the char
+			unesc.push_back('\\');
+			unesc.push_back(n);
+			++i;
+		} else {
+			unesc.push_back(c);
 		}
-		out.swap(unesc);
-		// additionally replace any remaining literal "\\n" and "\\t" sequences with actual chars
-		for (size_t p = 0; p + 1 < out.size(); ) {
-			if (out[p] == '\\' && out[p+1] == 'n') {
-				out.replace(p, 2, "\n");
-				++p;
-			} else if (out[p] == '\\' && out[p+1] == 't') {
-				out.replace(p, 2, "\t");
-				++p;
-			} else {
-				++p;
-			}
+	}
+	out.swap(unesc);
+	// additionally replace any remaining literal "\\n" and "\\t" sequences with actual chars
+	for (size_t p = 0; p + 1 < out.size(); ) {
+		if (out[p] == '\\' && out[p+1] == 'n') {
+			out.replace(p, 2, "\n");
+			++p;
+		} else if (out[p] == '\\' && out[p+1] == 't') {
+			out.replace(p, 2, "\t");
+			++p;
+		} else {
+			++p;
 		}
+	}
+
+	// If the unescaped output contains embedded newlines, split and print each sub-entry separately
+	size_t start = 0;
+	while (start < out.size()) {
+		size_t pos = out.find('\n', start);
+		std::string piece;
+		if (pos == std::string::npos) {
+			piece = out.substr(start);
+			start = out.size();
+		} else {
+			piece = out.substr(start, pos - start);
+			start = pos + 1;
+		}
+		if (piece.empty()) continue;
 		char buf[1024];
-		snprintf(buf, sizeof(buf), "%d: %s", idx, out.c_str());
+		snprintf(buf, sizeof(buf), "%d: %s", idx, piece.c_str());
 		NXRP_PrintConsoleToPlayer(cl, buf);
 		idx++;
+	}
 	}
 	if (!any) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
 	ifs.close();
