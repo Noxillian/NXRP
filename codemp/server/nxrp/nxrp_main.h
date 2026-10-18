@@ -110,6 +110,13 @@ const char* NXRP_GetRepoSkillLevelEffectValue(int skillIdx, int levelIdx, int ef
 bool NXRP_ReadFileToString(const char *path, std::string &out);
 bool NXRP_WriteStringToFile(const char *path, const std::string &content);
 
+// Account-level helpers: read/modify numeric "level" field in an account JSON file
+bool NXRP_GetAccountLevelFromFile(const char *filepath, int &outLevel);
+bool NXRP_SetAccountLevelInFile(const char *filepath, int newLevel);
+// Account-level helpers: read/modify numeric "level" field in an account JSON file
+bool NXRP_GetAccountLevelFromFile(const char *filepath, int &outLevel);
+bool NXRP_SetAccountLevelInFile(const char *filepath, int newLevel);
+
 // Simple skill struct used by the JSON reader and skills module
 struct NXRP_SimpleSkill {
 	std::string id;

@@ -94,3 +94,44 @@ bool NXRP_WriteStringToFile(const char *path, const std::string &content) {
 	ofs.close();
 	return true;
 }
+
+// Read the numeric "level" field from a simple account JSON file at filepath.
+// Returns true on success and sets outLevel. This uses a tolerant text search
+// similar to other NXRP helpers and expects a top-level "level": <number> entry.
+bool NXRP_GetAccountLevelFromFile(const char *filepath, int &outLevel) {
+	if (!filepath) return false;
+	std::string content;
+	if (!NXRP_ReadFileToString(filepath, content)) return false;
+	const std::string key = "\"level\"";
+	size_t k = content.find(key);
+	if (k == std::string::npos) return false;
+	size_t colon = content.find(':', k + key.size());
+	if (colon == std::string::npos) return false;
+	size_t pos = colon + 1;
+	while (pos < content.size() && isspace((unsigned char)content[pos])) pos++;
+	if (pos >= content.size()) return false;
+	int lvl = atoi(content.c_str() + pos);
+	outLevel = lvl;
+	return true;
+}
+
+// Set the numeric "level" field in the account JSON file at filepath.
+// Returns true on success. This performs a textual replacement of the numeric
+// token following the "level" key and writes the updated content back.
+bool NXRP_SetAccountLevelInFile(const char *filepath, int newLevel) {
+	if (!filepath) return false;
+	std::string content;
+	if (!NXRP_ReadFileToString(filepath, content)) return false;
+	const std::string key = "\"level\"";
+	size_t k = content.find(key);
+	if (k == std::string::npos) return false;
+	size_t colon = content.find(':', k + key.size());
+	if (colon == std::string::npos) return false;
+	size_t pos = colon + 1;
+	while (pos < content.size() && isspace((unsigned char)content[pos])) pos++;
+	size_t end = pos;
+	if (end < content.size() && (content[end] == '-' || isdigit((unsigned char)content[end]))) ++end;
+	while (end < content.size() && isdigit((unsigned char)content[end])) ++end;
+	std::string newContent = content.substr(0, pos) + std::to_string(newLevel) + content.substr(end);
+	return NXRP_WriteStringToFile(filepath, newContent);
+}
