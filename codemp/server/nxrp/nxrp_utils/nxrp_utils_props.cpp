@@ -31,8 +31,8 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 	while (std::getline(ifs, line)) {
 		if (line.empty()) continue;
 		any = true;
-	// Parse the JSON-ish line and print a concise one-line summary per saved spawn.
-	// Expected format: { "ent": <n>, "id": <n>, "index": <n>, "model": "<path>", "origin": [x, y, z], "angles": [ax, ay, az] }
+// Parse the JSON-ish line and print a concise one-line summary per saved spawn.
+// Expected format: { "ent": <n>, "index": <n>, "model": "<path>", "origin": [x, y, z], "angles": [ax, ay, az] }
 	std::string s = line;
 	if (s.size() > maxLen) s = s.substr(0, maxLen - 3) + "...";
 
@@ -50,7 +50,6 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 	};
 
 	int entv = extract_int("\"ent\"", -1);
-	int idv = extract_int("\"id\"", -1);
 	int idxv = extract_int("\"index\"", idx);
 
 	// extract model path
@@ -86,7 +85,7 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 
 	// print a single consolidated line per spawn
 	if (model.empty()) model = "<unknown>";
-	NXRP_PrintConsoleToPlayerFmt(cl, "%d: ent=%d id=%d model=%s origin=%.0f,%.0f,%.0f angles=%.0f,%.0f,%.0f", idx, entv, idv, model.c_str(), ox, oy, oz, ax, ay, az);
+	NXRP_PrintConsoleToPlayerFmt(cl, "%d: ent=%d model=%s origin=%.0f,%.0f,%.0f angles=%.0f,%.0f,%.0f", idx, entv, model.c_str(), ox, oy, oz, ax, ay, az);
 	idx++;
 	}
 	if (!any) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
