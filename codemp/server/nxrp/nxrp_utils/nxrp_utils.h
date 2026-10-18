@@ -92,9 +92,9 @@ inline void NXRP_PrintConsoleToPlayerFmt(client_t* cl, const char* fmt, ...) {
 			start = pos + 1;
 		}
 		if (cl)
-			SV_SendServerCommand(cl, "print \"^0[^6N^7X^0]^8 %s\\n\"", line.c_str());
+			SV_SendServerCommand(cl, "print \"^0[^6N^7X^0]^8 %s\n\"", line.c_str());
 		else
-			SV_SendServerCommand(NULL, "print \"^0[^6N^7X^0]^8 %s\\n\"", line.c_str());
+			SV_SendServerCommand(NULL, "print \"^0[^6N^7X^0]^8 %s\n\"", line.c_str());
 	}
 }
 
