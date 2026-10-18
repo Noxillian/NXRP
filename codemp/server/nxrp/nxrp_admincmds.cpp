@@ -841,6 +841,7 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 	if (hasCatalog) {
 		// use catalog model and extents
 		Q_strncpyz(path, modelFromCatalog.c_str(), sizeof(path));
+		NXRP_PrintConsoleToPlayer(cl, "found prop in list, using custom collider box");
 		// If the user provided an explicit angle, prefer it. Otherwise use catalog yaw if non-zero.
 		if (scanned < 2) {
 			if (fabsf(catalogYaw) >= eps) angle = catalogYaw;

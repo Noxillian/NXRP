@@ -287,6 +287,8 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 // return that as the model and provide default extents. Otherwise attempt to
 // read a catalog file under nxrp_props/catalog.txt with simple CSV-like lines
 // of the form: key|modelPath|minx,miny,minz|maxx,maxy,maxz|originx,originy,originz|yaw
+// New: support JSON-based catalog file nxrp_props_catalog.json in the nxrp_props directory.
+// If present, the JSON maps keys to objects with fields: model, extents (array of 3), origin (array of 3), yaw
 bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& outMins, vec3_t& outMaxs, vec3_t& outOrigin, float& outYaw) {
 	if (!name || !name[0]) return false;
 	std::string sname = name;
@@ -302,6 +304,56 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 
 	const char* home = Cvar_VariableString("fs_homepath");
 	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
+	// Try JSON first: nxrp_props_catalog.json
+	std::string jsonPath = dir + "/nxrp_props_catalog.json";
+	std::ifstream jifs(jsonPath);
+	if (jifs.is_open()) {
+		std::string content((std::istreambuf_iterator<char>(jifs)), std::istreambuf_iterator<char>());
+		jifs.close();
+		// crude JSON parsing: find the object by key "sname" and extract fields model, extents, origin, yaw
+		std::string key = '"' + sname + '"';
+		size_t kpos = content.find(key);
+		if (kpos != std::string::npos) {
+			size_t brace = content.find('{', kpos);
+			if (brace != std::string::npos) {
+				size_t end = content.find('}', brace);
+				std::string obj = (end != std::string::npos) ? content.substr(brace, end - brace + 1) : content.substr(brace);
+				// model
+				size_t mpos = obj.find("\"model\"");
+				if (mpos != std::string::npos) {
+					size_t c = obj.find(':', mpos);
+					size_t q = obj.find('"', c);
+					if (q != std::string::npos) {
+						size_t qe = obj.find('"', q+1);
+						if (qe != std::string::npos) outModel = obj.substr(q+1, qe-q-1);
+					}
+				}
+				// extents -> use as half-extents
+				size_t epos = obj.find("\"extents\"");
+				if (epos != std::string::npos) {
+					size_t lb = obj.find('[', epos);
+					if (lb != std::string::npos) {
+						float a,b,c; if (sscanf(obj.c_str()+lb, "[%f %*[, ] %f %*[, ] %f", &a,&b,&c) == 3) { outMins[0] = -a; outMins[1] = -b; outMins[2] = -c; outMaxs[0] = a; outMaxs[1] = b; outMaxs[2] = c; }
+					}
+				}
+				// origin
+				size_t opos = obj.find("\"origin\"");
+				if (opos != std::string::npos) {
+					size_t lb = obj.find('[', opos);
+					if (lb != std::string::npos) { float a,b,c; if (sscanf(obj.c_str()+lb, "[%f %*[, ] %f %*[, ] %f", &a,&b,&c) == 3) { outOrigin[0]=a; outOrigin[1]=b; outOrigin[2]=c; } }
+				}
+				// yaw
+				size_t ypos = obj.find("\"yaw\"");
+				if (ypos != std::string::npos) { size_t c = obj.find(':', ypos); if (c != std::string::npos) { float y; if (sscanf(obj.c_str()+c, ":%f", &y) == 1) outYaw = y; } }
+
+				if (outModel.empty()) outModel = sname;
+				jifs.close();
+				return true;
+			}
+		}
+	}
+
+	// Fallback: legacy catalog.txt / catalog.csv parsing
 	std::string cat1 = dir + "/catalog.txt";
 	std::string cat2 = dir + "/catalog.csv";
 	std::ifstream ifs;
