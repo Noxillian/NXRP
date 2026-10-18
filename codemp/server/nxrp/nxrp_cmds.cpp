@@ -314,20 +314,12 @@ qboolean NXRP_cmd_account( client_t *cl, const char *chatCursor ) {
 	std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
 	ifs.close();
 
-	auto extract_number = [&](const std::string &key)->std::string {
-		size_t k = content.find(key);
-		if (k == std::string::npos) return std::string();
-		size_t colon = content.find(':', k + key.size()); if (colon == std::string::npos) return std::string();
-		size_t start = content.find_first_not_of(" \t", colon+1); if (start == std::string::npos) return std::string();
-		size_t end = content.find_first_of(",\n\r}", start);
-		if (end == std::string::npos) end = content.size();
-		return content.substr(start, end-start);
-	};
-
-	std::string level = extract_number("\"level\"");
-	std::string exp = extract_number("\"exp\"");
-	std::string credits = extract_number("\"credits\"");
-	std::string skillpoints = extract_number("\"skillpoints\"");
+	std::string level, exp, credits, skillpoints;
+	std::string tmp;
+	if (!NXRP_GetAccountFieldFromFile(filepath.c_str(), "level", tmp)) level = "0"; else level = tmp;
+	if (!NXRP_GetAccountFieldFromFile(filepath.c_str(), "exp", tmp)) exp = "0"; else exp = tmp;
+	if (!NXRP_GetAccountFieldFromFile(filepath.c_str(), "credits", tmp)) credits = "0"; else credits = tmp;
+	if (!NXRP_GetAccountFieldFromFile(filepath.c_str(), "skillpoints", tmp)) skillpoints = "0"; else skillpoints = tmp;
 
 	NXRP_PrintConsoleToPlayerFmt(cl, "Account info for %s:", username);
 	NXRP_PrintConsoleToPlayerFmt(cl, "  Username: %s", username);
