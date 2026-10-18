@@ -213,7 +213,8 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
 	const char* a = strstr(s, anglesKey);
 	if (a) { a = strchr(a, '['); if (a) { a++; float ax=0, ay=0, az=0; sscanf(a, "%f %*[, ] %f %*[, ] %f", &ax, &ay, &az); yaw = ay; } }
 
-	int ent = NXRP_PlaceModel(modelPath.c_str(), mins, maxs, yaw, newFloor);
+	vec3_t zeroOffset = {0.0f, 0.0f, 0.0f};
+	int ent = NXRP_PlaceModel(modelPath.c_str(), mins, maxs, yaw, zeroOffset, newFloor);
 	if (ent >= 0) {
 		NXRP_RegisterSpawn(ent);
 		// update saved entry with new origin
@@ -397,7 +398,8 @@ qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor ) {
 	vec3_t maxs = {  24.0f,  24.0f, 24.0f };
 	float yaw = savedAy; // preserve saved yaw
 
-	int newEnt = NXRP_PlaceModel(modelPathStr.c_str(), mins, maxs, yaw, newFloor);
+	vec3_t zeroOffset2 = {0.0f, 0.0f, 0.0f};
+	int newEnt = NXRP_PlaceModel(modelPathStr.c_str(), mins, maxs, yaw, zeroOffset2, newFloor);
 	if (newEnt >= 0) {
 		NXRP_RegisterSpawn(newEnt);
 		NXRP_SaveSpawnToMap(newEnt, modelPathStr.c_str());
@@ -655,7 +657,8 @@ qboolean NXRP_cmdAdmin_test( client_t *cl, const char *chatCursor ) {
 		VectorCopy(cl->gentity->r.currentOrigin, floor);
 	}
 
-	int ent = NXRP_PlaceModel(model, mins, maxs, yaw, floor);
+	vec3_t zeroOffset3 = {0.0f, 0.0f, 0.0f};
+	int ent = NXRP_PlaceModel(model, mins, maxs, yaw, zeroOffset3, floor);
 	if (ent >= 0) {
 		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", model, ent));
 	NXRP_RegisterSpawn(ent);
