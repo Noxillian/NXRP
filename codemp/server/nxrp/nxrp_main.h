@@ -23,7 +23,6 @@ qboolean NXRP_HandleChat( client_t *cl, const char *commandName, const char *cha
 #endif
 
 // additional handlers declared in nxrp_cmds.cpp - renamed to NXRP_ prefix
-qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_register( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor );
@@ -73,12 +72,16 @@ qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor );
 // NXRP-specific listing of saved map spawns
 void NXRP_ListSavedSpawnsForPlayer(client_t* cl);
 
+qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_skill( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_test( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_addlevel( client_t *cl, const char *chatCursor );
+
 // Public info/help/skills commands (usable by logged-in players)
 qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_skill( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_test( client_t *cl, const char *chatCursor );
-qboolean NXRP_cmd_addlevel( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_addlevel( client_t *cl, const char *chatCursor );
 
 // Internal implementations for skills handling (implemented in nxrp_skills.cpp)
@@ -109,10 +112,6 @@ const char* NXRP_GetRepoSkillLevelEffectValue(int skillIdx, int levelIdx, int ef
 // Simple file I/O helpers for JSON reading/writing
 bool NXRP_ReadFileToString(const char *path, std::string &out);
 bool NXRP_WriteStringToFile(const char *path, const std::string &content);
-
-// Account-level helpers: read/modify numeric "level" field in an account JSON file
-bool NXRP_GetAccountLevelFromFile(const char *filepath, int &outLevel);
-bool NXRP_SetAccountLevelInFile(const char *filepath, int newLevel);
 
 // Generic account field accessors (read/write string values; quoting optional)
 bool NXRP_GetAccountFieldFromFile(const char *filepath, const char *field, std::string &outValue);
