@@ -26,17 +26,34 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 
 	std::string line;
 	int idx = 0;
-	const size_t chunk = 200;
+	const size_t maxLen = 900; // keep within safe console buffer
 	bool any = false;
 	while (std::getline(ifs, line)) {
 		if (line.empty()) continue;
 		any = true;
-		// Print the index on its own line, then the JSON content in 200-char chunks
-		SV_SendServerCommand(cl, "print \"%d:\\n\"", idx);
-		for (size_t off = 0; off < line.size(); off += chunk) {
-			std::string part = line.substr(off, std::min(chunk, line.size() - off));
-			SV_SendServerCommand(cl, "print \"%s\\n\"", part.c_str());
+		std::string out = line;
+		if (out.size() > maxLen) out = out.substr(0, maxLen - 3) + "...";
+		// Unescape common escape sequences so printed output can contain real newlines/tabs
+		std::string unesc;
+		unesc.reserve(out.size());
+		for (size_t i = 0; i < out.size(); ++i) {
+			char c = out[i];
+			if (c == '\\' && i + 1 < out.size()) {
+				char n = out[i+1];
+				if (n == 'n') { unesc.push_back('\n'); ++i; continue; }
+				if (n == 't') { unesc.push_back('\t'); ++i; continue; }
+				// unknown escape -> keep the backslash and the char
+				unesc.push_back('\\');
+				unesc.push_back(n);
+				++i;
+			} else {
+				unesc.push_back(c);
+			}
 		}
+		out.swap(unesc);
+		char buf[1024];
+		snprintf(buf, sizeof(buf), "%d: %s", idx, out.c_str());
+		NXRP_PrintConsoleToPlayer(cl, buf);
 		idx++;
 	}
 	if (!any) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
