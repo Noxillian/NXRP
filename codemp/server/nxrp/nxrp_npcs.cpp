@@ -13,19 +13,21 @@
 #include <cstdio>
 #include <map>
 #include <string>
+#include <deque>
 
 // Simple tracking map for NPC entnums -> name
 static std::map<int, std::string> nxrp_tracked_npcs;
 // When spawn is issued via delayed VM command, NXRP_GetLastSpawn may be set
-// after the VM processes the command. Push a pending name here so when
-// NXRP_RegisterSpawn is called we can associate the entnum with the name.
-static std::string nxrp_pending_npc_name;
+// after the VM processes the command. Push pending names into a FIFO queue
+// so concurrent or closely-timed spawns don't overwrite a single pending
+// name string.
+static std::deque<std::string> nxrp_pending_npc_names;
 
 void NXRP_PushPendingNPCName(const char* name) {
 	if (!name) return;
-	nxrp_pending_npc_name = std::string(name);
-	// Debug: notify that a pending NPC name was queued
-	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_PushPendingNPCName: %s", name);
+	nxrp_pending_npc_names.push_back(std::string(name));
+	// Debug: notify that a pending NPC name was queued (queue size shown)
+	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_PushPendingNPCName queued: %s (queue=%zu)", name, nxrp_pending_npc_names.size());
 }
 
 // Remove a saved NPC entry by its zero-based index. This rewrites the per-map file.
@@ -99,16 +101,17 @@ void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 // and persists the entry if a pending name was present.
 void NXRP_HandlePendingNPCSpawn(int entnum) {
 	if (entnum < 0) return;
-	// Debug: show when handler runs and current pending name
-	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_HandlePendingNPCSpawn ent=%d pending='%s'", entnum, nxrp_pending_npc_name.c_str());
-	if (nxrp_pending_npc_name.empty()) return;
+	// Debug: show when handler runs and pending queue size
+	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_HandlePendingNPCSpawn ent=%d queue=%zu", entnum, nxrp_pending_npc_names.size());
+	if (nxrp_pending_npc_names.empty()) return;
+	// Consume the oldest pending name
+	std::string name = nxrp_pending_npc_names.front();
+	nxrp_pending_npc_names.pop_front();
 	// Track for runtime events
-	NXRP_TrackNPC(entnum, nxrp_pending_npc_name.c_str());
+	NXRP_TrackNPC(entnum, name.c_str());
 	// Persist to disk
-	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_HandlePendingNPCSpawn: saving ent=%d name=%s", entnum, nxrp_pending_npc_name.c_str());
-	NXRP_SaveNPCToMap(entnum, nxrp_pending_npc_name.c_str());
-	// Clear pending
-	nxrp_pending_npc_name.clear();
+	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_HandlePendingNPCSpawn: saving ent=%d name=%s", entnum, name.c_str());
+	NXRP_SaveNPCToMap(entnum, name.c_str());
 }
 
 void NXRP_TrackNPC(int entnum, const char* name) {
