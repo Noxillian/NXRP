@@ -292,15 +292,8 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& outMins, vec3_t& outMaxs, vec3_t& outOrigin, float& outYaw) {
 	if (!name || !name[0]) return false;
 	std::string sname = name;
-	// heuristic: if it looks like a path, return it with default extents
-	if (sname.find('/') != std::string::npos || sname.find('\\') != std::string::npos || sname.find('.') != std::string::npos) {
-		outModel = sname;
-		outMins[0] = -24.0f; outMins[1] = -24.0f; outMins[2] = -8.0f;
-		outMaxs[0] = 24.0f; outMaxs[1] = 24.0f; outMaxs[2] = 24.0f;
-		outOrigin[0] = outOrigin[1] = outOrigin[2] = 0.0f;
-		outYaw = 0.0f;
-		return true;
-	}
+	// If it looks like a path, attempt to match it against the JSON catalog's model fields first.
+	bool looksLikePath = (sname.find('/') != std::string::npos || sname.find('\\') != std::string::npos || sname.find('.') != std::string::npos);
 
 	const char* home = Cvar_VariableString("fs_homepath");
 	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
@@ -310,9 +303,27 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 	if (jifs.is_open()) {
 		std::string content((std::istreambuf_iterator<char>(jifs)), std::istreambuf_iterator<char>());
 		jifs.close();
-		// crude JSON parsing: find the object by key "sname" and extract fields model, extents, origin, yaw
+		// crude JSON parsing: if name is a key, use that entry. If name looks like a path, search for an entry whose model matches the path.
 		std::string key = '"' + sname + '"';
 		size_t kpos = content.find(key);
+		if (kpos == std::string::npos && looksLikePath) {
+			// search for model: "<sname>"
+			std::string modelKey = "\"model\"";
+			size_t pos = 0;
+			while (true) {
+				size_t mpos = content.find(modelKey, pos);
+				if (mpos == std::string::npos) break;
+				size_t colon = content.find(':', mpos);
+				if (colon == std::string::npos) break;
+				size_t q = content.find('"', colon);
+				if (q == std::string::npos) break;
+				size_t qe = content.find('"', q+1);
+				if (qe == std::string::npos) break;
+				std::string modelVal = content.substr(q+1, qe-q-1);
+				if (modelVal == sname) { kpos = content.rfind('{', mpos); break; }
+				pos = qe + 1;
+			}
+		}
 		if (kpos != std::string::npos) {
 			size_t brace = content.find('{', kpos);
 			if (brace != std::string::npos) {
@@ -347,7 +358,6 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 				if (ypos != std::string::npos) { size_t c = obj.find(':', ypos); if (c != std::string::npos) { float y; if (sscanf(obj.c_str()+c, ":%f", &y) == 1) outYaw = y; } }
 
 				if (outModel.empty()) outModel = sname;
-				jifs.close();
 				return true;
 			}
 		}
