@@ -91,10 +91,17 @@ inline void NXRP_PrintConsoleToPlayerFmt(client_t* cl, const char* fmt, ...) {
 			line = s.substr(start, pos - start);
 			start = pos + 1;
 		}
-		if (cl)
-			SV_SendServerCommand(cl, "print \"^0[^6N^7X^0]^8 %s\n\"", line.c_str());
-		else
-			SV_SendServerCommand(NULL, "print \"^0[^6N^7X^0]^8 %s\n\"", line.c_str());
+			// Escape backslashes and double-quotes so the server command string remains syntactically valid
+			std::string esc;
+			esc.reserve(line.size()*2);
+			for (char c : line) {
+				if (c == '\\' || c == '"') { esc.push_back('\\'); esc.push_back(c); }
+				else esc.push_back(c);
+			}
+			if (cl)
+				SV_SendServerCommand(cl, "print \"^0[^6N^7X^0]^8 %s\n\"", esc.c_str());
+			else
+				SV_SendServerCommand(NULL, "print \"^0[^6N^7X^0]^8 %s\n\"", esc.c_str());
 	}
 }
 
