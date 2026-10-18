@@ -70,6 +70,11 @@ void NXRP_PushPendingNPCName(const char* name);
 // NPC persistence helpers: save/load NPCs per-map
 void NXRP_SaveNPCToMap(int entnum, const char* npcType);
 int NXRP_LoadSavedNPCsForMap(client_t* cl);
+// Send a player a list of saved NPCs for the current map.
+void NXRP_ListSavedNPCs(client_t* cl);
+// Called by NXRP_RegisterSpawn to allow NPC module to associate a pending name
+// with the newly-registered entity number.
+void NXRP_HandlePendingNPCSpawn(int entnum);
 
 // Print a standardized NXRP console message to a specific player. If cl is
 // NULL the message will be broadcast to all clients by passing NULL to

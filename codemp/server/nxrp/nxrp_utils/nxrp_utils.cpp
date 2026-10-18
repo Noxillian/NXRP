@@ -153,31 +153,47 @@ int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMa
 	VectorCopy(e->s.apos.trBase, e->r.currentAngles);
 	e->s.apos.trType = TR_STATIONARY;
 
-	// Compute a rotated box around the yaw like social.cpp does
-	const float c = cosf(DEG2RAD(yaw)), sn = sinf(DEG2RAD(yaw));
-	vec3_t mins = { 99999.0f, 99999.0f, propMins[2] }, maxs = { -99999.0f, -99999.0f, propMaxs[2] };
-	for (int k = 0; k < 4; k++) {
-		const float x = (k & 1) ? propMaxs[0] : propMins[0];
-		const float y = (k & 2) ? propMaxs[1] : propMins[1];
-		const float rx = x * c - y * sn, ry = x * sn + y * c;
-		mins[0] = Q_min(mins[0], rx); maxs[0] = Q_max(maxs[0], rx);
-		mins[1] = Q_min(mins[1], ry); maxs[1] = Q_max(maxs[1], ry);
+	// If the provided prop bounds are all zero, treat this as "no collider":
+	// do not construct a collision box or mark the entity as solid.
+	bool noCollider = (propMins[0] == 0.0f && propMins[1] == 0.0f && propMins[2] == 0.0f
+		&& propMaxs[0] == 0.0f && propMaxs[1] == 0.0f && propMaxs[2] == 0.0f);
+
+	if (noCollider) {
+		// leave r.mins/maxs as zero-length and set absmin/absmax to the origin
+		VectorSet(e->r.mins, 0.0f, 0.0f, 0.0f);
+		VectorSet(e->r.maxs, 0.0f, 0.0f, 0.0f);
+		VectorCopy(e->s.pos.trBase, e->r.absmin);
+		VectorCopy(e->s.pos.trBase, e->r.absmax);
+		// do not mark contents solid - leave as default (no collider)
+		e->r.svFlags = 0;
+		SV_LinkEntity(e);
+	} else {
+		// Compute a rotated box around the yaw like social.cpp does
+		const float c = cosf(DEG2RAD(yaw)), sn = sinf(DEG2RAD(yaw));
+		vec3_t mins = { 99999.0f, 99999.0f, propMins[2] }, maxs = { -99999.0f, -99999.0f, propMaxs[2] };
+		for (int k = 0; k < 4; k++) {
+			const float x = (k & 1) ? propMaxs[0] : propMins[0];
+			const float y = (k & 2) ? propMaxs[1] : propMins[1];
+			const float rx = x * c - y * sn, ry = x * sn + y * c;
+			mins[0] = Q_min(mins[0], rx); maxs[0] = Q_max(maxs[0], rx);
+			mins[1] = Q_min(mins[1], ry); maxs[1] = Q_max(maxs[1], ry);
+		}
+		VectorCopy(mins, e->r.mins);
+		VectorCopy(maxs, e->r.maxs);
+
+		// Apply colliderOffset to shift the collision bounds relative to the entity origin
+		VectorAdd(e->r.mins, colliderOffset, e->r.mins);
+		VectorAdd(e->r.maxs, colliderOffset, e->r.maxs);
+
+		// Use the rotated prop bounds as-is (match Holo_PlaceModel behavior):
+		// copy mins/maxs already set above and enable solid contents, then link.
+		VectorAdd(e->s.pos.trBase, e->r.mins, e->r.absmin);
+		VectorAdd(e->s.pos.trBase, e->r.maxs, e->r.absmax);
+
+		e->r.contents = CONTENTS_SOLID;
+		e->r.svFlags = 0;
+		SV_LinkEntity(e);
 	}
-	VectorCopy(mins, e->r.mins);
-	VectorCopy(maxs, e->r.maxs);
-
-	// Apply colliderOffset to shift the collision bounds relative to the entity origin
-	VectorAdd(e->r.mins, colliderOffset, e->r.mins);
-	VectorAdd(e->r.maxs, colliderOffset, e->r.maxs);
-
-	// Use the rotated prop bounds as-is (match Holo_PlaceModel behavior):
-	// copy mins/maxs already set above and enable solid contents, then link.
-	VectorAdd(e->s.pos.trBase, e->r.mins, e->r.absmin);
-	VectorAdd(e->s.pos.trBase, e->r.maxs, e->r.absmax);
-
-	e->r.contents = CONTENTS_SOLID;
-	e->r.svFlags = 0;
-	SV_LinkEntity(e);
 	return e->s.number;
 }
 
@@ -197,6 +213,9 @@ static int nxrp_last_spawn = -1;
 
 void NXRP_RegisterSpawn(int entnum) {
 	nxrp_last_spawn = entnum;
+	// Notify NPC subsystem so it can associate any pending name with this entnum
+	extern void NXRP_HandlePendingNPCSpawn(int entnum);
+	NXRP_HandlePendingNPCSpawn(entnum);
 }
 
 int NXRP_GetLastSpawn() {

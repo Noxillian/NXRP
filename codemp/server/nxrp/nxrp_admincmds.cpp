@@ -86,31 +86,31 @@ qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
 	if (sscanf(chatCursor, "%31s", tok) < 1) { return qtrue; }
 
 	if (!Q_stricmp(tok, "load")) {
-		// Loading saved NPCs is temporarily disabled while persistence is
-		// stabilized. Restore NXRP_LoadSavedNPCsForMap when ready.
-		// int cnt = NXRP_LoadSavedNPCsForMap(cl);
-		NXRP_PrintConsoleToPlayer(cl, "Loading saved NPCs is disabled");
+		int cnt = NXRP_LoadSavedNPCsForMap(cl);
+		NXRP_PrintConsoleToPlayerFmt(cl, "Loaded %d saved NPC(s)", cnt);
 		return qtrue;
 	}
 
-	// Otherwise treat first token as npc type and spawn it nearby
+	if (!Q_stricmp(tok, "list")) {
+		NXRP_ListSavedNPCs(cl);
+		return qtrue;
+	}
+
+	// Otherwise treat first token as npc type: spawn and persist
 	char cmdBuf[128];
 	Com_sprintf(cmdBuf, sizeof(cmdBuf), "npc spawn %s", tok);
 	NXRP_PrintConsoleToPlayer(cl, "^3Spawning NPC");
+	// Push pending name so NXRP_RegisterSpawn can associate name with entnum
+	NXRP_PushPendingNPCName(tok);
 	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
-
-	// Attempt to find last spawned entity and save it to map NPC file
-	// Delay a frame slightly: the spawn occurs in the game VM after the command executes.
-	// We can't synchronously get the entnum reliably here, but if the test spawn
-	// helper adds an entity immediately we attempt to persist the last registered
-	// spawn id.
+	// If the spawn is immediate, Save; otherwise NXRP_RegisterSpawn callers
+	// should call NXRP_SaveNPCToMap when appropriate after registration.
 	int last = NXRP_GetLastSpawn();
 	if (last >= 0) {
-		// Temporarily disable saving spawned NPCs to the map file while
-		// we stabilize persistence/loading behavior.
-		// NXRP_SaveNPCToMap(last, tok);
-		NXRP_PrintConsoleToPlayer(cl, "Saved NPC to map file (disabled)");
+		NXRP_SaveNPCToMap(last, tok);
+		NXRP_PrintConsoleToPlayer(cl, "Saved NPC to map file");
 	}
+	return qtrue;
 	return qtrue;
 }
 
@@ -837,6 +837,7 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 	std::string modelFromCatalog;
 	vec3_t mins = { -24.0f, -24.0f, -8.0f };
 	vec3_t maxs = { 24.0f, 24.0f, 24.0f };
+	// Kept as colliderOrigin for clarity; represents collider offset parsed as collideroffset.
 	vec3_t colliderOrigin = { 0.0f, 0.0f, 0.0f };
 	vec3_t floor = { 0.0f, 0.0f, 0.0f };
 	float catalogYaw = angle;
