@@ -113,6 +113,10 @@ bool NXRP_WriteStringToFile(const char *path, const std::string &content);
 // Account-level helpers: read/modify numeric "level" field in an account JSON file
 bool NXRP_GetAccountLevelFromFile(const char *filepath, int &outLevel);
 bool NXRP_SetAccountLevelInFile(const char *filepath, int newLevel);
+
+// Generic account field accessors (read/write string values; quoting optional)
+bool NXRP_GetAccountFieldFromFile(const char *filepath, const char *field, std::string &outValue);
+bool NXRP_SetAccountFieldInFile(const char *filepath, const char *field, const std::string &newValue, bool quoteValue);
 // Account-level helpers: read/modify numeric "level" field in an account JSON file
 bool NXRP_GetAccountLevelFromFile(const char *filepath, int &outLevel);
 bool NXRP_SetAccountLevelInFile(const char *filepath, int newLevel);

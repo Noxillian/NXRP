@@ -99,19 +99,9 @@ bool NXRP_WriteStringToFile(const char *path, const std::string &content) {
 // Returns true on success and sets outLevel. This uses a tolerant text search
 // similar to other NXRP helpers and expects a top-level "level": <number> entry.
 bool NXRP_GetAccountLevelFromFile(const char *filepath, int &outLevel) {
-	if (!filepath) return false;
-	std::string content;
-	if (!NXRP_ReadFileToString(filepath, content)) return false;
-	const std::string key = "\"level\"";
-	size_t k = content.find(key);
-	if (k == std::string::npos) return false;
-	size_t colon = content.find(':', k + key.size());
-	if (colon == std::string::npos) return false;
-	size_t pos = colon + 1;
-	while (pos < content.size() && isspace((unsigned char)content[pos])) pos++;
-	if (pos >= content.size()) return false;
-	int lvl = atoi(content.c_str() + pos);
-	outLevel = lvl;
+	std::string sval;
+	if (!NXRP_GetAccountFieldFromFile(filepath, "level", sval)) return false;
+	outLevel = atoi(sval.c_str());
 	return true;
 }
 
@@ -119,19 +109,79 @@ bool NXRP_GetAccountLevelFromFile(const char *filepath, int &outLevel) {
 // Returns true on success. This performs a textual replacement of the numeric
 // token following the "level" key and writes the updated content back.
 bool NXRP_SetAccountLevelInFile(const char *filepath, int newLevel) {
-	if (!filepath) return false;
+	return NXRP_SetAccountFieldInFile(filepath, "level", std::to_string(newLevel), false);
+}
+
+// Generic account field accessors
+bool NXRP_GetAccountFieldFromFile(const char *filepath, const char *field, std::string &outValue) {
+	if (!filepath || !field) return false;
 	std::string content;
 	if (!NXRP_ReadFileToString(filepath, content)) return false;
-	const std::string key = "\"level\"";
+	std::string key = std::string("\"") + field + "\"";
 	size_t k = content.find(key);
 	if (k == std::string::npos) return false;
 	size_t colon = content.find(':', k + key.size());
 	if (colon == std::string::npos) return false;
 	size_t pos = colon + 1;
 	while (pos < content.size() && isspace((unsigned char)content[pos])) pos++;
+	if (pos >= content.size()) return false;
+	// If value is a quoted string
+	if (content[pos] == '"') {
+		size_t q = content.find('"', pos + 1);
+		if (q == std::string::npos) return false;
+		outValue = content.substr(pos + 1, q - (pos + 1));
+		return true;
+	}
+	// Otherwise read until comma or closing brace
 	size_t end = pos;
-	if (end < content.size() && (content[end] == '-' || isdigit((unsigned char)content[end]))) ++end;
-	while (end < content.size() && isdigit((unsigned char)content[end])) ++end;
-	std::string newContent = content.substr(0, pos) + std::to_string(newLevel) + content.substr(end);
+	while (end < content.size() && content[end] != ',' && content[end] != '}' && content[end] != '\n' && content[end] != '\r') ++end;
+	// trim trailing whitespace
+	while (end > pos && isspace((unsigned char)content[end-1])) --end;
+	outValue = content.substr(pos, end - pos);
+	return true;
+}
+
+bool NXRP_SetAccountFieldInFile(const char *filepath, const char *field, const std::string &newValue, bool quoteValue) {
+	if (!filepath || !field) return false;
+	std::string content;
+	if (!NXRP_ReadFileToString(filepath, content)) return false;
+	std::string key = std::string("\"") + field + "\"";
+	size_t k = content.find(key);
+	std::string toInsert;
+	if (quoteValue) toInsert = std::string("\"") + newValue + "\"";
+	else toInsert = newValue;
+	if (k == std::string::npos) {
+		// insert before final '}'
+		size_t rb = content.rfind('}');
+		if (rb == std::string::npos) return false;
+		// determine if we need a comma
+		size_t insertPos = rb;
+		// trim trailing whitespace before rb
+		size_t t = rb;
+		while (t > 0 && isspace((unsigned char)content[t-1])) --t;
+		bool needsComma = false;
+		if (t > 1) {
+			// If file not empty object
+			needsComma = true;
+		}
+		std::string addition = (needsComma ? std::string(",\n  ") : std::string("\n  ")) + key + ": " + toInsert + "\n";
+		content.insert(insertPos, addition);
+		return NXRP_WriteStringToFile(filepath, content);
+	}
+	size_t colon = content.find(':', k + key.size());
+	if (colon == std::string::npos) return false;
+	size_t pos = colon + 1;
+	while (pos < content.size() && isspace((unsigned char)content[pos])) pos++;
+	size_t end = pos;
+	if (end < content.size() && content[end] == '"') {
+		++end;
+		while (end < content.size() && content[end] != '"') ++end;
+		if (end < content.size()) ++end; // include closing quote
+	} else {
+		while (end < content.size() && content[end] != ',' && content[end] != '}') ++end;
+	}
+	std::string newContent = content.substr(0, pos);
+	newContent += toInsert;
+	newContent += content.substr(end);
 	return NXRP_WriteStringToFile(filepath, newContent);
 }
