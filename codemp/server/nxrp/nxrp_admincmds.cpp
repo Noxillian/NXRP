@@ -25,6 +25,24 @@ qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
+	// remove subcommand: !npc r <index>
+	if (!Q_stricmp(sub, "r")) {
+		// find next token (index)
+		const char* q2 = p;
+		// skip sub token
+		while (*q2 && !isspace((unsigned char)*q2)) q2++;
+		while (*q2 == ' ' || *q2 == '\t') q2++;
+		int idx = -1;
+		if (sscanf(q2, "%d", &idx) < 1) { NXRP_PrintConsoleToPlayer(cl, "Usage: !npc r <index>"); return qtrue; }
+		if (idx < 0) { NXRP_PrintConsoleToPlayer(cl, "Invalid index"); return qtrue; }
+		if (NXRP_RemoveSavedNPCByIndex(idx)) {
+			NXRP_PrintConsoleToPlayer(cl, va("Removed saved NPC %d", idx));
+		} else {
+			NXRP_PrintConsoleToPlayer(cl, va("Failed to remove saved NPC %d", idx));
+		}
+		return qtrue;
+	}
+
 // Admin-only: spawn prop with explicit collider extents
 // Usage: !prop t <model_path> <sx> <sy> <sz> [angle]
 qboolean NXRP_cmdAdmin_prop_t( client_t *cl, const char *chatCursor ) {

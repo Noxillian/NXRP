@@ -72,6 +72,8 @@ void NXRP_SaveNPCToMap(int entnum, const char* npcType);
 int NXRP_LoadSavedNPCsForMap(client_t* cl);
 // Send a player a list of saved NPCs for the current map.
 void NXRP_ListSavedNPCs(client_t* cl);
+// Remove a saved NPC entry by its zero-based index. Returns true on success.
+bool NXRP_RemoveSavedNPCByIndex(int index);
 // Called by NXRP_RegisterSpawn to allow NPC module to associate a pending name
 // with the newly-registered entity number.
 void NXRP_HandlePendingNPCSpawn(int entnum);

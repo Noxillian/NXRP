@@ -26,6 +26,69 @@ void NXRP_PushPendingNPCName(const char* name) {
 	nxrp_pending_npc_name = std::string(name);
 }
 
+// Remove a saved NPC entry by its zero-based index. This rewrites the per-map file.
+bool NXRP_RemoveSavedNPCByIndex(int index) {
+	const char* home = Cvar_VariableString("fs_homepath");
+	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_npcs" : std::string("nxrp_npcs");
+	const char* map = Cvar_VariableString("mapname");
+	if (!map || !map[0]) map = "nomap";
+	std::string filename = dir + "/" + std::string(map) + ".json";
+
+	std::ifstream ifs(filename);
+	if (!ifs.is_open()) return false;
+
+	std::vector<std::string> lines;
+	std::string line;
+	while (std::getline(ifs, line)) { if (!line.empty()) lines.push_back(line); }
+	ifs.close();
+
+	if (index < 0 || index >= (int)lines.size()) return false;
+
+	// Attempt to free the entity referenced by this saved line if present
+	std::string targetLine = lines[index];
+	int entToFree = -1;
+	size_t entPos = targetLine.find("\"ent\"");
+	if (entPos != std::string::npos) {
+		size_t colon = targetLine.find(':', entPos);
+		if (colon != std::string::npos) {
+			size_t valStart = colon + 1;
+			while (valStart < targetLine.size() && isspace((unsigned char)targetLine[valStart])) ++valStart;
+			size_t valEnd = valStart;
+			if (valEnd < targetLine.size() && (targetLine[valEnd] == '-' || isdigit((unsigned char)targetLine[valEnd]))) ++valEnd;
+			while (valEnd < targetLine.size() && isdigit((unsigned char)targetLine[valEnd])) ++valEnd;
+			if (valEnd > valStart) {
+				try { entToFree = std::stoi(targetLine.substr(valStart, valEnd - valStart)); } catch(...) { entToFree = -1; }
+			}
+		}
+	}
+
+	if (entToFree >= 0) {
+		if (entToFree >= 0 && entToFree < sv.num_entities) {
+			sharedEntity_t* e = SV_GentityNum(entToFree);
+			if (e) {
+				void* dll = GVM_GetDllHandle();
+				if (dll) {
+					void (*G_FreeEntity_f)(void*) = (void (*)(void*))Sys_LoadFunction(dll, "G_FreeEntity");
+					if (G_FreeEntity_f) {
+						void* old = GVM_BeginNative();
+						G_FreeEntity_f(e);
+						GVM_EndNative(old);
+						NXRP_RegisterSpawn(-1);
+					}
+				}
+			}
+		}
+	}
+
+	// Remove the entry and rewrite
+	lines.erase(lines.begin() + index);
+	FILE* f = fopen(filename.c_str(), "w");
+	if (!f) return false;
+	for (const auto &l : lines) { fputs(l.c_str(), f); fputc('\n', f); }
+	fclose(f);
+	return true;
+}
+
 // Forward-declare delayed executor used elsewhere (defined in spin.cpp / nxrp_admincmds.cpp)
 void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 
