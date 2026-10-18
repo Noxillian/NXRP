@@ -27,6 +27,54 @@ qboolean NXRP_cmd_test( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
+// Test command: !addlevel - add 1 level to the invoking player's account
+qboolean NXRP_cmd_addlevel( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
+	if (!cl) return qtrue;
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+
+	std::string content, safe;
+	if (!NXRP_ReadAccountContentForClient(cl, content, safe)) return qtrue;
+
+	// Find the "level" field and increment it as an integer.
+	const std::string key = "\"level\"";
+	size_t k = content.find(key);
+	if (k == std::string::npos) {
+		NXRP_PrintConsoleToPlayer(cl, "Account missing level field");
+		return qtrue;
+	}
+	size_t colon = content.find(':', k + key.size());
+	if (colon == std::string::npos) { NXRP_PrintConsoleToPlayer(cl, "Account parse error"); return qtrue; }
+	size_t pos = colon + 1;
+	while (pos < content.size() && isspace((unsigned char)content[pos])) pos++;
+	int level = atoi(content.c_str() + pos);
+	level += 1;
+
+	// Replace the numeric token with the new value (simple rewrite)
+	// Find end of number
+	size_t end = pos;
+	if (end < content.size() && (content[end] == '-' || isdigit((unsigned char)content[end]))) ++end;
+	while (end < content.size() && isdigit((unsigned char)content[end])) ++end;
+	std::string newContent = content.substr(0, pos) + std::to_string(level) + content.substr(end);
+
+	const char* home = Cvar_VariableString("fs_homepath");
+	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_accounts" : std::string("nxrp_accounts");
+	#if defined(_WIN32)
+		_mkdir(dir.c_str());
+	#else
+		mkdir(dir.c_str(), 0755);
+	#endif
+
+	std::string filepath = dir + "/" + safe + ".json";
+	if (!NXRP_WriteStringToFile(filepath.c_str(), newContent)) {
+		NXRP_PrintConsoleToPlayer(cl, "Failed to write account file");
+		return qtrue;
+	}
+
+	NXRP_PrintConsoleToPlayer(cl, va("Added 1 level. New level: %d", level));
+	return qtrue;
+}
+
 // Minimal skills listing handler
 qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
@@ -86,11 +134,21 @@ qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor ) {
 		// Trim leading spaces
 		while (*s == ' ' || *s == '\t') ++s;
 		if (!Q_stricmp(s, "cmds") || !Q_stricmp(s, "commands")) {
-			NXRP_PrintConsoleToPlayer(cl, "General commands:\n  !info | !nxrp | /info - show info/help\n  !register <user> <pass> - create account\n  !login <user> <pass> - login\n  !pos - show position\n  !skills - list skills");
+			NXRP_PrintConsoleToPlayer(cl, "General commands:");
+			NXRP_PrintConsoleToPlayer(cl, "  !info | !nxrp | /info - show info/help");
+			NXRP_PrintConsoleToPlayer(cl, "  !register <user> <pass> - create account");
+			NXRP_PrintConsoleToPlayer(cl, "  !login <user> <pass> - login");
+			NXRP_PrintConsoleToPlayer(cl, "  !pos - show position");
+			NXRP_PrintConsoleToPlayer(cl, "  !skills - list skills");
 			return qtrue;
 		}
 		if (!Q_stricmp(s, "acmds") || !Q_stricmp(s, "admin")) {
-			NXRP_PrintConsoleToPlayer(cl, "Admin commands:\n  !prop s/t/m - spawn/manage props\n  !npc - spawn/load NPCs\n  !tp - teleport\n  !list - list entities\n  (admin only)");
+			NXRP_PrintConsoleToPlayer(cl, "Admin commands:");
+			NXRP_PrintConsoleToPlayer(cl, "  !prop s/t/m - spawn/manage props");
+			NXRP_PrintConsoleToPlayer(cl, "  !npc - spawn/load NPCs");
+			NXRP_PrintConsoleToPlayer(cl, "  !tp - teleport");
+			NXRP_PrintConsoleToPlayer(cl, "  !list - list entities");
+			NXRP_PrintConsoleToPlayer(cl, "  (admin only)");
 			return qtrue;
 		}
 	}

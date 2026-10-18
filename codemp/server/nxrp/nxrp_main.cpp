@@ -77,6 +77,7 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "boss" ) )		return NXRP_SUB_BOSS;
 	if ( !Q_stricmp( s, "vehicle" ) )	return NXRP_SUB_VEHICLE;
 	if ( !Q_stricmp( s, "list" ) )	return NXRP_SUB_LIST;
+	if ( !Q_stricmp( s, "addlevel" ) )	return NXRP_SUB_TEST; // map addlevel to test group handler for now
 	return NXRP_SUB_UNKNOWN;
 }
 
@@ -171,6 +172,11 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 	dispatchCursor = normalizedCursor;
 
 	NXRP_SubCmd sc = NXRP_ParseSubcmd( subcmd );
+
+	// Direct literal check for addlevel command (test helper)
+	if (!Q_stricmp(subcmd, "addlevel")) {
+		return NXRP_cmd_addlevel(cl, dispatchCursor);
+	}
 
 	// Special handling for prop subcommands: support syntax
 	//   !nx prop s <modelpath>
