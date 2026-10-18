@@ -50,12 +50,12 @@
     "colliderangle": 0.0
   },
   "models/map_objects/byss/tractor_base.md3": {
-    "collidersize": [50.0, 50.0, 75.0],
-    "collideroffset": [0.0, 0.0, 40.0],
+    "collidersize": [45.0, 50.0, 80.0],
+    "collideroffset": [0.0, 0.0, 0.0],
     "colliderangle": 0.0
   },
   "models/map_objects/byss/tractor_top.md3": {
-    "collidersize": [40.0, 40.0, 30.0],
+    "collidersize": [40.0, 40.0, 60.0],
     "collideroffset": [0.0, 0.0, 0.0],
     "colliderangle": 0.0
   }
