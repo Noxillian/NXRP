@@ -78,39 +78,54 @@ qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
 	if (!chatCursor || !*chatCursor) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !npc <type>|load");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !npc s <type> | !npc load | !npc list");
 		return qtrue;
 	}
 
-	char tok[MAX_TOKEN_CHARS] = {0};
-	if (sscanf(chatCursor, "%31s", tok) < 1) { return qtrue; }
+	// Expect a subcommand as the first token: s|load|list
+	char sub[MAX_TOKEN_CHARS] = {0};
+	const char* p = chatCursor;
+	while (*p == ' ' || *p == '\t') p++;
+	if (sscanf(p, "%31s", sub) < 1) return qtrue;
 
-	if (!Q_stricmp(tok, "load")) {
+	if (!Q_stricmp(sub, "load")) {
 		int cnt = NXRP_LoadSavedNPCsForMap(cl);
 		NXRP_PrintConsoleToPlayerFmt(cl, "Loaded %d saved NPC(s)", cnt);
 		return qtrue;
 	}
 
-	if (!Q_stricmp(tok, "list")) {
+	if (!Q_stricmp(sub, "list")) {
 		NXRP_ListSavedNPCs(cl);
 		return qtrue;
 	}
 
-	// Otherwise treat first token as npc type: spawn and persist
-	char cmdBuf[128];
-	Com_sprintf(cmdBuf, sizeof(cmdBuf), "npc spawn %s", tok);
-	NXRP_PrintConsoleToPlayer(cl, "^3Spawning NPC");
-	// Push pending name so NXRP_RegisterSpawn can associate name with entnum
-	NXRP_PushPendingNPCName(tok);
-	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
-	// If the spawn is immediate, Save; otherwise NXRP_RegisterSpawn callers
-	// should call NXRP_SaveNPCToMap when appropriate after registration.
-	int last = NXRP_GetLastSpawn();
-	if (last >= 0) {
-		NXRP_SaveNPCToMap(last, tok);
-		NXRP_PrintConsoleToPlayer(cl, "Saved NPC to map file");
+	// spawn subcommand: !npc s <type>
+	if (!Q_stricmp(sub, "s")) {
+		// find next token (npc type)
+		const char* q2 = p;
+		// skip sub token
+		while (*q2 && !isspace((unsigned char)*q2)) q2++;
+		while (*q2 == ' ' || *q2 == '\t') q2++;
+		char tok[MAX_TOKEN_CHARS] = {0};
+		if (sscanf(q2, "%31s", tok) < 1) { NXRP_PrintConsoleToPlayer(cl, "Usage: !npc s <type>"); return qtrue; }
+
+		// Otherwise treat token as npc type: spawn and persist
+		char cmdBuf[128];
+		Com_sprintf(cmdBuf, sizeof(cmdBuf), "npc spawn %s", tok);
+		NXRP_PrintConsoleToPlayer(cl, "^3Spawning NPC");
+		// Push pending name so NXRP_RegisterSpawn can associate name with entnum
+		NXRP_PushPendingNPCName(tok);
+		SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
+		// If the spawn is immediate, Save; otherwise NXRP_RegisterSpawn will handle saving
+		int last = NXRP_GetLastSpawn();
+		if (last >= 0) {
+			NXRP_SaveNPCToMap(last, tok);
+			NXRP_PrintConsoleToPlayer(cl, "Saved NPC to map file");
+		}
+		return qtrue;
 	}
-	return qtrue;
+
+	NXRP_PrintConsoleToPlayer(cl, "Usage: !npc s <type> | !npc load | !npc list");
 	return qtrue;
 }
 

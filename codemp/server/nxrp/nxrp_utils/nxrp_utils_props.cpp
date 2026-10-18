@@ -254,8 +254,12 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 		const float eps = 0.001f;
 		if (hasCatalog) {
 			// If catalog returned an all-zero origin, prefer the saved origin from file
+			// If catalog returned an all-zero origin, do NOT substitute the saved
+			// world origin as a colliderOffset. The colliderOffset should remain
+			// model-local. Use zero offset instead when catalog provides no local
+			// origin.
 			if (fabs(origin[0]) < eps && fabs(origin[1]) < eps && fabs(origin[2]) < eps) {
-				origin[0] = ox; origin[1] = oy; origin[2] = oz;
+				origin[0] = 0.0f; origin[1] = 0.0f; origin[2] = 0.0f;
 			}
 			// If catalog left yaw at zero but our saved yaw was non-zero, prefer saved yaw
 			if (fabs(yaw) < eps && fabs(savedYaw) >= eps) {
@@ -266,13 +270,27 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 		if (!hasCatalog) {
 			VectorCopy(defaultMins, mins);
 			VectorCopy(defaultMaxs, maxs);
-			origin[0] = ox; origin[1] = oy; origin[2] = oz;
+			// No catalog: do not use saved world origin as colliderOffset. Keep
+			// colliderOffset model-local (zero) and preserve saved origin only for
+			// entity placement below.
+			origin[0] = 0.0f; origin[1] = 0.0f; origin[2] = 0.0f;
 		}
 
 		// For saved-spawn loading, origin previously came from catalog or saved file
 		// Treat 'origin' here as the colliderOffset (position of collider relative to entity origin)
-		// and place the entity at the saved origin (ox,oy,oz).
-		vec3_t savedFloor = { ox, oy, oz };
+		// and place the entity so its stored origin (ox,oy,oz) is preserved.
+		// NXRP_PlaceModel expects a 'floor' reference where it computes
+		// entityOrigin.z = floor.z - propMins[2]. To restore a previously saved
+		// entity origin (ox,oy,oz) we must pass floor.z = ox.z + propMins[2].
+		vec3_t savedFloor = { ox, oy, oz + mins[2] };
+		// Debug: report computed placement parameters when a client requested load
+		if (cl) {
+			NXRP_PrintConsoleToPlayer(cl, va("NXRP: loading prop %s; savedOrigin=[%.2f %.2f %.2f] propMins=[%.2f %.2f %.2f] propMaxs=[%.2f %.2f %.2f] colliderOffset=[%.2f %.2f %.2f] yaw=%.2f savedFloor=[%.2f %.2f %.2f]",
+				modelPath.c_str(), ox, oy, oz,
+				mins[0], mins[1], mins[2], maxs[0], maxs[1], maxs[2],
+				origin[0], origin[1], origin[2], yaw,
+				savedFloor[0], savedFloor[1], savedFloor[2]));
+		}
 		int ent = NXRP_PlaceModel(modelPath.c_str(), mins, maxs, yaw, origin, savedFloor);
 		if (ent >= 0) {
 			NXRP_RegisterSpawn(ent);
@@ -295,6 +313,12 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 // If present, the JSON maps keys to objects with fields: model, extents (array of 3), origin (array of 3), yaw
 bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& outMins, vec3_t& outMaxs, vec3_t& outOrigin, float& outYaw) {
 	if (!name || !name[0]) return false;
+
+	// Initialize outputs to safe defaults to avoid returning uninitialized data
+	outMins[0] = outMins[1] = outMins[2] = 0.0f;
+	outMaxs[0] = outMaxs[1] = outMaxs[2] = 0.0f;
+	outOrigin[0] = outOrigin[1] = outOrigin[2] = 0.0f;
+	outYaw = 0.0f;
 	std::string sname = name;
 	// If it looks like a path, attempt to match it against the JSON catalog's model fields first.
 	bool looksLikePath = (sname.find('/') != std::string::npos || sname.find('\\') != std::string::npos || sname.find('.') != std::string::npos);

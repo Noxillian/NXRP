@@ -182,8 +182,14 @@ int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMa
 		VectorCopy(maxs, e->r.maxs);
 
 		// Apply colliderOffset to shift the collision bounds relative to the entity origin
-		VectorAdd(e->r.mins, colliderOffset, e->r.mins);
-		VectorAdd(e->r.maxs, colliderOffset, e->r.maxs);
+		// Rotate the colliderOffset by the entity yaw so offsets defined in model-local
+		// coordinates are applied correctly when the model is rotated.
+		vec3_t rotOffset;
+		rotOffset[0] = colliderOffset[0] * c - colliderOffset[1] * sn;
+		rotOffset[1] = colliderOffset[0] * sn + colliderOffset[1] * c;
+		rotOffset[2] = colliderOffset[2];
+		VectorAdd(e->r.mins, rotOffset, e->r.mins);
+		VectorAdd(e->r.maxs, rotOffset, e->r.maxs);
 
 		// Use the rotated prop bounds as-is (match Holo_PlaceModel behavior):
 		// copy mins/maxs already set above and enable solid contents, then link.
