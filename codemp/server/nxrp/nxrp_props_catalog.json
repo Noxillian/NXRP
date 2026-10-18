@@ -1,12 +1,12 @@
 {
   "models/map_objects/nar_shaddar/table01.md3": {
     "collidersize": [15.0, 15.0, 10.0],
-    "colliderorigin": [0.0, 0.0, 0.0],
+    "collideroffset": [0.0, 0.0, 0.0],
     "colliderangle": 0.0
   },
   "models/map_objects/crate_small.md3": {
     "collidersize": [12.0, 12.0, 12.0],
-    "colliderorigin": [0.0, 0.0, 0.0],
+    "collideroffset": [0.0, 0.0, 0.0],
     "colliderangle": 0.0
   }
 }

@@ -360,10 +360,10 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 					}
 				}
 
-				// colliderorigin / origin
-				size_t coriginPos = obj.find("\"colliderorigin\"");
-				if (coriginPos != std::string::npos) {
-					size_t lb = obj.find('[', coriginPos);
+				// collideroffset / origin
+				size_t coffsetPos = obj.find("\"collideroffset\"");
+				if (coffsetPos != std::string::npos) {
+					size_t lb = obj.find('[', coffsetPos);
 					if (lb != std::string::npos) { float a,b,c; if (sscanf(obj.c_str()+lb, "[%f %*[, ] %f %*[, ] %f", &a,&b,&c) == 3) { outOrigin[0]=a; outOrigin[1]=b; outOrigin[2]=c; } }
 				} else {
 					size_t opos = obj.find("\"origin\"");
