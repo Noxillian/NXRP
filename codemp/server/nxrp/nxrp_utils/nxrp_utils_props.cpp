@@ -339,23 +339,44 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 						if (qe != std::string::npos) outModel = obj.substr(q+1, qe-q-1);
 					}
 				}
-				// extents -> use as half-extents
-				size_t epos = obj.find("\"extents\"");
-				if (epos != std::string::npos) {
-					size_t lb = obj.find('[', epos);
+				// collidersize / extents -> use as half-extents (prefer collidersize)
+				size_t csizePos = obj.find("\"collidersize\"");
+				if (csizePos != std::string::npos) {
+					size_t lb = obj.find('[', csizePos);
 					if (lb != std::string::npos) {
 						float a,b,c; if (sscanf(obj.c_str()+lb, "[%f %*[, ] %f %*[, ] %f", &a,&b,&c) == 3) { outMins[0] = -a; outMins[1] = -b; outMins[2] = -c; outMaxs[0] = a; outMaxs[1] = b; outMaxs[2] = c; }
 					}
+				} else {
+					size_t epos = obj.find("\"extents\"");
+					if (epos != std::string::npos) {
+						size_t lb = obj.find('[', epos);
+						if (lb != std::string::npos) {
+							float a,b,c; if (sscanf(obj.c_str()+lb, "[%f %*[, ] %f %*[, ] %f", &a,&b,&c) == 3) { outMins[0] = -a; outMins[1] = -b; outMins[2] = -c; outMaxs[0] = a; outMaxs[1] = b; outMaxs[2] = c; }
+						}
+					}
 				}
-				// origin
-				size_t opos = obj.find("\"origin\"");
-				if (opos != std::string::npos) {
-					size_t lb = obj.find('[', opos);
+
+				// colliderorigin / origin
+				size_t coriginPos = obj.find("\"colliderorigin\"");
+				if (coriginPos != std::string::npos) {
+					size_t lb = obj.find('[', coriginPos);
 					if (lb != std::string::npos) { float a,b,c; if (sscanf(obj.c_str()+lb, "[%f %*[, ] %f %*[, ] %f", &a,&b,&c) == 3) { outOrigin[0]=a; outOrigin[1]=b; outOrigin[2]=c; } }
+				} else {
+					size_t opos = obj.find("\"origin\"");
+					if (opos != std::string::npos) {
+						size_t lb = obj.find('[', opos);
+						if (lb != std::string::npos) { float a,b,c; if (sscanf(obj.c_str()+lb, "[%f %*[, ] %f %*[, ] %f", &a,&b,&c) == 3) { outOrigin[0]=a; outOrigin[1]=b; outOrigin[2]=c; } }
+					}
 				}
-				// yaw
-				size_t ypos = obj.find("\"yaw\"");
-				if (ypos != std::string::npos) { size_t c = obj.find(':', ypos); if (c != std::string::npos) { float y; if (sscanf(obj.c_str()+c, ":%f", &y) == 1) outYaw = y; } }
+
+				// colliderangle / yaw
+				size_t canglePos = obj.find("\"colliderangle\"");
+				if (canglePos != std::string::npos) {
+					size_t c = obj.find(':', canglePos); if (c != std::string::npos) { float y; if (sscanf(obj.c_str()+c, ":%f", &y) == 1) outYaw = y; }
+				} else {
+					size_t ypos = obj.find("\"yaw\"");
+					if (ypos != std::string::npos) { size_t c = obj.find(':', ypos); if (c != std::string::npos) { float y; if (sscanf(obj.c_str()+c, ":%f", &y) == 1) outYaw = y; } }
+				}
 
 				if (outModel.empty()) outModel = sname;
 				return true;
