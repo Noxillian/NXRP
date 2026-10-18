@@ -128,12 +128,9 @@ qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
 		// Push pending name so NXRP_RegisterSpawn can associate name with entnum
 		NXRP_PushPendingNPCName(tok);
 		SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
-		// If the spawn is immediate, Save; otherwise NXRP_RegisterSpawn will handle saving
-		int last = NXRP_GetLastSpawn();
-		if (last >= 0) {
-			NXRP_SaveNPCToMap(last, tok);
-			NXRP_PrintConsoleToPlayer(cl, "Saved NPC to map file");
-		}
+		// Do NOT attempt to save here synchronously; NXRP_HandlePendingNPCSpawn
+		// (called from NXRP_RegisterSpawn) will persist the NPC once the VM
+		// has created and initialized the entity to ensure correct origin.
 		return qtrue;
 	}
 
