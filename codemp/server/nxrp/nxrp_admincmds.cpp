@@ -836,6 +836,25 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 	vec3_t maxs = { 24.0f, 24.0f, 24.0f };
 	vec3_t floor = { 0.0f, 0.0f, 0.0f };
 	float catalogYaw = angle;
+	// Quick diagnostic: check whether the runtime JSON catalog exists and contains the model path
+	const char* home = Cvar_VariableString("fs_homepath");
+	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
+	std::string jsonPath = dir + "/nxrp_props_catalog.json";
+	{
+		std::ifstream check(jsonPath);
+		if (!check.is_open()) {
+			NXRP_PrintConsoleToPlayer(cl, va("Catalog file not found at %s", jsonPath.c_str()));
+		} else {
+			std::string content((std::istreambuf_iterator<char>(check)), std::istreambuf_iterator<char>());
+			check.close();
+			if (content.find(path) == std::string::npos) {
+				NXRP_PrintConsoleToPlayer(cl, va("Catalog present but does not contain entry for %s", path));
+			} else {
+				// catalog file contains the model path but parser may still fail if formatting differs
+				NXRP_PrintConsoleToPlayer(cl, va("Catalog contains %s; attempting to parse entry", path));
+			}
+		}
+	}
 	bool hasCatalog = NXRP_GetPropFromCatalog(path, modelFromCatalog, mins, maxs, floor, catalogYaw);
 	const float eps = 0.001f;
 	if (hasCatalog) {
@@ -858,6 +877,8 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 		}
 	} else {
 		if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
+		// Inform the admin that no catalog entry was found for this model/path
+		NXRP_PrintConsoleToPlayer(cl, va("No catalog entry found for %s", path));
 	}
 
 	int ent = NXRP_PlaceModel(path, mins, maxs, angle, floor);
