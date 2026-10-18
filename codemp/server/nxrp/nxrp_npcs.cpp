@@ -24,6 +24,8 @@ static std::string nxrp_pending_npc_name;
 void NXRP_PushPendingNPCName(const char* name) {
 	if (!name) return;
 	nxrp_pending_npc_name = std::string(name);
+	// Debug: notify that a pending NPC name was queued
+	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_PushPendingNPCName: %s", name);
 }
 
 // Remove a saved NPC entry by its zero-based index. This rewrites the per-map file.
@@ -97,10 +99,13 @@ void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 // and persists the entry if a pending name was present.
 void NXRP_HandlePendingNPCSpawn(int entnum) {
 	if (entnum < 0) return;
+	// Debug: show when handler runs and current pending name
+	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_HandlePendingNPCSpawn ent=%d pending='%s'", entnum, nxrp_pending_npc_name.c_str());
 	if (nxrp_pending_npc_name.empty()) return;
 	// Track for runtime events
 	NXRP_TrackNPC(entnum, nxrp_pending_npc_name.c_str());
 	// Persist to disk
+	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_HandlePendingNPCSpawn: saving ent=%d name=%s", entnum, nxrp_pending_npc_name.c_str());
 	NXRP_SaveNPCToMap(entnum, nxrp_pending_npc_name.c_str());
 	// Clear pending
 	nxrp_pending_npc_name.clear();
@@ -160,6 +165,8 @@ void NXRP_SaveNPCToMap(int entnum, const char* npcType) {
 	if (!map || !map[0]) map = "nomap";
 	std::string filename = dir + "/" + std::string(map) + ".json";
 
+	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_SaveNPCToMap: will append to %s", filename.c_str());
+
 	int nextIndex = 0;
 	{
 		std::ifstream existing(filename);
@@ -184,6 +191,7 @@ void NXRP_SaveNPCToMap(int entnum, const char* npcType) {
 		entnum, nextIndex, npcType, ox, oy, oz, ax, ay, az);
 	fputs(buf, f);
 	fclose(f);
+	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_SaveNPCToMap: saved ent=%d type=%s to %s", entnum, npcType, filename.c_str());
 }
 
 // Read the per-map JSON file and send entries to the player as an indexed list.
