@@ -518,19 +518,10 @@ qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char
 	std::string content((std::istreambuf_iterator<char>(aifs)), std::istreambuf_iterator<char>());
 	aifs.close();
 
-	// extract skillpoints
-	auto extract_number = [&](const char* key)->int {
-		std::string ks = key;
-		size_t pos = content.find(ks);
-		if (pos == std::string::npos) return -99999;
-		size_t colon = content.find(':', pos + ks.size()); if (colon == std::string::npos) return -99999;
-		size_t vstart = colon + 1; while (vstart < content.size() && isspace((unsigned char)content[vstart])) ++vstart;
-		int val = 0; if (vstart < content.size()) { val = atoi(content.c_str()+vstart); }
-		return val;
-	};
-
-	int sp = extract_number("\"skillpoints\"");
-	if (sp == -99999) { NXRP_PrintConsoleToPlayer(cl, "Account missing skillpoints field"); return qtrue; }
+	// extract skillpoints using generic account field accessor
+	std::string sval;
+	if (!NXRP_GetAccountFieldFromFile(accPath.c_str(), "skillpoints", sval)) { NXRP_PrintConsoleToPlayer(cl, "Account missing skillpoints field"); return qtrue; }
+	int sp = atoi(sval.c_str());
 	if (sp <= 0) { NXRP_PrintConsoleToPlayer(cl, "Not enough skill points"); return qtrue; }
 
 	// read skills definitions to find cost and maxLevel for the requested skill id
@@ -622,18 +613,14 @@ qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char
 		if (sp < nextCost) { NXRP_PrintConsoleToPlayer(cl, "Not enough skillpoints for next level"); return qtrue; }
 
 		int newsp = sp - nextCost;
-		auto repl = content;
-		size_t spPos = repl.find("\"skillpoints\"");
-		if (spPos != std::string::npos) {
-			size_t colon = repl.find(':', spPos);
-			size_t lineEnd = repl.find_first_of("\n", colon);
-			if (colon != std::string::npos && lineEnd != std::string::npos) {
-				std::string before = repl.substr(0, colon+1);
-				std::string after = repl.substr(lineEnd);
-				repl = before + " " + std::to_string(newsp) + "," + after;
-			}
+		// update account file using generic setter for skillpoints and manipulate skills section as before
+		if (!NXRP_SetAccountFieldInFile(accPath.c_str(), "skillpoints", std::to_string(newsp), false)) {
+			NXRP_PrintConsoleToPlayer(cl, "Failed to update skillpoints");
+			return qtrue;
 		}
 
+		// add/increment skill entry inside "skills" object; reuse existing content string
+		auto repl = content;
 		if (repl.find("\"skills\"") == std::string::npos) {
 			size_t brace = repl.rfind('}');
 			if (brace != std::string::npos) {
@@ -685,18 +672,14 @@ qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char
 		if (sp < nextCost) { NXRP_PrintConsoleToPlayer(cl, "Not enough skillpoints for next level"); return qtrue; }
 
 		int newsp = sp - nextCost;
-		auto repl = content;
-		size_t spPos = repl.find("\"skillpoints\"");
-		if (spPos != std::string::npos) {
-			size_t colon = repl.find(':', spPos);
-			size_t lineEnd = repl.find_first_of("\n", colon);
-			if (colon != std::string::npos && lineEnd != std::string::npos) {
-				std::string before = repl.substr(0, colon+1);
-				std::string after = repl.substr(lineEnd);
-				repl = before + " " + std::to_string(newsp) + "," + after;
-			}
+		// update account file using generic setter for skillpoints and manipulate skills section as before
+		if (!NXRP_SetAccountFieldInFile(accPath.c_str(), "skillpoints", std::to_string(newsp), false)) {
+			NXRP_PrintConsoleToPlayer(cl, "Failed to update skillpoints");
+			return qtrue;
 		}
 
+		// add/increment skill entry inside "skills" object; reuse existing content string
+		auto repl = content;
 		if (repl.find("\"skills\"") == std::string::npos) {
 			size_t brace = repl.rfind('}');
 			if (brace != std::string::npos) {
