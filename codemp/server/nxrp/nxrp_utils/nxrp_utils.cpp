@@ -67,7 +67,8 @@ int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath)
 	vec3_t maxs = {  24.0f,  24.0f, 24.0f };
 	float yaw = 0.0f;
 	if (cl && cl->gentity) yaw = cl->gentity->s.angles[YAW];
-	int entnum = NXRP_PlaceModel(modelPath, mins, maxs, yaw, org);
+	vec3_t zeroOffset = {0.0f, 0.0f, 0.0f};
+	int entnum = NXRP_PlaceModel(modelPath, mins, maxs, yaw, zeroOffset, org);
 	if (entnum >= 0) {
 		NXRP_RegisterSpawn(entnum);
 	}
@@ -75,7 +76,7 @@ int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath)
 }
 
 // Place a model with explicit prop bounds and yaw at a floor position.
-int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMaxs, float yaw, const vec3_t floor)
+int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMaxs, float yaw, const vec3_t colliderOffset, const vec3_t floor)
 {
 	if (!name || !name[0]) return -1;
 
@@ -165,6 +166,10 @@ int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMa
 	VectorCopy(mins, e->r.mins);
 	VectorCopy(maxs, e->r.maxs);
 
+	// Apply colliderOffset to shift the collision bounds relative to the entity origin
+	VectorAdd(e->r.mins, colliderOffset, e->r.mins);
+	VectorAdd(e->r.maxs, colliderOffset, e->r.maxs);
+
 	// Use the rotated prop bounds as-is (match Holo_PlaceModel behavior):
 	// copy mins/maxs already set above and enable solid contents, then link.
 	VectorAdd(e->s.pos.trBase, e->r.mins, e->r.absmin);
@@ -183,7 +188,8 @@ int NXRP_SpawnPropAtClient(client_t* cl, const char* modelPath, const vec3_t pro
 	vec3_t floor;
 	if (cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
 	else { VectorSet(floor, 0,0,0); }
-	return NXRP_PlaceModel(modelPath, propMins, propMaxs, yaw, floor);
+	vec3_t zeroOffset2 = {0.0f, 0.0f, 0.0f};
+	return NXRP_PlaceModel(modelPath, propMins, propMaxs, yaw, zeroOffset2, floor);
 }
 
 // Simple tracking for last NXRP spawn

@@ -269,7 +269,11 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 			origin[0] = ox; origin[1] = oy; origin[2] = oz;
 		}
 
-		int ent = NXRP_PlaceModel(modelPath.c_str(), mins, maxs, yaw, origin);
+		// For saved-spawn loading, origin previously came from catalog or saved file
+		// Treat 'origin' here as the colliderOffset (position of collider relative to entity origin)
+		// and place the entity at the saved origin (ox,oy,oz).
+		vec3_t savedFloor = { ox, oy, oz };
+		int ent = NXRP_PlaceModel(modelPath.c_str(), mins, maxs, yaw, origin, savedFloor);
 		if (ent >= 0) {
 			NXRP_RegisterSpawn(ent);
 			spawned++;

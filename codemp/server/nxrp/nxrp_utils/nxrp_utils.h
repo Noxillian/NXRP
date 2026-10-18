@@ -21,7 +21,10 @@ int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath);
 
 // Place a model at a given floor position with explicit prop bounds and yaw.
 // Returns the new entity number, or -1 on failure.
-int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMaxs, float yaw, const vec3_t floor);
+// Place a model at a given floor position with explicit prop bounds and yaw.
+// The colliderOffset parameter shifts the collision box relative to the entity origin
+// without moving the entity itself.
+int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMaxs, float yaw, const vec3_t colliderOffset, const vec3_t floor);
 
 // Track last NXRP-spawned entity and allow adjustments
 void NXRP_RegisterSpawn(int entnum);

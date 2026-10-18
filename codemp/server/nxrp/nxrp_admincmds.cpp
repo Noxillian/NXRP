@@ -834,11 +834,11 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 	std::string modelFromCatalog;
 	vec3_t mins = { -24.0f, -24.0f, -8.0f };
 	vec3_t maxs = { 24.0f, 24.0f, 24.0f };
+	vec3_t colliderOrigin = { 0.0f, 0.0f, 0.0f };
 	vec3_t floor = { 0.0f, 0.0f, 0.0f };
 	float catalogYaw = angle;
 	// Quick diagnostic: check whether the runtime JSON catalog exists and contains the model path
 	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
 	std::string jsonPath;
 	if (home && home[0]) jsonPath = std::string(home) + "/nxrp_props_catalog.json";
 	else jsonPath = std::string("nxrp_props_catalog.json");
@@ -857,7 +857,7 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 			}
 		}
 	}
-	bool hasCatalog = NXRP_GetPropFromCatalog(path, modelFromCatalog, mins, maxs, floor, catalogYaw);
+	bool hasCatalog = NXRP_GetPropFromCatalog(path, modelFromCatalog, mins, maxs, colliderOrigin, catalogYaw);
 	const float eps = 0.001f;
 	if (hasCatalog) {
 		// use catalog model and extents
@@ -873,17 +873,25 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 		if (scanned < 2) {
 			if (fabsf(catalogYaw) >= eps) angle = catalogYaw;
 		}
-		// If the catalog didn't provide an origin (all zeros), default to client origin when available
-		if (fabsf(floor[0]) < eps && fabsf(floor[1]) < eps && fabsf(floor[2]) < eps) {
-			if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
-		}
+		// For entity placement, always prefer the client's origin (do NOT use colliderOrigin to place the object)
+		if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
 	} else {
 		if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
 		// Inform the admin that no catalog entry was found for this model/path
 		NXRP_PrintConsoleToPlayer(cl, va("No catalog entry found for %s", path));
 	}
 
-	int ent = NXRP_PlaceModel(path, mins, maxs, angle, floor);
+	// If we have a catalog entry, treat mins/maxs as half-extents centered at colliderOrigin.
+	// Convert to prop mins/maxs relative to the entity origin by offsetting by colliderOrigin.
+	vec3_t adjMins, adjMaxs;
+	if (hasCatalog) {
+		for (int i = 0; i < 3; ++i) { adjMins[i] = mins[i] + colliderOrigin[i]; adjMaxs[i] = maxs[i] + colliderOrigin[i]; }
+	} else {
+		VectorCopy(mins, adjMins);
+		VectorCopy(maxs, adjMaxs);
+	}
+
+	int ent = NXRP_PlaceModel(path, adjMins, adjMaxs, angle, colliderOrigin, floor);
 	if (ent >= 0) {
 		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", path, ent));
 		NXRP_RegisterSpawn(ent);
