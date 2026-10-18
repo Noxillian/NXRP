@@ -88,6 +88,18 @@ qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
 	while (*p == ' ' || *p == '\t') p++;
 	if (sscanf(p, "%31s", sub) < 1) return qtrue;
 
+	// Some callers pass the full normalized cursor starting with the
+	// primary subcommand (e.g. "npc s rebel"). If the first token is
+	// the literal "npc", skip it and read the actual subcommand.
+	if (!Q_stricmp(sub, "npc")) {
+		// advance past the "npc" token
+		while (*p && !isspace((unsigned char)*p)) p++;
+		while (*p == ' ' || *p == '\t') p++;
+		// read the next token into sub
+		memset(sub, 0, sizeof(sub));
+		if (sscanf(p, "%31s", sub) < 1) return qtrue;
+	}
+
 	if (!Q_stricmp(sub, "load")) {
 		int cnt = NXRP_LoadSavedNPCsForMap(cl);
 		NXRP_PrintConsoleToPlayerFmt(cl, "Loaded %d saved NPC(s)", cnt);
