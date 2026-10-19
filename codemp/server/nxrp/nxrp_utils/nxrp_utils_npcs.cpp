@@ -172,20 +172,7 @@ void NXRP_ListSavedNPCs(client_t* cl) {
 	for (const auto &s : lines) {
 		if (s.empty()) continue;
 		any = true;
-		// extract ent
-		auto extract_int = [&](const char* key, int def)->int {
-			size_t p = s.find(key);
-			if (p == std::string::npos) return def;
-			size_t colon = s.find(':', p + strlen(key)); if (colon == std::string::npos) return def;
-			size_t v = colon + 1; while (v < s.size() && isspace((unsigned char)s[v])) ++v;
-			size_t e = v; if (e < s.size() && (s[e] == '-' || isdigit((unsigned char)s[e]))) ++e; while (e < s.size() && isdigit((unsigned char)s[e])) ++e;
-			if (e > v) {
-				try { return std::stoi(s.substr(v, e-v)); } catch(...) { return def; }
-			}
-			return def;
-		};
-
-		int entv = extract_int("\"ent\"", -1);
+		int entv = NXRP_ExtractIntField(s, "\"ent\"", -1);
 
 		// extract npc type
 		std::string npcType;

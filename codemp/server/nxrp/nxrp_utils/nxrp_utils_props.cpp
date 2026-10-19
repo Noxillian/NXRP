@@ -28,21 +28,8 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 		std::string s = line;
 		if (s.size() > maxLen) s = s.substr(0, maxLen - 3) + "...";
 
-		// helper to extract integer fields
-		auto extract_int = [&](const char* key, int def)->int {
-			size_t p = s.find(key);
-			if (p == std::string::npos) return def;
-			size_t colon = s.find(':', p + strlen(key)); if (colon == std::string::npos) return def;
-			size_t v = colon + 1; while (v < s.size() && isspace((unsigned char)s[v])) ++v;
-			size_t e = v; if (e < s.size() && (s[e] == '-' || isdigit((unsigned char)s[e]))) ++e; while (e < s.size() && isdigit((unsigned char)s[e])) ++e;
-			if (e > v) {
-				try { return std::stoi(s.substr(v, e-v)); } catch(...) { return def; }
-			}
-			return def;
-		};
-
-		int entv = extract_int("\"ent\"", -1);
-		int idxv = extract_int("\"index\"", idx);
+		int entv = NXRP_ExtractIntField(s, "\"ent\"", -1);
+		int idxv = NXRP_ExtractIntField(s, "\"index\"", idx);
 
 		// extract model path
 		std::string model;
@@ -379,73 +366,6 @@ bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor) {
 	}
 	NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model.");
 	return false;
-}
-
-	int idx = 0;
-	const size_t maxLen = 900; // keep within safe console buffer
-	bool any = false;
-	for (const auto &line : lines) {
-		if (line.empty()) continue;
-		any = true;
-		// Parse the JSON-ish line and print a concise one-line summary per saved spawn.
-		// Expected format: { "ent": <n>, "index": <n>, "model": "<path>", "origin": [x, y, z], "angles": [ax, ay, az] }
-		std::string s = line;
-	if (s.size() > maxLen) s = s.substr(0, maxLen - 3) + "...";
-
-	// helper to extract integer fields
-	auto extract_int = [&](const char* key, int def)->int {
-		size_t p = s.find(key);
-		if (p == std::string::npos) return def;
-		size_t colon = s.find(':', p + strlen(key)); if (colon == std::string::npos) return def;
-		size_t v = colon + 1; while (v < s.size() && isspace((unsigned char)s[v])) ++v;
-		size_t e = v; if (e < s.size() && (s[e] == '-' || isdigit((unsigned char)s[e]))) ++e; while (e < s.size() && isdigit((unsigned char)s[e])) ++e;
-		if (e > v) {
-			try { return std::stoi(s.substr(v, e-v)); } catch(...) { return def; }
-		}
-		return def;
-	};
-
-	int entv = extract_int("\"ent\"", -1);
-	int idxv = extract_int("\"index\"", idx);
-
-	// extract model path
-	std::string model;
-	size_t mpos = s.find("\"model\"");
-	if (mpos != std::string::npos) {
-		size_t colon = s.find(':', mpos);
-		if (colon != std::string::npos) {
-			size_t q = s.find('"', colon);
-			if (q != std::string::npos) {
-				size_t qe = s.find('"', q+1);
-				if (qe != std::string::npos && qe > q) model = s.substr(q+1, qe-q-1);
-			}
-		}
-	}
-
-	// extract origin and angles
-	float ox=0, oy=0, oz=0, ax=0, ay=0, az=0;
-	size_t opos = s.find("\"origin\"");
-	if (opos != std::string::npos) {
-		opos = s.find('[', opos);
-		if (opos != std::string::npos) {
-			sscanf(s.c_str()+opos, "[%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz);
-		}
-	}
-	size_t apos = s.find("\"angles\"");
-	if (apos != std::string::npos) {
-		apos = s.find('[', apos);
-		if (apos != std::string::npos) {
-			sscanf(s.c_str()+apos, "[%f %*[, ] %f %*[, ] %f", &ax, &ay, &az);
-		}
-	}
-
-	// print a single consolidated line per spawn
-	if (model.empty()) model = "<unknown>";
-	NXRP_PrintConsoleToPlayerFmt(cl, "%d: ent=%d model=%s origin=%.0f,%.0f,%.0f angles=%.0f,%.0f,%.0f", idx, entv, model.c_str(), ox, oy, oz, ax, ay, az);
-	idx++;
-	}
-	if (!any) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
-	if (idx == 0) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
 }
 
 // Alias: spawn prop at client using explicit extents. Keep same behavior as NXRP_SpawnPropAtClient.

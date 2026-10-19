@@ -84,6 +84,20 @@ bool NXRP_HexDecode(const std::string& hex, std::vector<unsigned char>& out);
 // String utilities
 std::string NXRP_EscapeString(const std::string& in);
 
+// Extract a simple integer field from a JSON-ish single-line string.
+// Returns def if key not found or parse fails. Key should include quotes, e.g. "\"ent\"".
+inline int NXRP_ExtractIntField(const std::string& s, const char* key, int def) {
+	size_t p = s.find(key);
+	if (p == std::string::npos) return def;
+	size_t colon = s.find(':', p + strlen(key)); if (colon == std::string::npos) return def;
+	size_t v = colon + 1; while (v < s.size() && isspace((unsigned char)s[v])) ++v;
+	size_t e = v; if (e < s.size() && (s[e] == '-' || isdigit((unsigned char)s[e]))) ++e; while (e < s.size() && isdigit((unsigned char)s[e])) ++e;
+	if (e > v) {
+		try { return std::stoi(s.substr(v, e-v)); } catch(...) { return def; }
+	}
+	return def;
+}
+
 // Wrapper for game VM's G_FreeEntity that allows NXRP to observe freed entities
 // and detect when tracked NPCs are removed. Replace direct G_FreeEntity calls
 // in server-side modules with NXRP_FreeEntity to ensure NXRP receives events.
