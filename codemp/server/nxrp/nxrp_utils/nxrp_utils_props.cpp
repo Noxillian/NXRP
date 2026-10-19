@@ -147,10 +147,11 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 	int newEnt = NXRP_PlaceModel(modelPath.c_str(), mins, maxs, yaw, zeroOffset2, newFloor);
 	if (newEnt >= 0) {
 		NXRP_RegisterSpawn(newEnt);
-		// update saved entry with new origin
+		// update saved entry with new origin and preserve collider metadata when present
 		char buf[1024];
-		snprintf(buf, sizeof(buf), "{ \"ent\": %d, \"id\": %d, \"index\": %d, \"model\": \"%s\", \"origin\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f] }",
-			newEnt, newEnt, index, modelPath.c_str(), newFloor[0], newFloor[1], newFloor[2], 0.0f, yaw, 0.0f);
+		snprintf(buf, sizeof(buf), "{ \"ent\": %d, \"id\": %d, \"index\": %d, \"model\": \"%s\", \"origin\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f], \"propMins\": [%.2f, %.2f, %.2f], \"propMaxs\": [%.2f, %.2f, %.2f], \"colliderOffset\": [%.2f, %.2f, %.2f], \"yaw\": %.2f }",
+			newEnt, newEnt, index, modelPath.c_str(), newFloor[0], newFloor[1], newFloor[2], 0.0f, yaw, 0.0f,
+			mins[0], mins[1], mins[2], maxs[0], maxs[1], maxs[2], 0.0f, 0.0f, 0.0f, yaw);
 		lines[index] = std::string(buf);
 		FILE* f = fopen(filename.c_str(), "w");
 		if (f) {
@@ -493,37 +494,64 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 		const char* a = strstr(s, anglesKey);
 		if (a) { a = strchr(a, '['); if (a) { a++; sscanf(a, "%f %*[, ] %f %*[, ] %f", &ax, &ay, &az); } }
 
+		// Parse optional saved collider metadata (propMins, propMaxs, colliderOffset, yaw)
+		vec3_t savedPropMins = {0,0,0}, savedPropMaxs = {0,0,0}, savedColliderOffset = {0,0,0};
+		float savedYaw = ay;
+		const char* pmKey = "\"propMins\"";
+		const char* pM = strstr(s, pmKey);
+		if (pM) { pM = strchr(pM, '['); if (pM) { pM++; sscanf(pM, "%f %*[, ] %f %*[, ] %f", &savedPropMins[0], &savedPropMins[1], &savedPropMins[2]); } }
+		const char* pM2Key = "\"propMaxs\"";
+		const char* pM2 = strstr(s, pM2Key);
+		if (pM2) { pM2 = strchr(pM2, '['); if (pM2) { pM2++; sscanf(pM2, "%f %*[, ] %f %*[, ] %f", &savedPropMaxs[0], &savedPropMaxs[1], &savedPropMaxs[2]); } }
+		const char* coffKey = "\"colliderOffset\"";
+		const char* cOff = strstr(s, coffKey);
+		if (cOff) { cOff = strchr(cOff, '['); if (cOff) { cOff++; sscanf(cOff, "%f %*[, ] %f %*[, ] %f", &savedColliderOffset[0], &savedColliderOffset[1], &savedColliderOffset[2]); } }
+		const char* yawKey = "\"yaw\"";
+		const char* yk = strstr(s, yawKey);
+		if (yk) { yk = strchr(yk, ':'); if (yk) { float ytmp; if (sscanf(yk, ":%f", &ytmp) == 1) savedYaw = ytmp; } }
+
 		if (modelPath.empty()) continue;
 
-		// attempt to find prop extents in catalog
+		// attempt to find prop extents in catalog or use saved collider metadata
 		vec3_t mins, maxs, origin; float yaw = ay; // use yaw from angles' second component if present
-		float savedYaw = ay;
 		bool hasCatalog = NXRP_GetPropFromCatalog(modelPath.c_str(), modelPath, mins, maxs, origin, yaw);
+		bool hasSavedCollider = (savedPropMins[0] != 0.0f || savedPropMins[1] != 0.0f || savedPropMins[2] != 0.0f
+			|| savedPropMaxs[0] != 0.0f || savedPropMaxs[1] != 0.0f || savedPropMaxs[2] != 0.0f
+			|| savedColliderOffset[0] != 0.0f || savedColliderOffset[1] != 0.0f || savedColliderOffset[2] != 0.0f);
 
-		// Preserve saved origin/yaw when catalog does not provide them.
-		const float eps = 0.001f;
-		if (hasCatalog) {
-			// If catalog returned an all-zero origin, prefer the saved origin from file
-			// If catalog returned an all-zero origin, do NOT substitute the saved
-			// world origin as a colliderOffset. The colliderOffset should remain
-			// model-local. Use zero offset instead when catalog provides no local
-			// origin.
-			if (fabs(origin[0]) < eps && fabs(origin[1]) < eps && fabs(origin[2]) < eps) {
-				origin[0] = 0.0f; origin[1] = 0.0f; origin[2] = 0.0f;
+		// If saved spawn contains explicit collider metadata, prefer that over catalog
+		if (hasSavedCollider) {
+			VectorCopy(savedPropMins, mins);
+			VectorCopy(savedPropMaxs, maxs);
+			VectorCopy(savedColliderOffset, origin);
+			yaw = savedYaw;
+		} else {
+			// Preserve saved origin/yaw when catalog does not provide them.
+			const float eps = 0.001f;
+			if (hasCatalog) {
+				// If catalog returned an all-zero origin, prefer the saved origin from file
+				// If catalog returned an all-zero origin, do NOT substitute the saved
+				// world origin as a colliderOffset. The colliderOffset should remain
+				// model-local. Use zero offset instead when catalog provides no local
+				// origin.
+				if (fabs(origin[0]) < eps && fabs(origin[1]) < eps && fabs(origin[2]) < eps) {
+					origin[0] = 0.0f; origin[1] = 0.0f; origin[2] = 0.0f;
+				}
+				// If catalog left yaw at zero but our saved yaw was non-zero, prefer saved yaw
+				if (fabs(yaw) < eps && fabs(savedYaw) >= eps) {
+					yaw = savedYaw;
+				}
+			} else {
+				const float eps = 0.001f;
+				if (!hasCatalog) {
+					VectorCopy(defaultMins, mins);
+					VectorCopy(defaultMaxs, maxs);
+					// No catalog: do not use saved world origin as colliderOffset. Keep
+					// colliderOffset model-local (zero) and preserve saved origin only for
+					// entity placement below.
+					origin[0] = 0.0f; origin[1] = 0.0f; origin[2] = 0.0f;
+				}
 			}
-			// If catalog left yaw at zero but our saved yaw was non-zero, prefer saved yaw
-			if (fabs(yaw) < eps && fabs(savedYaw) >= eps) {
-				yaw = savedYaw;
-			}
-		}
-
-		if (!hasCatalog) {
-			VectorCopy(defaultMins, mins);
-			VectorCopy(defaultMaxs, maxs);
-			// No catalog: do not use saved world origin as colliderOffset. Keep
-			// colliderOffset model-local (zero) and preserve saved origin only for
-			// entity placement below.
-			origin[0] = 0.0f; origin[1] = 0.0f; origin[2] = 0.0f;
 		}
 
 		// For saved-spawn loading, origin previously came from catalog or saved file
