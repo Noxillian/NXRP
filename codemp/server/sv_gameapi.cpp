@@ -3003,6 +3003,17 @@ void SV_BindGame( void ) {
 			// Untrack so the existing NXRP_FreeEntity wrapper won't duplicate the event
 			NXRP_UntrackNPC(entNum);
 		};
+		gi.NXRP_PlayerKilled					= []( int attackerClientNum, int victimClientNum, int meansOfDeath ) {
+			client_t *attacker = NULL;
+			client_t *victim = NULL;
+			if ( attackerClientNum >= 0 && attackerClientNum < sv_maxclients->integer ) {
+				attacker = &svs.clients[attackerClientNum];
+			}
+			if ( victimClientNum >= 0 && victimClientNum < sv_maxclients->integer ) {
+				victim = &svs.clients[victimClientNum];
+			}
+			NXRP_OnPlayerKilled( attacker, victim, meansOfDeath );
+		};
 		gi.ICARUS_RunScript						= ICARUS_RunScript;
 		gi.ICARUS_RegisterScript				= SV_ICARUS_RegisterScript;
 		gi.ICARUS_Init							= ICARUS_Init;

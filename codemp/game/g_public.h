@@ -862,6 +862,7 @@ typedef struct gameImport_s {
 	// NXRP notifications
 	void		(*NXRP_Use)								( int clientNum, int entNum );
 	void		(*NXRP_EntityFreed)						( int entNum, int attackerClientNum );
+	void		(*NXRP_PlayerKilled)					( int attackerClientNum, int victimClientNum, int meansOfDeath );
 
 	// navigation
 	void		(*Nav_Init)								( void );

@@ -107,6 +107,8 @@ bool NXRP_ParseSkillsJson(const std::string &content, std::vector<NXRP_SimpleSki
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );
 void NXRP_OnPlayerSpawned( client_t *cl );
+// Forward declaration for player-killed events delivered from the game VM via trap
+void NXRP_OnPlayerKilled(client_t *attacker, client_t *victim, int meansOfDeath);
 // Additional NXRP event hooks
 void NXRP_OnPlayerConnect(int clientNum, qboolean firstTime, qboolean isBot);
 void NXRP_OnPlayerUserinfoChanged(int clientNum);
