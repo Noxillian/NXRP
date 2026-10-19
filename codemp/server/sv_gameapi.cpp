@@ -33,6 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/timing.h"
 #include "NPCNav/navigator.h"
 #include "killstreak.h"
+#include "sys/sys_loadlib.h"
 
 botlib_export_t	*botlib_export;
 
@@ -1913,19 +1914,7 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 	case TRAP_ASIN:
 		return FloatAsInt( Q_asin( VMF(1) ) );
 
-	// Custom NXRP trap: game -> server notification that a player used an entity.
-	// Trap args: args[1] = clientNum, args[2] = entNum
-case TRAP_USER + 200: // choose a high offset to avoid collisions; ensure client-side matches
-	{
-		int clientNum = args[1];
-		int entNum = args[2];
-		if (clientNum >= 0 && clientNum < sv_maxclients->integer) {
-			client_t *cl = &svs.clients[clientNum];
-			NXRP_OnNPCUsed(cl, entNum);
-		}
-		return 0;
-	}
-
+// (Removed legacy TRAP_USER-based NXRP trap; native VM path used instead.)
 	case G_PRINT:
 		Com_Printf( "%s", VMA(1) );
 		return 0;
@@ -3010,16 +2999,11 @@ void SV_BindGame( void ) {
 				attacker = &svs.clients[attackerClientNum];
 			}
 
-			const char *name = NULL;
-			void *dll = GVM_GetDllHandle();
-			if ( dll ) {
-				const char *(*GetTrackedNPCName)( int ) = (const char *(*)( int ))Sys_LoadFunction( dll, "NXRP_GetTrackedNPCName" );
-				if ( GetTrackedNPCName ) {
-					name = GetTrackedNPCName( entNum );
-				}
-			}
-
-			NXRP_OnNPCKilled( attacker, name );
+			// Resolve tracked NPC name directly and notify NXRP
+			const char *name = NXRP_GetTrackedNPCName(entNum);
+			NXRP_OnNPCKilled(attacker, name);
+			// Untrack so the existing NXRP_FreeEntity wrapper won't duplicate the event
+			NXRP_UntrackNPC(entNum);
 		};
 		gi.ICARUS_RunScript						= ICARUS_RunScript;
 		gi.ICARUS_RegisterScript				= SV_ICARUS_RegisterScript;
