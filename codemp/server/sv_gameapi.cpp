@@ -2989,16 +2989,9 @@ void SV_BindGame( void ) {
 		gi.ROFF_Play							= SV_ROFF_Play;
 		gi.ROFF_Purge_Ent						= SV_ROFF_Purge_Ent;
 		gi.NXRP_EntityFreed						= []( int entNum, int attackerClientNum ) {
-			client_t *attacker = NULL;
-			if ( attackerClientNum >= 0 && attackerClientNum < sv_maxclients->integer ) {
-				attacker = &svs.clients[attackerClientNum];
-			}
-
-			// Resolve tracked NPC name directly and notify NXRP
-			const char *name = NXRP_GetTrackedNPCName(entNum);
-			NXRP_OnNPCKilled(attacker, name);
-			// Untrack so the existing NXRP_FreeEntity wrapper won't duplicate the event
-			NXRP_UntrackNPC(entNum);
+			// NPC death/event tracking disabled.
+			(void)entNum;
+			(void)attackerClientNum;
 		};
 		gi.NXRP_PlayerKilled					= []( int attackerClientNum, int victimClientNum, int meansOfDeath ) {
 			client_t *attacker = NULL;
@@ -3010,16 +3003,6 @@ void SV_BindGame( void ) {
 			if ( victimClientNum >= 0 && victimClientNum < sv_maxclients->integer ) {
 				NXRP_OnPlayerKilled( attacker, &svs.clients[victimClientNum], meansOfDeath );
 				return;
-			}
-
-			// NPC victim (entity index)
-			if ( victimClientNum >= 0 && victimClientNum < sv.num_entities ) {
-				sharedEntity_t *victimEnt = SV_GentityNum( victimClientNum );
-				if ( victimEnt && victimEnt->s.eType == ET_NPC ) {
-					const char *name = NXRP_GetTrackedNPCName( victimClientNum );
-					NXRP_OnNPCKilled( attacker, name );
-					return;
-				}
 			}
 
 			// Fallback for unknown/non-client victims

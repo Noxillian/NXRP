@@ -92,32 +92,27 @@ void NXRP_HandlePendingNPCSpawn(int entnum) {
 }
 
 void NXRP_TrackNPC(int entnum, const char* name) {
-	if (entnum < 0) return;
-	if (!name) return;
-	nxrp_tracked_npcs[entnum] = std::string(name);
+	// NPC tracking disabled.
+	(void)entnum;
+	(void)name;
 }
 
 void NXRP_UntrackNPC(int entnum) {
-	nxrp_tracked_npcs.erase(entnum);
+	// NPC tracking disabled.
+	(void)entnum;
 }
 
 const char* NXRP_GetTrackedNPCName(int entnum) {
-	auto it = nxrp_tracked_npcs.find(entnum);
-	if (it == nxrp_tracked_npcs.end()) return NULL;
-	return it->second.c_str();
+	// NPC tracking disabled.
+	(void)entnum;
+	return NULL;
 }
 
 // Wrapper for freeing entities: if the entity being freed is a tracked NPC,
 // call NXRP_OnNPCKilled before forwarding to the real G_FreeEntity in the VM.
 void NXRP_FreeEntity(void* entPtr) {
 	if (!entPtr) return;
-	sharedEntity_t* e = (sharedEntity_t*)entPtr;
-	int entnum = e->s.number;
-	auto it = nxrp_tracked_npcs.find(entnum);
-	if (it != nxrp_tracked_npcs.end()) {
-		NXRP_OnNPCKilled(NULL, it->second.c_str());
-		nxrp_tracked_npcs.erase(it);
-	}
+	// NPC kill tracking on free disabled.
 
 	// Forward to the real VM G_FreeEntity function
 	void* dll = GVM_GetDllHandle();
