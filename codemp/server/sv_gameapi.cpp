@@ -2910,10 +2910,7 @@ void SV_InitGame( qboolean restart ) {
 	// Same reason: G_InitGame recomputes MBII's respawn-mode flag every round.
 	SV_SocialGameInit();
 
-	// Ensure NXRP FFA helpers are reinitialized alongside social mode so
-	// respawn-anytime stays active across G_InitGame (map load / restart).
-	NXRP_FFA_Init();
-	NXRP_FFA_Frame();
+	// NXRP FFA disabled per user request; initialization/frame calls removed.
 
 	// Ensure runtime skills.json exists under fs_homepath/nxrp
 	NXRP_EnsureRuntimeSkills();

@@ -33,7 +33,7 @@ void SV_NXRP_ScoreInit(void) {
 	}
 	NXRP_FFA_Frame();
 }
-
+// FFA frame call removed per user request: callers should still build.
 // Called when a player uses (presses use) on an entity. entnum is the gentity index.
 void NXRP_OnNPCUsed( client_t *user, int entnum ) {
 	if (!user) return;
