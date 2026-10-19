@@ -2988,11 +2988,7 @@ void SV_BindGame( void ) {
 		gi.ROFF_Cache							= SV_ROFF_Cache;
 		gi.ROFF_Play							= SV_ROFF_Play;
 		gi.ROFF_Purge_Ent						= SV_ROFF_Purge_Ent;
-		gi.NXRP_EntityFreed						= []( int entNum, int attackerClientNum ) {
-			// NPC death/event tracking disabled.
-			(void)entNum;
-			(void)attackerClientNum;
-		};
+		gi.NXRP_EntityFreed						= NULL;
 		gi.NXRP_PlayerKilled					= []( int attackerClientNum, int victimClientNum, int meansOfDeath ) {
 			client_t *attacker = NULL;
 			if ( attackerClientNum >= 0 && attackerClientNum < sv_maxclients->integer ) {
@@ -3003,6 +2999,18 @@ void SV_BindGame( void ) {
 			if ( victimClientNum >= 0 && victimClientNum < sv_maxclients->integer ) {
 				NXRP_OnPlayerKilled( attacker, &svs.clients[victimClientNum], meansOfDeath );
 				return;
+			}
+
+			// NPC victim (entity index) - resolve name directly from the victim entity.
+			if ( victimClientNum >= 0 && victimClientNum < sv.num_entities ) {
+				sharedEntity_t *victimEnt = SV_GentityNum( victimClientNum );
+				if ( victimEnt && victimEnt->s.eType == ET_NPC ) {
+					const char *npcName = NULL;
+					if ( victimEnt->targetname && victimEnt->targetname[0] ) npcName = victimEnt->targetname;
+					else if ( victimEnt->NPC_type && victimEnt->NPC_type[0] ) npcName = victimEnt->NPC_type;
+					NXRP_OnNPCKilled( attacker, npcName );
+					return;
+				}
 			}
 
 			// Fallback for unknown/non-client victims

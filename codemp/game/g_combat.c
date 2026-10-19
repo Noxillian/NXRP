@@ -5482,16 +5482,6 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		}
 
 		if ( targ->health <= 0 ) {
-			// If this is an NPC death, attempt to notify the server-side NXRP hooks
-			if ( targ->s.eType == ET_NPC ) {
-				int attackerClientNum = -1;
-				if ( attacker && attacker->client ) {
-					attackerClientNum = attacker->s.number;
-				}
-				if ( trap && trap->NXRP_EntityFreed ) {
-					trap->NXRP_EntityFreed( targ->s.number, attackerClientNum );
-				}
-			}
 			if ( client )
 			{
 				targ->flags |= FL_NO_KNOCKBACK;

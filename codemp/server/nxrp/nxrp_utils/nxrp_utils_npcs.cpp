@@ -11,12 +11,9 @@
 #include <cctype>
 #include <sstream>
 #include <cstdio>
-#include <map>
 #include <string>
 #include <deque>
 
-// Simple tracking map for NPC entnums -> name
-static std::map<int, std::string> nxrp_tracked_npcs;
 // Pending NPC names queued until NXRP_RegisterSpawn associates them with entnums
 static std::deque<std::string> nxrp_pending_npc_names;
 
@@ -92,18 +89,15 @@ void NXRP_HandlePendingNPCSpawn(int entnum) {
 }
 
 void NXRP_TrackNPC(int entnum, const char* name) {
-	// NPC tracking disabled.
 	(void)entnum;
 	(void)name;
 }
 
 void NXRP_UntrackNPC(int entnum) {
-	// NPC tracking disabled.
 	(void)entnum;
 }
 
 const char* NXRP_GetTrackedNPCName(int entnum) {
-	// NPC tracking disabled.
 	(void)entnum;
 	return NULL;
 }
@@ -112,7 +106,6 @@ const char* NXRP_GetTrackedNPCName(int entnum) {
 // call NXRP_OnNPCKilled before forwarding to the real G_FreeEntity in the VM.
 void NXRP_FreeEntity(void* entPtr) {
 	if (!entPtr) return;
-	// NPC kill tracking on free disabled.
 
 	// Forward to the real VM G_FreeEntity function
 	void* dll = GVM_GetDllHandle();
