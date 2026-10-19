@@ -29,7 +29,6 @@ int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMa
 // Track last NXRP-spawned entity and allow adjustments
 void NXRP_RegisterSpawn(int entnum);
 int NXRP_GetLastSpawn();
-qboolean NXRP_MoveLastSpawnByVec(client_t* cl, float dx, float dy, float dz);
 // Spawn a prop (model) near a client using provided model bounds. This calls
 // NXRP_PlaceModel using the client's origin as the floor reference.
 int NXRP_SpawnPropAtClient(client_t* cl, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, float yaw);
@@ -45,6 +44,17 @@ void NXRP_ListSavedSpawns(client_t* cl);
 bool NXRP_RemoveSavedSpawnByIndex(int index);
 // Load and spawn all saved entries for the current map. Returns number spawned.
 int NXRP_LoadSavedSpawnsForMap(client_t* cl);
+
+// Utility helpers extracted from admin commands
+// Spawn prop helper: handles catalog lookup, placement and persistence.
+bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor);
+
+// Move a saved spawn (by index) by a cardinal direction and amount.
+// args: "<dir> <amount>"
+bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args);
+
+// Move the last spawned model to absolute coordinates parsed from chatCursor: "<x> <y> <z>"
+bool NXRP_MoveLastSpawnTo(client_t* cl, const char* chatCursor);
 
 // Look up a prop definition by name from a per-module catalog file and return
 // model path, extents (mins/maxs), origin and yaw angle when found.
