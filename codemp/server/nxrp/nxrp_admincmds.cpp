@@ -25,52 +25,6 @@ qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: spawn prop with explicit collider extents
-// Usage: !prop t <model_path> <sx> <sy> <sz> [angle]
-qboolean NXRP_cmdAdmin_prop_t( client_t *cl, const char *chatCursor ) {
-	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-	if (!NXRP_IsClientAdmin(cl)) return qtrue;
-	if (!chatCursor || !*chatCursor) { NXRP_PrintConsoleToPlayer(cl, "Usage: !prop t <model_path> <sx> <sy> <sz> [angle]"); return qtrue; }
-
-	// Skip leading spaces
-	const char* p = chatCursor;
-	while (*p == ' ' || *p == '\t') p++;
-
-	// If the first token is "model" or "pmodel", skip it
-	char firstTok[MAX_TOKEN_CHARS] = {0};
-	if (sscanf(p, "%31s", firstTok) == 1) {
-		if (!Q_stricmp(firstTok, "model") || !Q_stricmp(firstTok, "pmodel")) {
-			const char* q = p;
-			while (*q && *q != ' ' && *q != '\t') q++;
-			while (*q == ' ' || *q == '\t') q++;
-			p = q;
-		}
-	}
-
-	char path[512] = {0};
-	float sx=0, sy=0, sz=0, angle=0.0f;
-	int cnt = sscanf(p, "%511s %f %f %f %f", path, &sx, &sy, &sz, &angle);
-	if (cnt < 4) { NXRP_PrintConsoleToPlayer(cl, "Usage: !prop t <model_path> <sx> <sy> <sz> [angle]"); return qtrue; }
-
-	// Normalize angle
-	while (angle < 0.0f) angle += 360.0f;
-	while (angle >= 360.0f) angle -= 360.0f;
-
-	vec3_t mins = { -sx, -sy, -sz };
-	vec3_t maxs = { sx, sy, sz };
-	vec3_t floor = { 0.0f, 0.0f, 0.0f };
-	if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
-
-	int ent = NXRP_SpawnPropAtClientWithExtents(cl, path, mins, maxs, angle);
-	if (ent >= 0) {
-		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s with extents as entity %d", path, ent));
-		NXRP_RegisterSpawn(ent);
-		NXRP_SaveSpawnToMap(ent, path);
-	} else {
-		NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model with extents.");
-	}
-	return qtrue;
-}
 
 // Admin-only: spawn and optionally persist an NPC, or load saved NPCs
 qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
@@ -594,7 +548,6 @@ qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// NXRP_cmdAdmin_strip removed
 
 // Admin-only: handle !spawn <npc_type>
 qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor ) {
@@ -888,26 +841,6 @@ qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {
 
 	if ( arg[0] == '\0' ) {
 		NXRP_PrintConsoleToPlayer(cl, "Usage: !vehicle <vehicle_name>");
-		return qtrue;
-	}
-
-	// Validate vehicle exists via game VM's VehicleTable/GetIDForString before spawning
-	void* dll = GVM_GetDllHandle();
-	if (!dll) {
-		NXRP_PrintConsoleToPlayer(cl, "Cannot validate vehicle: game VM not available");
-		return qtrue;
-	}
-
-	int (*GetIDForString_f)(void*, const char*) = (int (*)(void*, const char*))Sys_LoadFunction(dll, "GetIDForString");
-	void* vehicleTable = Sys_LoadFunction(dll, "VehicleTable");
-	if (!GetIDForString_f || !vehicleTable) {
-		NXRP_PrintConsoleToPlayer(cl, "Cannot validate vehicle: lookup functions unavailable");
-		return qtrue;
-	}
-
-	int vid = GetIDForString_f(vehicleTable, arg);
-	if (vid < 0) {
-		NXRP_PrintConsoleToPlayer(cl, va("Unknown vehicle '%s'", arg));
 		return qtrue;
 	}
 

@@ -266,7 +266,8 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 				// skip token
 				while (*p && *p != ' ' && *p != '\t') ++p;
 				while (*p == ' ' || *p == '\t') ++p;
-				return NXRP_cmdAdmin_prop_t(cl, p);
+				// removed prop-t shorthand
+				return qtrue;
 			}
 			if (!Q_stricmp(firstTok, "test2")) {
 				// test2 command removed
@@ -276,30 +277,20 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 		break;
 	}
 
-
 	case NXRP_SUB_BOSS:
 		return NXRP_cmdAdmin_boss(cl, dispatchCursor);
-
 	case NXRP_SUB_LIST:
 		return NXRP_cmdAdmin_list(cl, dispatchCursor);
-
-
 	case NXRP_SUB_VEHICLE:
 		return NXRP_cmdAdmin_vehicle(cl, dispatchCursor);
-
 	case NXRP_SUB_POS:
 		return NXRP_cmd_pos(cl, dispatchCursor);
-
 	case NXRP_SUB_SKILLS:
 		return NXRP_cmd_skills(cl, dispatchCursor);
-
 	case NXRP_SUB_SKILL:
 		return NXRP_cmd_skill(cl, dispatchCursor);
-
 	case NXRP_SUB_INFO:
 		return NXRP_cmd_info( cl, dispatchCursor );
-
-
 	case NXRP_SUB_ACCOUNT:
 		return NXRP_cmd_account( cl, dispatchCursor );
 	case NXRP_SUB_GIVEALL:
@@ -310,7 +301,6 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 		return NXRP_cmd_register( cl, dispatchCursor );
 	case NXRP_SUB_LOGIN:
 		return NXRP_cmd_login( cl, dispatchCursor );
-
 	default:
 		break;
 	}

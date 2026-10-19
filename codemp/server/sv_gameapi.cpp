@@ -1913,7 +1913,6 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 	case TRAP_ASIN:
 		return FloatAsInt( Q_asin( VMF(1) ) );
 
-// (Removed legacy TRAP_USER-based NXRP trap; native VM path used instead.)
 	case G_PRINT:
 		Com_Printf( "%s", VMA(1) );
 		return 0;

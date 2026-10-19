@@ -22,48 +22,26 @@ qboolean NXRP_HandleChat( client_t *cl, const char *commandName, const char *cha
 }
 #endif
 
-// additional handlers declared in nxrp_cmds.cpp - renamed to NXRP_ prefix
 qboolean NXRP_cmd_register( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_account( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor );
-// Non-admin: report player position
 qboolean NXRP_cmd_pos( client_t *cl, const char *chatCursor );
-// NXRP_cmdAdmin_mspawn handled via prop_s wrapper
-// New prop-style spawn command (wrapper for backward compatibility)
 qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor );
-// Admin-only: spawn a prop with explicit collider size: !prop t <model_path> <sx> <sy> <sz> [angle]
-qboolean NXRP_cmdAdmin_prop_t( client_t *cl, const char *chatCursor );
-// Remove a saved prop spawn by index
 qboolean NXRP_cmdAdmin_prop_r( client_t *cl, const char *chatCursor );
-// Move last spawned prop: !prop m <x> <y> <z>
 qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor );
-// Load saved prop spawns for the current map
 qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor );
-// List saved prop spawns for the current map (admin)
 qboolean NXRP_cmdAdmin_prop_list( client_t *cl, const char *chatCursor );
-// Move a specific saved prop entry by a cardinal direction and amount
 qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args );
-// Expose new directional move through chat parser (internal)
 qboolean NXRP_cmdAdmin_prop_dir_chat( client_t *cl, const char *chatCursor );
-// NXRP_cmdAdmin_mremove removed
-// Admin-only: spawn an NPC or misc model test
 qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor );
-// Admin-only: spawn and persist NPC definitions per-map (commands: !npc <type>, !npc load)
 qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor );
-// Admin-only: teleport player upward
 qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor );
-// Admin-only test commands removed (NXRP_cmdAdmin_test, NXRP_cmdAdmin_test2)
-// Admin-only: spawn a vehicle
 qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor );
-// Admin-only: toggle FFA respawn mode (on/off/toggle)
 qboolean NXRP_cmdAdmin_ffa( client_t *cl, const char *chatCursor );
-// NXRP_cmdAdmin_strip removed
-// Admin-only: list entities or other map info (usage: !list e)
 qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor );
-// NXRP-specific listing of saved map spawns
 void NXRP_ListSavedSpawnsForPlayer(client_t* cl);
 
 qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor );

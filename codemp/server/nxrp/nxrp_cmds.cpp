@@ -18,10 +18,6 @@
 #include <algorithm>
 #include "qcommon/md5.h"
 
-// hex helpers moved to nxrp_utils.cpp
-
-// removed obsolete test/addlevel commands
-
 // Minimal skills listing handler
 qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
