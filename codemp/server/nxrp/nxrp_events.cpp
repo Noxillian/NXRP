@@ -208,6 +208,9 @@ void NXRP_OnPlayerKilled(client_t *attacker, client_t *victim, int meansOfDeath)
 	const char *aName = attacker ? (attacker->nxrp_username[0] ? attacker->nxrp_username : attacker->name) : "World";
 	const char *vName = victim ? (victim->nxrp_username[0] ? victim->nxrp_username : victim->name) : "Unknown";
 	NXRP_PrintConsoleToPlayer(NULL, va("Kill: %s killed %s (mod %d)", aName, vName, meansOfDeath));
+	// Broadcast a concise chat notification when the game reports a kill so
+	// players see the same event without parsing server logs.
+	SV_SendServerCommand(NULL, va("chat \"%s killed %s\"", aName, vName));
 }
 
 void NXRP_OnScoreChanged(client_t *cl, int oldScore, int newScore) {

@@ -3002,14 +3002,28 @@ void SV_BindGame( void ) {
 		};
 		gi.NXRP_PlayerKilled					= []( int attackerClientNum, int victimClientNum, int meansOfDeath ) {
 			client_t *attacker = NULL;
-			client_t *victim = NULL;
 			if ( attackerClientNum >= 0 && attackerClientNum < sv_maxclients->integer ) {
 				attacker = &svs.clients[attackerClientNum];
 			}
+
+			// Player victim (client slot)
 			if ( victimClientNum >= 0 && victimClientNum < sv_maxclients->integer ) {
-				victim = &svs.clients[victimClientNum];
+				NXRP_OnPlayerKilled( attacker, &svs.clients[victimClientNum], meansOfDeath );
+				return;
 			}
-			NXRP_OnPlayerKilled( attacker, victim, meansOfDeath );
+
+			// NPC victim (entity index)
+			if ( victimClientNum >= 0 && victimClientNum < sv.num_entities ) {
+				sharedEntity_t *victimEnt = SV_GentityNum( victimClientNum );
+				if ( victimEnt && victimEnt->s.eType == ET_NPC ) {
+					const char *name = NXRP_GetTrackedNPCName( victimClientNum );
+					NXRP_OnNPCKilled( attacker, name );
+					return;
+				}
+			}
+
+			// Fallback for unknown/non-client victims
+			NXRP_OnPlayerKilled( attacker, NULL, meansOfDeath );
 		};
 		gi.ICARUS_RunScript						= ICARUS_RunScript;
 		gi.ICARUS_RegisterScript				= SV_ICARUS_RegisterScript;
