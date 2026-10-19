@@ -1802,6 +1802,8 @@ void TryUse( gentity_t *ent )
 			NPC_SetAnim( ent, SETANIM_LEGS, BOTH_FORCEPUSH, SETANIM_FLAG_NORMAL|SETANIM_FLAG_HOLD );
 		}
 		*/
+		// TODO: Placeholder call site for future trap notification when a client uses an entity.
+		// Keep existing behavior unchanged until VM-side trap binding is added.
 		if ( target->touch == Touch_Button )
 		{//pretend we touched it
 			target->touch(target, ent, NULL);

@@ -3,7 +3,7 @@
  */
 
 #include "server/nxrp/nxrp_main.h"
-#include "server/nxrp/nxrp_utils.h"
+#include "server/nxrp/nxrp_utils/nxrp_utils.h"
 
 #include <cstring>
 #include <cstdlib>
@@ -17,15 +17,6 @@
 #endif
 #include <algorithm>
 #include "qcommon/md5.h"
-
-// hex helpers moved to nxrp_utils.cpp
-
-// Test command: !test - list detailed skills from repo skills.json
-qboolean NXRP_cmd_test( client_t *cl, const char *chatCursor ) {
-	(void)chatCursor;
-	NXRP_Skills_TestImpl(cl);
-	return qtrue;
-}
 
 // Minimal skills listing handler
 qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
@@ -86,11 +77,21 @@ qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor ) {
 		// Trim leading spaces
 		while (*s == ' ' || *s == '\t') ++s;
 		if (!Q_stricmp(s, "cmds") || !Q_stricmp(s, "commands")) {
-			NXRP_PrintConsoleToPlayer(cl, "General commands:\n  !info | !nxrp | /info - show info/help\n  !register <user> <pass> - create account\n  !login <user> <pass> - login\n  !pos - show position\n  !skills - list skills");
+			NXRP_PrintConsoleToPlayer(cl, "General commands:");
+			NXRP_PrintConsoleToPlayer(cl, "  !info | !nxrp | /info - show info/help");
+			NXRP_PrintConsoleToPlayer(cl, "  !register <user> <pass> - create account");
+			NXRP_PrintConsoleToPlayer(cl, "  !login <user> <pass> - login");
+			NXRP_PrintConsoleToPlayer(cl, "  !pos - show position");
+			NXRP_PrintConsoleToPlayer(cl, "  !skills - list skills");
 			return qtrue;
 		}
 		if (!Q_stricmp(s, "acmds") || !Q_stricmp(s, "admin")) {
-			NXRP_PrintConsoleToPlayer(cl, "Admin commands:\n  !prop s/t/m - spawn/manage props\n  !npc - spawn/load NPCs\n  !tp - teleport\n  !list - list entities\n  (admin only)");
+			NXRP_PrintConsoleToPlayer(cl, "Admin commands:");
+			NXRP_PrintConsoleToPlayer(cl, "  !prop s/t/m - spawn/manage props");
+			NXRP_PrintConsoleToPlayer(cl, "  !npc - spawn/load NPCs");
+			NXRP_PrintConsoleToPlayer(cl, "  !tp - teleport");
+			NXRP_PrintConsoleToPlayer(cl, "  !list - list entities");
+			NXRP_PrintConsoleToPlayer(cl, "  (admin only)");
 			return qtrue;
 		}
 	}
@@ -277,20 +278,12 @@ qboolean NXRP_cmd_account( client_t *cl, const char *chatCursor ) {
 	std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
 	ifs.close();
 
-	auto extract_number = [&](const std::string &key)->std::string {
-		size_t k = content.find(key);
-		if (k == std::string::npos) return std::string();
-		size_t colon = content.find(':', k + key.size()); if (colon == std::string::npos) return std::string();
-		size_t start = content.find_first_not_of(" \t", colon+1); if (start == std::string::npos) return std::string();
-		size_t end = content.find_first_of(",\n\r}", start);
-		if (end == std::string::npos) end = content.size();
-		return content.substr(start, end-start);
-	};
-
-	std::string level = extract_number("\"level\"");
-	std::string exp = extract_number("\"exp\"");
-	std::string credits = extract_number("\"credits\"");
-	std::string skillpoints = extract_number("\"skillpoints\"");
+	std::string level, exp, credits, skillpoints;
+	std::string tmp;
+	if (!NXRP_GetAccountFieldFromFile(filepath.c_str(), "level", tmp)) level = "0"; else level = tmp;
+	if (!NXRP_GetAccountFieldFromFile(filepath.c_str(), "exp", tmp)) exp = "0"; else exp = tmp;
+	if (!NXRP_GetAccountFieldFromFile(filepath.c_str(), "credits", tmp)) credits = "0"; else credits = tmp;
+	if (!NXRP_GetAccountFieldFromFile(filepath.c_str(), "skillpoints", tmp)) skillpoints = "0"; else skillpoints = tmp;
 
 	NXRP_PrintConsoleToPlayerFmt(cl, "Account info for %s:", username);
 	NXRP_PrintConsoleToPlayerFmt(cl, "  Username: %s", username);

@@ -2,7 +2,7 @@
 
 #include <string>
 #include <vector>
-#include "../server.h"
+#include "../../server.h"
 #include <cstdarg>
 #include <cstdio>
 
@@ -21,7 +21,10 @@ int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath);
 
 // Place a model at a given floor position with explicit prop bounds and yaw.
 // Returns the new entity number, or -1 on failure.
-int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMaxs, float yaw, const vec3_t floor);
+// Place a model at a given floor position with explicit prop bounds and yaw.
+// The colliderOffset parameter shifts the collision box relative to the entity origin
+// without moving the entity itself.
+int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMaxs, float yaw, const vec3_t colliderOffset, const vec3_t floor);
 
 // Track last NXRP-spawned entity and allow adjustments
 void NXRP_RegisterSpawn(int entnum);
@@ -67,6 +70,19 @@ void NXRP_PushPendingNPCName(const char* name);
 // NPC persistence helpers: save/load NPCs per-map
 void NXRP_SaveNPCToMap(int entnum, const char* npcType);
 int NXRP_LoadSavedNPCsForMap(client_t* cl);
+// Send a player a list of saved NPCs for the current map.
+void NXRP_ListSavedNPCs(client_t* cl);
+// Remove a saved NPC entry by its zero-based index. Returns true on success.
+bool NXRP_RemoveSavedNPCByIndex(int index);
+// Called by NXRP_RegisterSpawn to allow NPC module to associate a pending name
+// with the newly-registered entity number.
+void NXRP_HandlePendingNPCSpawn(int entnum);
+// Called when a player uses (presses use) on an entity; checks for tracked NPC interactions.
+void NXRP_OnNPCUsed(client_t* user, int entnum);
+
+// Return the tracked NPC name for an entity number, or NULL if not tracked.
+// The returned pointer is owned by NXRP and valid until the NPC is untracked.
+const char* NXRP_GetTrackedNPCName(int entnum);
 
 // Print a standardized NXRP console message to a specific player. If cl is
 // NULL the message will be broadcast to all clients by passing NULL to
@@ -78,10 +94,31 @@ inline void NXRP_PrintConsoleToPlayerFmt(client_t* cl, const char* fmt, ...) {
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 
-	if (cl)
-		SV_SendServerCommand(cl, "print \"^0[^6N^7X^0]^8 %s\n\"", buf);
-	else
-		SV_SendServerCommand(NULL, "print \"^0[^6N^7X^0]^8 %s\n\"", buf);
+	// Split the formatted buffer on literal newlines and send one server command per line
+	std::string s = buf;
+	size_t start = 0;
+	while (start < s.size()) {
+		size_t pos = s.find('\n', start);
+		std::string line;
+		if (pos == std::string::npos) {
+			line = s.substr(start);
+			start = s.size();
+		} else {
+			line = s.substr(start, pos - start);
+			start = pos + 1;
+		}
+			// Escape backslashes and double-quotes so the server command string remains syntactically valid
+			std::string esc;
+			esc.reserve(line.size()*2);
+			for (char c : line) {
+				if (c == '\\' || c == '"') { esc.push_back('\\'); esc.push_back(c); }
+				else esc.push_back(c);
+			}
+			if (cl)
+				SV_SendServerCommand(cl, "print \"^0[^6N^7X^0]^8 %s\n\"", esc.c_str());
+			else
+				SV_SendServerCommand(NULL, "print \"^0[^6N^7X^0]^8 %s\n\"", esc.c_str());
+	}
 }
 
 inline void NXRP_PrintConsoleToPlayer(client_t* cl, const char* text) {

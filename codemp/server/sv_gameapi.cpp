@@ -23,6 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "server.h"
 #include "server/nxrp/nxrp_main.h"
+#include "server/nxrp/nxrp_utils/nxrp_utils.h"
 #include "botlib/botlib.h"
 #include "qcommon/stringed_ingame.h"
 #include "qcommon/RoffSystem.h"
@@ -2990,6 +2991,18 @@ void SV_BindGame( void ) {
 		gi.ROFF_Cache							= SV_ROFF_Cache;
 		gi.ROFF_Play							= SV_ROFF_Play;
 		gi.ROFF_Purge_Ent						= SV_ROFF_Purge_Ent;
+		gi.NXRP_EntityFreed						= []( int entNum, int attackerClientNum ) {
+			client_t *attacker = NULL;
+			if ( attackerClientNum >= 0 && attackerClientNum < sv_maxclients->integer ) {
+				attacker = &svs.clients[attackerClientNum];
+			}
+
+			// Resolve tracked NPC name directly and notify NXRP
+			const char *name = NXRP_GetTrackedNPCName(entNum);
+			NXRP_OnNPCKilled(attacker, name);
+			// Untrack so the existing NXRP_FreeEntity wrapper won't duplicate the event
+			NXRP_UntrackNPC(entNum);
+		};
 		gi.ICARUS_RunScript						= ICARUS_RunScript;
 		gi.ICARUS_RegisterScript				= SV_ICARUS_RegisterScript;
 		gi.ICARUS_Init							= ICARUS_Init;

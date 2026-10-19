@@ -1,5 +1,5 @@
 #include "server/nxrp/nxrp_main.h"
-#include "server/nxrp/nxrp_utils.h"
+#include "server/nxrp/nxrp_utils/nxrp_utils.h"
 #include "server/sv_gameapi.h"
 #include "sys/sys_loadlib.h"
 #include "game/bg_mb2.h"
@@ -25,52 +25,6 @@ qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: spawn prop with explicit collider extents
-// Usage: !prop t <model_path> <sx> <sy> <sz> [angle]
-qboolean NXRP_cmdAdmin_prop_t( client_t *cl, const char *chatCursor ) {
-	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-	if (!NXRP_IsClientAdmin(cl)) return qtrue;
-	if (!chatCursor || !*chatCursor) { NXRP_PrintConsoleToPlayer(cl, "Usage: !prop t <model_path> <sx> <sy> <sz> [angle]"); return qtrue; }
-
-	// Skip leading spaces
-	const char* p = chatCursor;
-	while (*p == ' ' || *p == '\t') p++;
-
-	// If the first token is "model" or "pmodel", skip it
-	char firstTok[MAX_TOKEN_CHARS] = {0};
-	if (sscanf(p, "%31s", firstTok) == 1) {
-		if (!Q_stricmp(firstTok, "model") || !Q_stricmp(firstTok, "pmodel")) {
-			const char* q = p;
-			while (*q && *q != ' ' && *q != '\t') q++;
-			while (*q == ' ' || *q == '\t') q++;
-			p = q;
-		}
-	}
-
-	char path[512] = {0};
-	float sx=0, sy=0, sz=0, angle=0.0f;
-	int cnt = sscanf(p, "%511s %f %f %f %f", path, &sx, &sy, &sz, &angle);
-	if (cnt < 4) { NXRP_PrintConsoleToPlayer(cl, "Usage: !prop t <model_path> <sx> <sy> <sz> [angle]"); return qtrue; }
-
-	// Normalize angle
-	while (angle < 0.0f) angle += 360.0f;
-	while (angle >= 360.0f) angle -= 360.0f;
-
-	vec3_t mins = { -sx, -sy, -sz };
-	vec3_t maxs = { sx, sy, sz };
-	vec3_t floor = { 0.0f, 0.0f, 0.0f };
-	if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
-
-	int ent = NXRP_SpawnPropAtClientWithExtents(cl, path, mins, maxs, angle);
-	if (ent >= 0) {
-		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s with extents as entity %d", path, ent));
-		NXRP_RegisterSpawn(ent);
-		NXRP_SaveSpawnToMap(ent, path);
-	} else {
-		NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model with extents.");
-	}
-	return qtrue;
-}
 
 // Admin-only: spawn and optionally persist an NPC, or load saved NPCs
 qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
@@ -78,39 +32,87 @@ qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
 	if (!chatCursor || !*chatCursor) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !npc <type>|load");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !npc s <type> | !npc load | !npc list | !npc r <index>");
 		return qtrue;
 	}
 
-	char tok[MAX_TOKEN_CHARS] = {0};
-	if (sscanf(chatCursor, "%31s", tok) < 1) { return qtrue; }
+	// Expect a subcommand as the first token: s|load|list
+	char sub[MAX_TOKEN_CHARS] = {0};
+	const char* p = chatCursor;
+	while (*p == ' ' || *p == '\t') p++;
+	if (sscanf(p, "%31s", sub) < 1) return qtrue;
 
-	if (!Q_stricmp(tok, "load")) {
-		// Loading saved NPCs is temporarily disabled while persistence is
-		// stabilized. Restore NXRP_LoadSavedNPCsForMap when ready.
-		// int cnt = NXRP_LoadSavedNPCsForMap(cl);
-		NXRP_PrintConsoleToPlayer(cl, "Loading saved NPCs is disabled");
+	// Some callers pass the full normalized cursor starting with the
+	// primary subcommand (e.g. "npc s rebel"). If the first token is
+	// the literal "npc", skip it and read the actual subcommand.
+	if (!Q_stricmp(sub, "npc")) {
+		// advance past the "npc" token
+		while (*p && !isspace((unsigned char)*p)) p++;
+		while (*p == ' ' || *p == '\t') p++;
+		// read the next token into sub
+		memset(sub, 0, sizeof(sub));
+		if (sscanf(p, "%31s", sub) < 1) return qtrue;
+	}
+
+	if (!Q_stricmp(sub, "load")) {
+		int cnt = NXRP_LoadSavedNPCsForMap(cl);
+		NXRP_PrintConsoleToPlayerFmt(cl, "Loaded %d saved NPC(s)", cnt);
 		return qtrue;
 	}
 
-	// Otherwise treat first token as npc type and spawn it nearby
-	char cmdBuf[128];
-	Com_sprintf(cmdBuf, sizeof(cmdBuf), "npc spawn %s", tok);
-	NXRP_PrintConsoleToPlayer(cl, "^3Spawning NPC");
-	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
-
-	// Attempt to find last spawned entity and save it to map NPC file
-	// Delay a frame slightly: the spawn occurs in the game VM after the command executes.
-	// We can't synchronously get the entnum reliably here, but if the test spawn
-	// helper adds an entity immediately we attempt to persist the last registered
-	// spawn id.
-	int last = NXRP_GetLastSpawn();
-	if (last >= 0) {
-		// Temporarily disable saving spawned NPCs to the map file while
-		// we stabilize persistence/loading behavior.
-		// NXRP_SaveNPCToMap(last, tok);
-		NXRP_PrintConsoleToPlayer(cl, "Saved NPC to map file (disabled)");
+	if (!Q_stricmp(sub, "list")) {
+		NXRP_ListSavedNPCs(cl);
+		return qtrue;
 	}
+
+	// spawn subcommand: !npc s <type>
+	if (!Q_stricmp(sub, "s")) {
+		// find next token (npc type)
+		const char* q2 = p;
+		// skip sub token
+		while (*q2 && !isspace((unsigned char)*q2)) q2++;
+		while (*q2 == ' ' || *q2 == '\t') q2++;
+		char tok[MAX_TOKEN_CHARS] = {0};
+		if (sscanf(q2, "%31s", tok) < 1) { NXRP_PrintConsoleToPlayer(cl, "Usage: !npc s <type>"); return qtrue; }
+
+		// Otherwise treat token as npc type: spawn and persist
+		char cmdBuf[128];
+		Com_sprintf(cmdBuf, sizeof(cmdBuf), "npc spawn %s", tok);
+		NXRP_PrintConsoleToPlayer(cl, "^3Spawning NPC");
+		// Push pending name so NXRP_RegisterSpawn can associate name with entnum
+		NXRP_PushPendingNPCName(tok);
+		SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
+		// Do NOT attempt to save here synchronously; NXRP_HandlePendingNPCSpawn
+		// (called from NXRP_RegisterSpawn) will persist the NPC once the VM
+		// has created and initialized the entity to ensure correct origin.
+		return qtrue;
+	}
+
+	// remove subcommand: !npc r <index>
+	if (!Q_stricmp(sub, "r")) {
+		// find next token (index)
+		const char* q2 = p;
+		// skip sub token
+		while (*q2 && !isspace((unsigned char)*q2)) q2++;
+		while (*q2 == ' ' || *q2 == '\t') q2++;
+		int idx = -1;
+		if (sscanf(q2, "%d", &idx) < 1) {
+			NXRP_PrintConsoleToPlayer(cl, "Usage: !npc r <index>");
+			return qtrue;
+		}
+		if (idx < 0) {
+			NXRP_PrintConsoleToPlayer(cl, "Invalid index");
+			return qtrue;
+		}
+		if (NXRP_RemoveSavedNPCByIndex(idx)) {
+			NXRP_PrintConsoleToPlayer(cl, va("Removed saved NPC %d", idx));
+		} else {
+			NXRP_PrintConsoleToPlayer(cl, va("Failed to remove saved NPC %d", idx));
+		}
+		return qtrue;
+	}
+
+	NXRP_PrintConsoleToPlayer(cl, "Usage: !npc s <type> | !npc load | !npc list | !npc r <index>");
 	return qtrue;
 }
 
@@ -213,7 +215,8 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
 	const char* a = strstr(s, anglesKey);
 	if (a) { a = strchr(a, '['); if (a) { a++; float ax=0, ay=0, az=0; sscanf(a, "%f %*[, ] %f %*[, ] %f", &ax, &ay, &az); yaw = ay; } }
 
-	int ent = NXRP_PlaceModel(modelPath.c_str(), mins, maxs, yaw, newFloor);
+	vec3_t zeroOffset = {0.0f, 0.0f, 0.0f};
+	int ent = NXRP_PlaceModel(modelPath.c_str(), mins, maxs, yaw, zeroOffset, newFloor);
 	if (ent >= 0) {
 		NXRP_RegisterSpawn(ent);
 		// update saved entry with new origin
@@ -397,7 +400,8 @@ qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor ) {
 	vec3_t maxs = {  24.0f,  24.0f, 24.0f };
 	float yaw = savedAy; // preserve saved yaw
 
-	int newEnt = NXRP_PlaceModel(modelPathStr.c_str(), mins, maxs, yaw, newFloor);
+	vec3_t zeroOffset2 = {0.0f, 0.0f, 0.0f};
+	int newEnt = NXRP_PlaceModel(modelPathStr.c_str(), mins, maxs, yaw, zeroOffset2, newFloor);
 	if (newEnt >= 0) {
 		NXRP_RegisterSpawn(newEnt);
 		NXRP_SaveSpawnToMap(newEnt, modelPathStr.c_str());
@@ -414,7 +418,7 @@ qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
-
+	NXRP_PrintConsoleToPlayer(cl, "Loading saved spawns...");
 	int count = NXRP_LoadSavedSpawnsForMap(cl);
 	NXRP_PrintConsoleToPlayer(cl, va("Loaded %d saved spawns for this map", count));
 	return qtrue;
@@ -544,55 +548,6 @@ qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: remove all weapons and forcepowers from the invoking player
-qboolean NXRP_cmdAdmin_strip( client_t *cl, const char *chatCursor ) {
-	(void)chatCursor;
-	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-	if (!NXRP_IsClientAdmin(cl)) return qtrue;
-
-	if (!cl || !cl->gentity || !cl->gentity->playerState) {
-		NXRP_PrintConsoleToPlayer(cl, "Strip failed: no player entity");
-		return qtrue;
-	}
-
-	playerState_t* ps = cl->gentity->playerState;
-
-	// Remove weapon flags and set to no weapon
-	ps->stats[STAT_WEAPONS] = 0;
-	ps->weapon = WP_NONE;
-	ps->weaponstate = WEAPON_READY;
-
-	// Clear force powers
-	ps->fd.forcePowersKnown = 0;
-	ps->fd.forcePowersActive = 0;
-	ps->fd.forcePower = 0;
-	ps->fd.forcePowerMax = 0;
-	// Zero all per-power levels
-	const int numPowers = (int)(sizeof(ps->fd.forcePowerLevel) / sizeof(ps->fd.forcePowerLevel[0]));
-	for (int i = 0; i < numPowers; i++) ps->fd.forcePowerLevel[i] = 0;
-
-	// Ensure the client's userinfo and server state reflect the change
-	if (cl - svs.clients >= 0) {
-		char userinfo[MAX_INFO_STRING];
-		SV_GetUserinfo(cl - svs.clients, userinfo, sizeof(userinfo));
-		// Optionally clear saber info
-		Info_SetValueForKey(userinfo, "saber1", "");
-		SV_SetUserinfo(cl - svs.clients, userinfo);
-		// Ensure server-side parsing of the new userinfo occurs so the
-		// client's server state and derived fields update before notifying
-		// the game VM (matches behavior used elsewhere such as the boss cmd).
-		SV_UserinfoChanged(cl);
-		GVM_ClientUserinfoChanged(cl - svs.clients);
-
-		// Force the client to resend its userinfo shortly so the client
-		// refreshes any local model/saber state and removes lingering
-		// weapon/forcepower visuals/scripts on the client side.
-		SV_ExecuteClientCommandDelayed_h(cl, std::string("userinfo \"") + cl->userinfo + std::string("\""), 1);
-	}
-
-	NXRP_PrintConsoleToPlayer(cl, "You have been stripped of weapons and Force powers");
-	return qtrue;
-}
 
 // Admin-only: handle !spawn <npc_type>
 qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor ) {
@@ -618,52 +573,7 @@ qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: handle !test (spawn a default model)
-qboolean NXRP_cmdAdmin_test( client_t *cl, const char *chatCursor ) {
-	// Accept optional model path: "modelpath" or "model <path>"
-	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-	if (!NXRP_IsClientAdmin(cl)) { NXRP_PrintConsoleToPlayer(cl, "Test requires admin privileges to spawn models."); return qtrue; }
 
-	// Default model
-	const char* defaultModel = "models/map_objects/nar_shaddar/table01.md3";
-	const char* model = defaultModel;
-
-	// If a model path was provided, parse it (allow leading "model" token)
-	if (chatCursor && *chatCursor) {
-		const char* p = chatCursor;
-		while (*p == ' ' || *p == '\t') p++;
-		char firstTok[MAX_TOKEN_CHARS] = {0};
-		if (sscanf(p, "%31s", firstTok) == 1) {
-			if (!Q_stricmp(firstTok, "model") || !Q_stricmp(firstTok, "pmodel")) {
-				const char* q = p;
-				while (*q && *q != ' ' && *q != '\t') q++;
-				while (*q == ' ' || *q == '\t') q++;
-				if (*q) model = q;
-			} else {
-				model = p;
-			}
-		}
-	}
-
-	// Use Holo-style placement via NXRP_PlaceModel: default prop bounds and client yaw/floor
-	vec3_t mins = { -24.0f, -24.0f, -8.0f };
-	vec3_t maxs = {  24.0f,  24.0f, 24.0f };
-	float yaw = 0.0f;
-	vec3_t floor = {0.0f, 0.0f, 0.0f};
-	if (cl && cl->gentity) {
-		yaw = cl->gentity->s.angles[YAW];
-		VectorCopy(cl->gentity->r.currentOrigin, floor);
-	}
-
-	int ent = NXRP_PlaceModel(model, mins, maxs, yaw, floor);
-	if (ent >= 0) {
-		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", model, ent));
-	NXRP_RegisterSpawn(ent);
-	} else {
-		NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model.");
-	}
-	return qtrue;
-}
 
 // Admin-only: teleport the invoking player 5 meters above current position
 qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor ) {
@@ -780,7 +690,9 @@ qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	NXRP_PrintConsoleToPlayer(cl, "Usage: !tp                (teleport self up 5m)\n       !tp <dst>          (teleport you to dst client number)\n       !tp <src> <dst>    (teleport client src to client dst)");
+	NXRP_PrintConsoleToPlayer(cl, "Usage: !tp                (teleport self up 5m)");
+	NXRP_PrintConsoleToPlayer(cl, "       !tp <dst>          (teleport you to dst client number)");
+	NXRP_PrintConsoleToPlayer(cl, "       !tp <src> <dst>    (teleport client src to client dst)");
 	return qtrue;
 }
 
@@ -832,17 +744,65 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 	std::string modelFromCatalog;
 	vec3_t mins = { -24.0f, -24.0f, -8.0f };
 	vec3_t maxs = { 24.0f, 24.0f, 24.0f };
+	// Kept as colliderOrigin for clarity; represents collider offset parsed as collideroffset.
+	vec3_t colliderOrigin = { 0.0f, 0.0f, 0.0f };
 	vec3_t floor = { 0.0f, 0.0f, 0.0f };
 	float catalogYaw = angle;
-	if (NXRP_GetPropFromCatalog(path, modelFromCatalog, mins, maxs, floor, catalogYaw)) {
-		// use catalog model and extents; override angle/pose
+	// Quick diagnostic: check whether the runtime JSON catalog exists and contains the model path
+	const char* home = Cvar_VariableString("fs_homepath");
+	std::string jsonPath;
+	if (home && home[0]) jsonPath = std::string(home) + "/nxrp_props_catalog.json";
+	else jsonPath = std::string("nxrp_props_catalog.json");
+	{
+		std::ifstream check(jsonPath);
+		if (!check.is_open()) {
+			NXRP_PrintConsoleToPlayer(cl, va("Catalog file not found at %s", jsonPath.c_str()));
+		} else {
+			std::string content((std::istreambuf_iterator<char>(check)), std::istreambuf_iterator<char>());
+			check.close();
+			if (content.find(path) == std::string::npos) {
+				NXRP_PrintConsoleToPlayer(cl, va("Catalog present but does not contain entry for %s", path));
+			} else {
+				// catalog file contains the model path but parser may still fail if formatting differs
+				NXRP_PrintConsoleToPlayer(cl, va("Catalog contains %s; attempting to parse entry", path));
+			}
+		}
+	}
+	bool hasCatalog = NXRP_GetPropFromCatalog(path, modelFromCatalog, mins, maxs, colliderOrigin, catalogYaw);
+	const float eps = 0.001f;
+	if (hasCatalog) {
+		// use catalog model and extents
 		Q_strncpyz(path, modelFromCatalog.c_str(), sizeof(path));
-		angle = catalogYaw;
+		NXRP_PrintConsoleToPlayer(cl, "found prop in list, using custom collider box");
+		// also notify the player in chat for visibility
+		if (modelFromCatalog.empty()) {
+			SV_SendServerCommand(cl, "chat \"^3[NXRP]^7 Using custom collider\"\n");
+		} else {
+			SV_SendServerCommand(cl, "chat \"^3[NXRP]^7 Using custom collider for %s\"\n", modelFromCatalog.c_str());
+		}
+		// If the user provided an explicit angle, prefer it. Otherwise use catalog yaw if non-zero.
+		if (scanned < 2) {
+			if (fabsf(catalogYaw) >= eps) angle = catalogYaw;
+		}
+		// For entity placement, always prefer the client's origin (do NOT use colliderOrigin to place the object)
+		if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
 	} else {
 		if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
+		// Inform the admin that no catalog entry was found for this model/path
+		NXRP_PrintConsoleToPlayer(cl, va("No catalog entry found for %s", path));
 	}
 
-	int ent = NXRP_PlaceModel(path, mins, maxs, angle, floor);
+	// If we have a catalog entry, treat mins/maxs as half-extents centered at colliderOrigin.
+	// Convert to prop mins/maxs relative to the entity origin by offsetting by colliderOrigin.
+	vec3_t adjMins, adjMaxs;
+	if (hasCatalog) {
+		for (int i = 0; i < 3; ++i) { adjMins[i] = mins[i] + colliderOrigin[i]; adjMaxs[i] = maxs[i] + colliderOrigin[i]; }
+	} else {
+		VectorCopy(mins, adjMins);
+		VectorCopy(maxs, adjMaxs);
+	}
+
+	int ent = NXRP_PlaceModel(path, adjMins, adjMaxs, angle, colliderOrigin, floor);
 	if (ent >= 0) {
 		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", path, ent));
 		NXRP_RegisterSpawn(ent);
@@ -851,36 +811,6 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 	} else {
 		NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model.");
 	}
-	return qtrue;
-}
-
-// Admin-only: remove the last NXRP-spawned model
-qboolean NXRP_cmdAdmin_mremove( client_t *cl, const char *chatCursor ) {
-	(void)chatCursor;
-	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-	if (!NXRP_IsClientAdmin(cl)) return qtrue;
-
-	int last = NXRP_GetLastSpawn();
-	if (last < 0) {
-		NXRP_PrintConsoleToPlayer(cl, "No last spawned model to remove");
-		return qtrue;
-	}
-	if (last < 0 || last >= sv.num_entities) {
-		NXRP_PrintConsoleToPlayer(cl, "Invalid last spawned model id");
-		return qtrue;
-	}
-
-	sharedEntity_t* e = SV_GentityNum(last);
-	if (!e) {
-		NXRP_PrintConsoleToPlayer(cl, "Last spawned entity not found");
-		return qtrue;
-	}
-
-	// Use NXRP_FreeEntity wrapper to ensure NXRP receives notifications
-	NXRP_FreeEntity((void*)e);
-
-	NXRP_RegisterSpawn(-1);
-	NXRP_PrintConsoleToPlayer(cl, va("Removed last spawned model entity %d", last));
 	return qtrue;
 }
 
@@ -895,29 +825,7 @@ qboolean NXRP_cmdAdmin_prop_list( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: handle !test2 - spawn a prop using social-style place logic
-qboolean NXRP_cmdAdmin_test2( client_t *cl, const char *chatCursor ) {
-	(void)chatCursor;
-	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-	if (!NXRP_IsClientAdmin(cl)) { NXRP_PrintConsoleToPlayer(cl, "Test requires admin privileges to spawn models."); return qtrue; }
 
-	// Example model and approximate model bounds; these could be tuned per-model.
-	const char* model = "models/map_objects/nar_shaddar/table01.md3";
-	vec3_t mins = { -24.0f, -24.0f, -8.0f };
-	vec3_t maxs = {  24.0f,  24.0f, 24.0f };
-
-	// Use the client's yaw as the spawned prop's yaw
-	float yaw = 0.0f;
-	if (cl && cl->gentity) yaw = cl->gentity->s.angles[YAW];
-
-	int ent = NXRP_SpawnPropAtClient(cl, model, mins, maxs, yaw);
-	if (ent >= 0) {
-		NXRP_PrintConsoleToPlayer(cl, va("Spawned test2 model %s as entity %d", model, ent));
-	} else {
-		NXRP_PrintConsoleToPlayer(cl, "Failed to spawn test2 model.");
-	}
-	return qtrue;
-}
 
 // Admin-only: spawn a vehicle using the game's NPC vehicle spawn helper
 qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {
@@ -933,26 +841,6 @@ qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {
 
 	if ( arg[0] == '\0' ) {
 		NXRP_PrintConsoleToPlayer(cl, "Usage: !vehicle <vehicle_name>");
-		return qtrue;
-	}
-
-	// Validate vehicle exists via game VM's VehicleTable/GetIDForString before spawning
-	void* dll = GVM_GetDllHandle();
-	if (!dll) {
-		NXRP_PrintConsoleToPlayer(cl, "Cannot validate vehicle: game VM not available");
-		return qtrue;
-	}
-
-	int (*GetIDForString_f)(void*, const char*) = (int (*)(void*, const char*))Sys_LoadFunction(dll, "GetIDForString");
-	void* vehicleTable = Sys_LoadFunction(dll, "VehicleTable");
-	if (!GetIDForString_f || !vehicleTable) {
-		NXRP_PrintConsoleToPlayer(cl, "Cannot validate vehicle: lookup functions unavailable");
-		return qtrue;
-	}
-
-	int vid = GetIDForString_f(vehicleTable, arg);
-	if (vid < 0) {
-		NXRP_PrintConsoleToPlayer(cl, va("Unknown vehicle '%s'", arg));
 		return qtrue;
 	}
 

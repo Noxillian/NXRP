@@ -1,5 +1,5 @@
 #include "server/nxrp/nxrp_main.h"
-#include "server/nxrp/nxrp_utils.h"
+#include "server/nxrp/nxrp_utils/nxrp_utils.h"
 
 #include <string>
 #include <vector>
@@ -385,6 +385,33 @@ qboolean NXRP_Skills_ListImpl( client_t *cl, const char *homepath ) {
 
 	NXRP_PrintConsoleToPlayer(cl, "----- Skills -----");
 	int idx = 1;
+
+	// Prefer the simplified repo-backed skill list when available. This allows
+	// edits to codemp/server/nxrp/nxrp_skills/skills.json to appear at
+	// runtime during development without relying on the runtime copy.
+	if (g_nxrpSimpleSkills.empty()) NXRP_LoadRepoSkills();
+	if (!g_nxrpSimpleSkills.empty()) {
+		for (int i = 0; i < (int)g_nxrpSimpleSkills.size(); ++i) {
+			const auto &s = g_nxrpSimpleSkills[i];
+			int userLevel = 0;
+			if (!accountSkills.empty()) {
+				std::string key = '"' + s.id + '"';
+				size_t kpos = accountSkills.find(key);
+				if (kpos != std::string::npos) {
+					size_t lpos = accountSkills.find("\"level\"", kpos);
+					if (lpos != std::string::npos) {
+						size_t ccolon = accountSkills.find(':', lpos);
+						if (ccolon != std::string::npos) userLevel = atoi(accountSkills.c_str() + ccolon + 1);
+					}
+				}
+			}
+			const int firstCost = s.costs.empty() ? 0 : s.costs[0];
+			NXRP_PrintConsoleToPlayer(cl, va("%d. %s [%d/%d]\t- Cost: %d (id: %s)", i + 1, s.name.c_str(), userLevel, s.maxLevel, firstCost, s.id.c_str()));
+		}
+		NXRP_PrintConsoleToPlayer(cl, "------------------");
+		NXRP_PrintConsoleToPlayer(cl, "type !skill <skillid> to purchase/upgrade");
+		return qtrue;
+	}
 	// Prefer using repo-embedded skills if available
 	if (g_nxrpRepoSkills.empty()) {
 		NXRP_LoadRepoSkills();
@@ -491,19 +518,10 @@ qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char
 	std::string content((std::istreambuf_iterator<char>(aifs)), std::istreambuf_iterator<char>());
 	aifs.close();
 
-	// extract skillpoints
-	auto extract_number = [&](const char* key)->int {
-		std::string ks = key;
-		size_t pos = content.find(ks);
-		if (pos == std::string::npos) return -99999;
-		size_t colon = content.find(':', pos + ks.size()); if (colon == std::string::npos) return -99999;
-		size_t vstart = colon + 1; while (vstart < content.size() && isspace((unsigned char)content[vstart])) ++vstart;
-		int val = 0; if (vstart < content.size()) { val = atoi(content.c_str()+vstart); }
-		return val;
-	};
-
-	int sp = extract_number("\"skillpoints\"");
-	if (sp == -99999) { NXRP_PrintConsoleToPlayer(cl, "Account missing skillpoints field"); return qtrue; }
+	// extract skillpoints using generic account field accessor
+	std::string sval;
+	if (!NXRP_GetAccountFieldFromFile(accPath.c_str(), "skillpoints", sval)) { NXRP_PrintConsoleToPlayer(cl, "Account missing skillpoints field"); return qtrue; }
+	int sp = atoi(sval.c_str());
 	if (sp <= 0) { NXRP_PrintConsoleToPlayer(cl, "Not enough skill points"); return qtrue; }
 
 	// read skills definitions to find cost and maxLevel for the requested skill id
@@ -595,18 +613,14 @@ qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char
 		if (sp < nextCost) { NXRP_PrintConsoleToPlayer(cl, "Not enough skillpoints for next level"); return qtrue; }
 
 		int newsp = sp - nextCost;
-		auto repl = content;
-		size_t spPos = repl.find("\"skillpoints\"");
-		if (spPos != std::string::npos) {
-			size_t colon = repl.find(':', spPos);
-			size_t lineEnd = repl.find_first_of("\n", colon);
-			if (colon != std::string::npos && lineEnd != std::string::npos) {
-				std::string before = repl.substr(0, colon+1);
-				std::string after = repl.substr(lineEnd);
-				repl = before + " " + std::to_string(newsp) + "," + after;
-			}
+		// update account file using generic setter for skillpoints and manipulate skills section as before
+		if (!NXRP_SetAccountFieldInFile(accPath.c_str(), "skillpoints", std::to_string(newsp), false)) {
+			NXRP_PrintConsoleToPlayer(cl, "Failed to update skillpoints");
+			return qtrue;
 		}
 
+		// add/increment skill entry inside "skills" object; reuse existing content string
+		auto repl = content;
 		if (repl.find("\"skills\"") == std::string::npos) {
 			size_t brace = repl.rfind('}');
 			if (brace != std::string::npos) {
@@ -658,18 +672,14 @@ qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char
 		if (sp < nextCost) { NXRP_PrintConsoleToPlayer(cl, "Not enough skillpoints for next level"); return qtrue; }
 
 		int newsp = sp - nextCost;
-		auto repl = content;
-		size_t spPos = repl.find("\"skillpoints\"");
-		if (spPos != std::string::npos) {
-			size_t colon = repl.find(':', spPos);
-			size_t lineEnd = repl.find_first_of("\n", colon);
-			if (colon != std::string::npos && lineEnd != std::string::npos) {
-				std::string before = repl.substr(0, colon+1);
-				std::string after = repl.substr(lineEnd);
-				repl = before + " " + std::to_string(newsp) + "," + after;
-			}
+		// update account file using generic setter for skillpoints and manipulate skills section as before
+		if (!NXRP_SetAccountFieldInFile(accPath.c_str(), "skillpoints", std::to_string(newsp), false)) {
+			NXRP_PrintConsoleToPlayer(cl, "Failed to update skillpoints");
+			return qtrue;
 		}
 
+		// add/increment skill entry inside "skills" object; reuse existing content string
+		auto repl = content;
 		if (repl.find("\"skills\"") == std::string::npos) {
 			size_t brace = repl.rfind('}');
 			if (brace != std::string::npos) {
@@ -730,7 +740,10 @@ void NXRP_EnsureRuntimeSkills(void) {
 }
 
 void NXRP_LoadRepoSkills() {
-	if (!g_nxrpSimpleSkills.empty()) return;
+	// Always attempt to load the repository skills.json so runtime reflects
+	// the current repo contents (useful during development). If the repo
+	// file is missing or cannot be parsed, fall back to built-in defaults.
+	g_nxrpSimpleSkills.clear();
 
 	// Try to load repo skills.json using shared helpers.
 	std::string content;
@@ -751,21 +764,29 @@ void NXRP_LoadRepoSkills() {
 
 	// Fallback to hardcoded defaults if file is missing or parse fails.
 	NXRP_SimpleSkillDef jump;
-	jump.id = "skill_jump";
+	jump.id = "jump";
 	jump.name = "Jump";
 	jump.description = "Increases jump height.";
 	jump.maxLevel = 3;
-	jump.costs = {1, 2, 3};
+	jump.costs = {2, 5, 8};
 
 	NXRP_SimpleSkillDef pistol;
-	pistol.id = "skill_pistol";
+	pistol.id = "pistol";
 	pistol.name = "Pistol";
 	pistol.description = "Improves pistol handling.";
 	pistol.maxLevel = 2;
 	pistol.costs = {1, 2};
 
+	NXRP_SimpleSkillDef armor;
+	armor.id = "armor";
+	armor.name = "Armor";
+	armor.description = "Increases damage resistance.";
+	armor.maxLevel = 3;
+	armor.costs = {2, 5, 8};
+
 	g_nxrpSimpleSkills.push_back(jump);
 	g_nxrpSimpleSkills.push_back(pistol);
+	g_nxrpSimpleSkills.push_back(armor);
 }
 
 void NXRP_Skills_TestImpl(client_t* cl) {

@@ -1,5 +1,5 @@
 #include "server/nxrp/nxrp_main.h"
-#include "server/nxrp/nxrp_utils.h"
+#include "server/nxrp/nxrp_utils/nxrp_utils.h"
 #include "server/sv_gameapi.h"
 #include "sys/sys_loadlib.h"
 // <cstdio> not required in this TU; va() is provided by the engine headers included elsewhere
@@ -33,9 +33,18 @@ void SV_NXRP_ScoreInit(void) {
 		nxrp_lastScore[i] = 0;
 		nxrp_lastKills[i] = 0;
 	}
-
 	// Per-frame NXRP hooks (keep FFA respawn mode & timers enforced)
 	NXRP_FFA_Frame();
+}
+
+// Called when a player uses (presses use) on an entity. entnum is the gentity index.
+void NXRP_OnNPCUsed( client_t *user, int entnum ) {
+	if (!user) return;
+	// Look up tracked NPC by entnum in nxrp_npcs.cpp's map. We only have an API there
+	// via NXRP_TrackNPC/NXRP_UntrackNPC; nxrp_tracked_npcs is in that TU, so reuse
+	// the public interface by scanning known clients' gentity pointers.
+	// Simple log for now.
+	NXRP_PrintConsoleToPlayer(NULL, va("NXRP_OnNPCUsed called by %s on ent=%d", user->name, entnum));
 }
 
 void SV_NXRP_ScoreFrame(void) {
@@ -138,7 +147,7 @@ void NXRP_OnPlayerConnect(int clientNum, qboolean firstTime, qboolean isBot) {
 // Called when a player's persistent kill counter changes (tracked by SV_NXRP_ScoreFrame)
 void NXRP_OnKillsChanged(client_t *cl, int oldKills, int newKills) {
 	const char *name = cl ? (cl->nxrp_username[0] ? cl->nxrp_username : cl->name) : "Unknown";
-	NXRP_PrintConsoleToPlayer(NULL, va("Kill archived: %s %d -> %d\n", name, oldKills, newKills));
+	NXRP_PrintConsoleToPlayer(NULL, va("Kill archived: %s %d -> %d", name, oldKills, newKills));
 	//Com_Printf("Kill archived: %s %d -> %d\n", name, oldKills, newKills);
 
 	// Detect teamkills from the victim-side kill change and restore attacker score.
@@ -261,7 +270,7 @@ void NXRP_OnRoundEnd(int winningTeam) {
 void NXRP_OnRoundStart(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Round started");
 	// Announce in chat as well
-	SV_SendServerCommand(NULL, "chat \"^3[NXRP]^7 Round started\"\n");
+	SV_SendServerCommand(NULL, "chat \"^3[NXRP]^7 Round started\"");
 	// Increment round counter and re-resolve/reapply FFA hooks at round start
 	nxrp_roundNumber++;
 	NXRP_FFA_Init();
