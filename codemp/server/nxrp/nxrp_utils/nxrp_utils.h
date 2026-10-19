@@ -54,12 +54,14 @@ bool NXRP_GetFolderPath(const char* folder, std::string& outDir);
 
 // Persist and list NXRP-spawned models per-map in the homepath directory.
 // Save a spawned entity's model path and location to the map's JSON file.
-void NXRP_SaveSpawnToMap(int entnum, const char* modelPath);
+// Persist a spawn to the per-map file. When available, pass the prop bounds
+// and collider offset used when placing so load can restore identical colliders.
+void NXRP_SaveSpawnToMap(int entnum, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, const vec3_t colliderOffset, float yaw);
 // Send a player a list of saved spawns for the current map.
 void NXRP_ListSavedSpawns(client_t* cl);
 // Remove a saved spawn entry by its index in the per-map file. Returns true on success.
 bool NXRP_RemoveSavedSpawnByIndex(int index);
-// Load and spawn all saved entries for the current map. Returns number spawned.
+// Load and spawn all saved entries for the current map. Returns number spawned (header touch).
 int NXRP_LoadSavedSpawnsForMap(client_t* cl);
 
 // Utility helpers extracted from admin commands

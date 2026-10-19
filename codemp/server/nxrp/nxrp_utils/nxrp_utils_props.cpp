@@ -1,4 +1,4 @@
-// Restored prop persistence and catalog implementations moved into nxrp_utils
+// Restored prop persistence and catalog implementations moved into nxrp_utils.
 #include "server/nxrp/nxrp_utils/nxrp_utils.h"
 #include "server/sv_gameapi.h"
 #include "sys/sys_loadlib.h"
@@ -293,7 +293,8 @@ bool NXRP_MoveLastSpawnTo(client_t* cl, const char* chatCursor) {
 	int newEnt = NXRP_PlaceModel(modelPathStr.c_str(), mins, maxs, yaw, zeroOffset2, newFloor);
 	if (newEnt >= 0) {
 		NXRP_RegisterSpawn(newEnt);
-		NXRP_SaveSpawnToMap(newEnt, modelPathStr.c_str());
+		// Save spawn with collider info so future loads reproduce the same collider.
+		NXRP_SaveSpawnToMap(newEnt, modelPathStr.c_str(), mins, maxs, zeroOffset2, yaw);
 		NXRP_PrintConsoleToPlayer(cl, va("Moved last spawn to new entity %d", newEnt));
 		return true;
 	}
@@ -361,7 +362,9 @@ bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor) {
 	if (ent >= 0) {
 		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", path, ent));
 		NXRP_RegisterSpawn(ent);
-		NXRP_SaveSpawnToMap(ent, path);
+	// Save spawn including collider extents and origin offset so loading will
+	// recreate the same collider as when spawned via !prop s
+	NXRP_SaveSpawnToMap(ent, path, adjMins, adjMaxs, colliderOrigin, angle);
 		return true;
 	}
 	NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model.");
@@ -424,7 +427,9 @@ bool NXRP_RemoveSavedSpawnByIndex(int index) {
 }
 
 // Persist a spawn to a per-map JSON file in the fs_homepath/nxrp_props directory.
-void NXRP_SaveSpawnToMap(int entnum, const char* modelPath) {
+// Accept explicit collider extents, collider offset and yaw so loading can
+// recreate the same collision box as when spawned via !prop s.
+void NXRP_SaveSpawnToMap(int entnum, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, const vec3_t colliderOffset, float yaw) {
 	if (entnum < 0 || !modelPath) return;
 
 	sharedEntity_t* e = SV_GentityNum(entnum);
@@ -441,10 +446,15 @@ void NXRP_SaveSpawnToMap(int entnum, const char* modelPath) {
 	FILE* f = fopen(filename.c_str(), "a");
 	if (!f) return;
 
-	snprintf(buf, sizeof(buf), "{ \"ent\": %d, \"id\": %d, \"index\": %d, \"model\": \"%s\", \"origin\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f] }\n",
+	// Store collider extents and collider offset (origin) along with saved origin
+	snprintf(buf, sizeof(buf), "{ \"ent\": %d, \"id\": %d, \"index\": %d, \"model\": \"%s\", \"origin\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f], \"propMins\": [%.2f, %.2f, %.2f], \"propMaxs\": [%.2f, %.2f, %.2f], \"colliderOffset\": [%.2f, %.2f, %.2f], \"yaw\": %.2f }\n",
 		entnum, entnum, nextIndex, modelPath,
 		e->s.pos.trBase[0], e->s.pos.trBase[1], e->s.pos.trBase[2],
-		e->s.apos.trBase[0], e->s.apos.trBase[1], e->s.apos.trBase[2]);
+		e->s.apos.trBase[0], e->s.apos.trBase[1], e->s.apos.trBase[2],
+		propMins[0], propMins[1], propMins[2],
+		propMaxs[0], propMaxs[1], propMaxs[2],
+		colliderOffset[0], colliderOffset[1], colliderOffset[2],
+		yaw);
 	fputs(buf, f);
 	fclose(f);
 }
