@@ -61,9 +61,6 @@ void NXRP_Skills_TestImpl(client_t* cl);
 // installed or repository locations when missing. Called at server startup.
 void NXRP_EnsureRuntimeSkills(void);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 // Repo skill accessors (hardcoded skill data provided by nxrp_skills.cpp)
 void NXRP_LoadRepoSkills(void);
 int NXRP_GetRepoSkillCount(void);
@@ -100,9 +97,6 @@ struct NXRP_SimpleSkill {
 
 // Parse skills.json content into a vector of NXRP_SimpleSkill. Returns true on success.
 bool NXRP_ParseSkillsJson(const std::string &content, std::vector<NXRP_SimpleSkill> &out);
-#ifdef __cplusplus
-}
-#endif
 
 // Event helpers
 void NXRP_OnNPCKilled( client_t *killer, const char *npcName );

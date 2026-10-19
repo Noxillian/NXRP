@@ -198,7 +198,6 @@ void NXRP_ListSavedNPCs(client_t* cl) {
 		idx++;
 	}
 	if (!any) NXRP_PrintConsoleToPlayer(cl, "No saved NPCs for this map");
-	ifs.close();
 }
 
 // Load and spawn all saved NPC entries for the current map. Returns number spawned.
