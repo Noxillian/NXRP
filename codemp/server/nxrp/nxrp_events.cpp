@@ -33,6 +33,9 @@ void SV_NXRP_ScoreInit(void) {
 		nxrp_lastScore[i] = 0;
 		nxrp_lastKills[i] = 0;
 	}
+	// Per-frame NXRP hooks (keep FFA respawn mode & timers enforced)
+	NXRP_FFA_Frame();
+}
 
 // Called when a player uses (presses use) on an entity. entnum is the gentity index.
 void NXRP_OnNPCUsed( client_t *user, int entnum ) {
@@ -40,15 +43,8 @@ void NXRP_OnNPCUsed( client_t *user, int entnum ) {
 	// Look up tracked NPC by entnum in nxrp_npcs.cpp's map. We only have an API there
 	// via NXRP_TrackNPC/NXRP_UntrackNPC; nxrp_tracked_npcs is in that TU, so reuse
 	// the public interface by scanning known clients' gentity pointers.
-	const char *name = NULL;
-	// We'll attempt to resolve the NPC name by checking nxrp_tracked_npcs indirectly
-	// using the server's sv.gentities if available (best-effort). If not tracked, skip.
 	// Simple log for now.
 	NXRP_PrintConsoleToPlayer(NULL, va("NXRP_OnNPCUsed called by %s on ent=%d", user->name, entnum));
-}
-
-	// Per-frame NXRP hooks (keep FFA respawn mode & timers enforced)
-	NXRP_FFA_Frame();
 }
 
 void SV_NXRP_ScoreFrame(void) {
