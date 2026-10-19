@@ -420,6 +420,10 @@ void SV_DropClient( client_t *drop, const char *reason ) {
 	// tell everyone why they got dropped
 	SV_SendServerCommand( NULL, "print \"%s" S_COLOR_WHITE " %s\n\"", drop->name, reason );
 
+	// Diagnostic: also print an unambiguous server-side log for analysis so
+	// we can find where particular disconnect reasons originate.
+	Com_Printf("SV_DropClient: dropping client '%s' reason='%s'\n", drop->name, reason);
+
 	// call the prog function for removing a client
 	// this will remove the body, among other things
 	GVM_ClientDisconnect( drop - svs.clients );
