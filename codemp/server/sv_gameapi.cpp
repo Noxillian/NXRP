@@ -23,6 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "server.h"
 #include "server/nxrp/nxrp_main.h"
+#include "server/nxrp/nxrp_utils/nxrp_utils.h"
 #include "botlib/botlib.h"
 #include "qcommon/stringed_ingame.h"
 #include "qcommon/RoffSystem.h"
@@ -1912,6 +1913,19 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 	case TRAP_ASIN:
 		return FloatAsInt( Q_asin( VMF(1) ) );
 
+	// Custom NXRP trap: game -> server notification that a player used an entity.
+	// Trap args: args[1] = clientNum, args[2] = entNum
+case TRAP_USER + 200: // choose a high offset to avoid collisions; ensure client-side matches
+	{
+		int clientNum = args[1];
+		int entNum = args[2];
+		if (clientNum >= 0 && clientNum < sv_maxclients->integer) {
+			client_t *cl = &svs.clients[clientNum];
+			NXRP_OnNPCUsed(cl, entNum);
+		}
+		return 0;
+	}
+
 	case G_PRINT:
 		Com_Printf( "%s", VMA(1) );
 		return 0;
@@ -2990,6 +3004,23 @@ void SV_BindGame( void ) {
 		gi.ROFF_Cache							= SV_ROFF_Cache;
 		gi.ROFF_Play							= SV_ROFF_Play;
 		gi.ROFF_Purge_Ent						= SV_ROFF_Purge_Ent;
+		gi.NXRP_EntityFreed						= []( int entNum, int attackerClientNum ) {
+			client_t *attacker = NULL;
+			if ( attackerClientNum >= 0 && attackerClientNum < sv_maxclients->integer ) {
+				attacker = &svs.clients[attackerClientNum];
+			}
+
+			const char *name = NULL;
+			void *dll = GVM_GetDllHandle();
+			if ( dll ) {
+				const char *(*GetTrackedNPCName)( int ) = (const char *(*)( int ))Sys_LoadFunction( dll, "NXRP_GetTrackedNPCName" );
+				if ( GetTrackedNPCName ) {
+					name = GetTrackedNPCName( entNum );
+				}
+			}
+
+			NXRP_OnNPCKilled( attacker, name );
+		};
 		gi.ICARUS_RunScript						= ICARUS_RunScript;
 		gi.ICARUS_RegisterScript				= SV_ICARUS_RegisterScript;
 		gi.ICARUS_Init							= ICARUS_Init;

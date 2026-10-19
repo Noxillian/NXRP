@@ -77,6 +77,12 @@ bool NXRP_RemoveSavedNPCByIndex(int index);
 // Called by NXRP_RegisterSpawn to allow NPC module to associate a pending name
 // with the newly-registered entity number.
 void NXRP_HandlePendingNPCSpawn(int entnum);
+// Called when a player uses (presses use) on an entity; checks for tracked NPC interactions.
+void NXRP_OnNPCUsed(client_t* user, int entnum);
+
+// Return the tracked NPC name for an entity number, or NULL if not tracked.
+// The returned pointer is owned by NXRP and valid until the NPC is untracked.
+const char* NXRP_GetTrackedNPCName(int entnum);
 
 // Print a standardized NXRP console message to a specific player. If cl is
 // NULL the message will be broadcast to all clients by passing NULL to

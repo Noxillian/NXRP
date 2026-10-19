@@ -124,6 +124,12 @@ void NXRP_UntrackNPC(int entnum) {
 	nxrp_tracked_npcs.erase(entnum);
 }
 
+const char* NXRP_GetTrackedNPCName(int entnum) {
+	auto it = nxrp_tracked_npcs.find(entnum);
+	if (it == nxrp_tracked_npcs.end()) return NULL;
+	return it->second.c_str();
+}
+
 // Wrapper for freeing entities: if the entity being freed is a tracked NPC,
 // call NXRP_OnNPCKilled before forwarding to the real G_FreeEntity in the VM.
 void NXRP_FreeEntity(void* entPtr) {
