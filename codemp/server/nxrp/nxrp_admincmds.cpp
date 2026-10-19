@@ -25,7 +25,6 @@ qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-
 // Admin-only: spawn and optionally persist an NPC, or load saved NPCs
 qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
@@ -36,20 +35,14 @@ qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	// Expect a subcommand as the first token: s|load|list
 	char sub[MAX_TOKEN_CHARS] = {0};
 	const char* p = chatCursor;
 	while (*p == ' ' || *p == '\t') p++;
 	if (sscanf(p, "%31s", sub) < 1) return qtrue;
 
-	// Some callers pass the full normalized cursor starting with the
-	// primary subcommand (e.g. "npc s rebel"). If the first token is
-	// the literal "npc", skip it and read the actual subcommand.
 	if (!Q_stricmp(sub, "npc")) {
-		// advance past the "npc" token
 		while (*p && !isspace((unsigned char)*p)) p++;
 		while (*p == ' ' || *p == '\t') p++;
-		// read the next token into sub
 		memset(sub, 0, sizeof(sub));
 		if (sscanf(p, "%31s", sub) < 1) return qtrue;
 	}
@@ -65,34 +58,25 @@ qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	// spawn subcommand: !npc s <type>
 	if (!Q_stricmp(sub, "s")) {
-		// find next token (npc type)
 		const char* q2 = p;
-		// skip sub token
 		while (*q2 && !isspace((unsigned char)*q2)) q2++;
 		while (*q2 == ' ' || *q2 == '\t') q2++;
 		char tok[MAX_TOKEN_CHARS] = {0};
 		if (sscanf(q2, "%31s", tok) < 1) { NXRP_PrintConsoleToPlayer(cl, "Usage: !npc s <type>"); return qtrue; }
 
-		// Otherwise treat token as npc type: spawn and persist
 		char cmdBuf[128];
 		Com_sprintf(cmdBuf, sizeof(cmdBuf), "npc spawn %s", tok);
 		NXRP_PrintConsoleToPlayer(cl, "^3Spawning NPC");
-		// Push pending name so NXRP_RegisterSpawn can associate name with entnum
 		NXRP_PushPendingNPCName(tok);
 		SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
-		// Do NOT attempt to save here synchronously; NXRP_HandlePendingNPCSpawn
-		// (called from NXRP_RegisterSpawn) will persist the NPC once the VM
-		// has created and initialized the entity to ensure correct origin.
 		return qtrue;
 	}
 
 	// remove subcommand: !npc r <index>
 	if (!Q_stricmp(sub, "r")) {
-		// find next token (index)
 		const char* q2 = p;
-		// skip sub token
+		// advance past current token and any following whitespace (avoid dependency on skip_token_and_ws)
 		while (*q2 && !isspace((unsigned char)*q2)) q2++;
 		while (*q2 == ' ' || *q2 == '\t') q2++;
 		int idx = -1;
@@ -116,8 +100,8 @@ qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Directional move for a specific saved prop index using cardinal words up/down/left/right/forward/back
-// Usage: called via parser when first token is a number: !prop <index> <dir> <amount>
+	// Directional move for a specific saved prop index using cardinal words up/down/left/right/forward/back
+	// Usage: !prop <index> <dir> <amount>
 qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
@@ -127,7 +111,6 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
 		return qtrue;
 	}
 
-	// parse direction and amount
 	char dirTok[32] = {0};
 	float amount = 0.0f;
 	int scanned = sscanf(args, "%31s %f", dirTok, &amount);
@@ -136,7 +119,6 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
 		return qtrue;
 	}
 
-	// load saved file and locate entry by index
 	const char* home = Cvar_VariableString("fs_homepath");
 	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
 	const char* map = Cvar_VariableString("mapname");
@@ -154,7 +136,6 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
 
 	std::string target = lines[index];
 
-	// parse model and origin
 	const char* s = target.c_str();
 	std::string modelPath;
 	float ox=0, oy=0, oz=0;
@@ -165,7 +146,7 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
 	const char* o = strstr(s, originKey);
 	if (o) { o = strchr(o, '['); if (o) { o++; sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz); } }
 
-	// Attempt to free any runtime entity referenced in this saved entry to avoid duplicates
+	// Free any runtime entity referenced in this saved entry to avoid duplicates
 	int entToFree = -1;
 	size_t entPos = target.find("\"ent\"");
 	if (entPos != std::string::npos) {
@@ -184,10 +165,9 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
 	if (entToFree >= 0 && entToFree < sv.num_entities) {
 		sharedEntity_t* oldEnt = SV_GentityNum(entToFree);
 		if (oldEnt) {
-				// Use NXRP_FreeEntity wrapper so NXRP can observe freed entities
-				NXRP_FreeEntity((void*)oldEnt);
-				NXRP_RegisterSpawn(-1);
-				NXRP_PrintConsoleToPlayer(cl, va("Freed old saved runtime entity %d", entToFree));
+			NXRP_FreeEntity((void*)oldEnt);
+			NXRP_RegisterSpawn(-1);
+			NXRP_PrintConsoleToPlayer(cl, va("Freed old saved runtime entity %d", entToFree));
 		}
 	}
 

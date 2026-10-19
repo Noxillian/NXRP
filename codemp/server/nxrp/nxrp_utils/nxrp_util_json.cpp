@@ -1,3 +1,4 @@
+// Renamed from nxrp_jsonreader.cpp to nxrp_util_json.cpp
 #include "server/nxrp/nxrp_main.h"
 #include "server/nxrp/nxrp_utils/nxrp_utils.h"
 
@@ -5,9 +6,8 @@
 #include <cctype>
 #include <sstream>
 
-// Minimal JSON parsing for the simple skills schema used by NXRP.
-// This is intentionally lightweight and tolerant; replace with a proper
-// JSON library if schema complexity grows.
+// Minimal JSON parsing for the simple skills schema used by NXRP. Lightweight
+// and tolerant parser; replace with a proper JSON library if needed.
 
 bool NXRP_ParseSkillsJson(const std::string &content, std::vector<NXRP_SimpleSkill> &out) {
 	out.clear();
@@ -185,3 +185,4 @@ bool NXRP_SetAccountFieldInFile(const char *filepath, const char *field, const s
 	newContent += content.substr(end);
 	return NXRP_WriteStringToFile(filepath, newContent);
 }
+

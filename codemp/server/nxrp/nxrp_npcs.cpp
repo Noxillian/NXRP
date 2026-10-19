@@ -17,16 +17,12 @@
 
 // Simple tracking map for NPC entnums -> name
 static std::map<int, std::string> nxrp_tracked_npcs;
-// When spawn is issued via delayed VM command, NXRP_GetLastSpawn may be set
-// after the VM processes the command. Push pending names into a FIFO queue
-// so concurrent or closely-timed spawns don't overwrite a single pending
-// name string.
+// Pending NPC names queued until NXRP_RegisterSpawn associates them with entnums
 static std::deque<std::string> nxrp_pending_npc_names;
 
 void NXRP_PushPendingNPCName(const char* name) {
 	if (!name) return;
 	nxrp_pending_npc_names.push_back(std::string(name));
-	// Debug: notify that a pending NPC name was queued (queue size shown)
 	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_PushPendingNPCName queued: %s (queue=%zu)", name, nxrp_pending_npc_names.size());
 }
 
@@ -93,23 +89,17 @@ bool NXRP_RemoveSavedNPCByIndex(int index) {
 	return true;
 }
 
-// Forward-declare delayed executor used elsewhere (defined in spin.cpp / nxrp_admincmds.cpp)
+// Forward-declare delayed executor used elsewhere
 void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 
-// Called by NXRP_RegisterSpawn to associate any pending NPC name with the
-// newly-registered entity number. This links runtime entnum -> npc type
-// and persists the entry if a pending name was present.
+// Associate any pending NPC name with the newly-registered entity number
 void NXRP_HandlePendingNPCSpawn(int entnum) {
 	if (entnum < 0) return;
-	// Debug: show when handler runs and pending queue size
 	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_HandlePendingNPCSpawn ent=%d queue=%zu", entnum, nxrp_pending_npc_names.size());
 	if (nxrp_pending_npc_names.empty()) return;
-	// Consume the oldest pending name
 	std::string name = nxrp_pending_npc_names.front();
 	nxrp_pending_npc_names.pop_front();
-	// Track for runtime events
 	NXRP_TrackNPC(entnum, name.c_str());
-	// Persist to disk
 	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_HandlePendingNPCSpawn: saving ent=%d name=%s", entnum, name.c_str());
 	NXRP_SaveNPCToMap(entnum, name.c_str());
 }
@@ -138,9 +128,7 @@ void NXRP_FreeEntity(void* entPtr) {
 	int entnum = e->s.number;
 	auto it = nxrp_tracked_npcs.find(entnum);
 	if (it != nxrp_tracked_npcs.end()) {
-		// Notify NXRP hooks about NPC death. Pass NULL for killer for now.
 		NXRP_OnNPCKilled(NULL, it->second.c_str());
-		// Untrack so we don't double-fire
 		nxrp_tracked_npcs.erase(it);
 	}
 
@@ -154,7 +142,7 @@ void NXRP_FreeEntity(void* entPtr) {
 	GVM_EndNative(old);
 }
 
-// Persist a spawned NPC to a per-map JSON file in fs_homepath/nxrp_npcs
+// Persist a spawned NPC to a per-map JSON file
 void NXRP_SaveNPCToMap(int entnum, const char* npcType) {
 	if (entnum < 0 || !npcType) return;
 
@@ -203,7 +191,7 @@ void NXRP_SaveNPCToMap(int entnum, const char* npcType) {
 	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_SaveNPCToMap: saved ent=%d type=%s to %s", entnum, npcType, filename.c_str());
 }
 
-// Read the per-map JSON file and send entries to the player as an indexed list.
+// Read the per-map JSON file and send entries to the player as an indexed list
 void NXRP_ListSavedNPCs(client_t* cl) {
 	const char* home = Cvar_VariableString("fs_homepath");
 	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_npcs" : std::string("nxrp_npcs");
@@ -245,7 +233,7 @@ void NXRP_ListSavedNPCs(client_t* cl) {
 	ifs.close();
 }
 
-// Load and spawn all saved NPC entries for the current map. Returns number spawned.
+// Load and spawn all saved NPC entries for the current map. Returns number spawned
 int NXRP_LoadSavedNPCsForMap(client_t* cl) {
 	const char* home = Cvar_VariableString("fs_homepath");
 	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_npcs" : std::string("nxrp_npcs");
@@ -274,7 +262,6 @@ int NXRP_LoadSavedNPCsForMap(client_t* cl) {
 		}
 		if (npcType.empty()) continue;
 
-		// Push pending name so when spawn triggers NXRP_RegisterSpawn we can associate
 		NXRP_PushPendingNPCName(npcType.c_str());
 		char cmdBuf[128];
 		Com_sprintf(cmdBuf, sizeof(cmdBuf), "npc spawn %s", npcType.c_str());

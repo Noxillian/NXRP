@@ -1,6 +1,5 @@
-// --- account helpers re-added into nxrp_main (simple JSON storage) ---
 /* nxrp_main.cpp - simple NXRP chat command handler
- * Implements commands: !hello, and !nx spawn / !nx npc list
+ * Implements NXRP chat handling and helpers.
  */
 
 #include "server/nxrp/nxrp_main.h"
@@ -19,18 +18,16 @@
 	#include <sys/stat.h>
 #endif
 
-// forward-declare weapon give helper from sv_ccmds.cpp
-void SV_WannaGiveWeapon(client_t* cl, int wnum);
+#include "game/bg_weapons.h"
 #include "game/bg_weapons.h"
 
-// forward-declare helper used elsewhere to execute a client command after a delay
+// helper to execute a client command after a delay
 void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 
-// Forward declarations for the extracted command handlers
+// Forward declarations for command handlers used across the module
 qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor );
 static qboolean NXRP_HandleNpcSpawn( client_t *cl, const char *chatCursor );
-// forward-declare the spawn helper we will implement in this module
 int SV_SpawnModelAtClient(client_t* cl, const char* modelPath);
 
 enum NXRP_SubCmd {

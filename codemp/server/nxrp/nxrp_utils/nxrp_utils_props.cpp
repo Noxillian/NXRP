@@ -325,7 +325,6 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 
 	const char* home = Cvar_VariableString("fs_homepath");
 	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
-	// Try JSON first: nxrp_props_catalog.json (located directly under <fs_homepath>/)
 	std::string jsonPath = (home && home[0]) ? std::string(home) + "/nxrp_props_catalog.json" : std::string("nxrp_props_catalog.json");
 	std::ifstream jifs(jsonPath);
 	if (jifs.is_open()) {

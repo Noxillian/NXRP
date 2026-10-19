@@ -3,15 +3,15 @@
 #include "server/sv_gameapi.h"
 #include "sys/sys_loadlib.h"
 
-// Mirror social's ForceRespawn behavior but keep damage enabled.
-// We will toggle MBII's bNewRespawnMode and RespawnMode cvar when FFA is enabled.
+// Mirror social's ForceRespawn behavior but keep damage enabled. Toggle MBII's
+// bNewRespawnMode and RespawnMode cvar when FFA is enabled.
 
 static qboolean gFFA_Enabled = qfalse;
 static qboolean gRespawnWasNew = qfalse;
 static char gRespawnWasMode[16];
 static qboolean* gBNewRespawnMode = NULL;
 
-// Mirror social.cpp's respawn timers override so FFA truly enables "anytime"
+// Respawn timers override used to enable short respawn delays for FFA
 struct nxrpRespawnTimers_t {
 	int oneLife;
 	int twoLife;
@@ -30,7 +30,7 @@ static void NXRP_FFA_ApplyTimers(void)
 	if (!gRespawnTimers) return;
 
 	if (gFFA_Enabled) {
-		int secs = 3; // match social's short respawn
+		int secs = 3; // short respawn
 		if (secs < 1) secs = 1;
 		gRespawnTimers->oneLife = secs;
 		gRespawnTimers->twoLife = secs;

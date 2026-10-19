@@ -2,8 +2,6 @@
 #include "server/nxrp/nxrp_utils/nxrp_utils.h"
 #include "server/sv_gameapi.h"
 #include "sys/sys_loadlib.h"
-// <cstdio> not required in this TU; va() is provided by the engine headers included elsewhere
-
 // Ensure the print helper is visible in this translation unit
 void NXRP_PrintConsoleToPlayer(client_t* cl, const char* text);
 // Forward-declare kills-changed handler so SV_NXRP_ScoreFrame can call it before
@@ -33,17 +31,13 @@ void SV_NXRP_ScoreInit(void) {
 		nxrp_lastScore[i] = 0;
 		nxrp_lastKills[i] = 0;
 	}
-	// Per-frame NXRP hooks (keep FFA respawn mode & timers enforced)
 	NXRP_FFA_Frame();
 }
 
 // Called when a player uses (presses use) on an entity. entnum is the gentity index.
 void NXRP_OnNPCUsed( client_t *user, int entnum ) {
 	if (!user) return;
-	// Look up tracked NPC by entnum in nxrp_npcs.cpp's map. We only have an API there
-	// via NXRP_TrackNPC/NXRP_UntrackNPC; nxrp_tracked_npcs is in that TU, so reuse
-	// the public interface by scanning known clients' gentity pointers.
-	// Simple log for now.
+	// Log NPC use for now; nxrp_npcs provides APIs to map entnums to NPC names.
 	NXRP_PrintConsoleToPlayer(NULL, va("NXRP_OnNPCUsed called by %s on ent=%d", user->name, entnum));
 }
 
@@ -61,10 +55,7 @@ void SV_NXRP_ScoreFrame(void) {
 	nxrp_roundNumber = 0;
 
 	} else {
-		// Not intermission: if we haven't signaled round start yet, trigger once when
-		// we observe the first active player. This mirrors other server systems that
-		// record round start on first-seen active player and ensures NXRP_OnRoundStart
-		// runs exactly once per round.
+		// Not intermission: trigger round start when the first active player is seen.
 		if (nxrp_roundStartTime == 0) {
 			for (int i = 0; i < sv_maxclients->integer; i++) {
 				client_t* cl = &svs.clients[i];
@@ -72,12 +63,11 @@ void SV_NXRP_ScoreFrame(void) {
 					nxrp_roundStartTime = svs.time;
 					NXRP_OnMapStart();
 
-					// Also treat this as a round start: first active player seen -> round begins
+					// Also treat this as a round start.
 					NXRP_OnRoundStart();
 					nxrp_roundBegunFlag = qtrue;
 
-					// Initialize last-kill counters from current persistent values so
-					// we don't trigger spurrious change events at round start.
+					// Initialize last-kill counters from current persistent values
 					for (int j = 0; j < sv_maxclients->integer; j++) {
 						client_t* cl2 = &svs.clients[j];
 						if (cl2->state == CS_ACTIVE && cl2->gentity && cl2->gentity->playerState) {
@@ -100,8 +90,7 @@ void SV_NXRP_ScoreFrame(void) {
 			nxrp_prevRebelCountdown = r;
 			nxrp_prevImperialCountdown = im;
 		}
-		// If the game VM exposes a siege-round-begun flag, detect its rising
-		// edge and signal NXRP_OnRoundStart once per round.
+		// If the game VM exposes a siege-round-begun flag, detect its rising edge.
 		if (nxrp_gSiegeRoundBegun) {
 			const qboolean begun = (*nxrp_gSiegeRoundBegun) ? qtrue : qfalse;
 			if (begun && !nxrp_roundBegunFlag) {

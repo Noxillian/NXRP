@@ -50,8 +50,7 @@ qboolean NXRP_cmd_skill( client_t *cl, const char *chatCursor ) {
 // Version variable for NXRP. Update as needed.
 const char *NXRP_VERSION = "0.2.0";
 
-// Parse username and password from chatCursor. Accept either
-// "user pass" or "subcmd user pass" (when full chatCursor is passed).
+// Parse username and password from chatCursor. Accept either "user pass" or "subcmd user pass".
 static bool parse_user_pass(const char *chatCursor, std::string &outUser, std::string &outPass) {
 	if (!chatCursor) return false;
 	std::istringstream iss(chatCursor);
@@ -62,7 +61,7 @@ static bool parse_user_pass(const char *chatCursor, std::string &outUser, std::s
 		outUser = toks[0]; outPass = toks[1]; return true;
 	}
 	if (toks.size() >= 3) {
-		// could be: "register user pass" or "login user pass"
+		// e.g.: "register user pass" or "login user pass"
 		outUser = toks[1]; outPass = toks[2]; return true;
 	}
 	return false;
