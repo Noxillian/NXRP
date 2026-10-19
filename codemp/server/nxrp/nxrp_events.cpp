@@ -302,6 +302,9 @@ void NXRP_OnNPCKilled(client_t *killer, const char *npcName) {
 	const char *nName = npcName && npcName[0] ? npcName : "NPC";
 
 	NXRP_PrintConsoleToPlayer(NULL, va("%s defeated %s", pName, nName));
+
+	// Broadcast the same defeated string to all players (server logs already include this form)
+	SV_SendServerCommand(NULL, va("chat \"%s defeated %s\"", pName, nName));
 }
 
 // Called when a player first enters the game
