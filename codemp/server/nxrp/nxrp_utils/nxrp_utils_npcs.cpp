@@ -28,19 +28,9 @@ void NXRP_PushPendingNPCName(const char* name) {
 
 // Remove a saved NPC entry by its zero-based index. This rewrites the per-map file.
 bool NXRP_RemoveSavedNPCByIndex(int index) {
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_npcs" : std::string("nxrp_npcs");
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
-
-	std::ifstream ifs(filename);
-	if (!ifs.is_open()) return false;
-
+	std::string filename;
 	std::vector<std::string> lines;
-	std::string line;
-	while (std::getline(ifs, line)) { if (!line.empty()) lines.push_back(line); }
-	ifs.close();
+	if (!NXRP_ReadPerMapLines("nxrp_npcs", lines, filename)) return false;
 
 	if (index < 0 || index >= (int)lines.size()) return false;
 
@@ -82,10 +72,7 @@ bool NXRP_RemoveSavedNPCByIndex(int index) {
 
 	// Remove the entry and rewrite
 	lines.erase(lines.begin() + index);
-	FILE* f = fopen(filename.c_str(), "w");
-	if (!f) return false;
-	for (const auto &l : lines) { fputs(l.c_str(), f); fputc('\n', f); }
-	fclose(f);
+	if (!NXRP_WriteLinesToFile(filename, lines)) return false;
 	return true;
 }
 
@@ -150,29 +137,12 @@ void NXRP_SaveNPCToMap(int entnum, const char* npcType) {
 	if (!e) return;
 
 	char buf[1024];
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_npcs" : std::string("nxrp_npcs");
-#if defined(_WIN32)
-	CreateDirectoryA(dir.c_str(), NULL);
-#else
-	mkdir(dir.c_str(), 0755);
-#endif
-
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
-
+	std::string filename;
+	std::vector<std::string> lines;
+	NXRP_GetPerMapFilePath("nxrp_npcs", filename);
 	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_SaveNPCToMap: will append to %s", filename.c_str());
-
 	int nextIndex = 0;
-	{
-		std::ifstream existing(filename);
-		if (existing.is_open()) {
-			std::string l;
-			while (std::getline(existing, l)) { if (!l.empty()) nextIndex++; }
-			existing.close();
-		}
-	}
+	if (NXRP_ReadNonEmptyLinesFromFile(filename, lines)) nextIndex = (int)lines.size();
 
 	FILE* f = fopen(filename.c_str(), "a");
 	if (!f) return;
@@ -193,22 +163,15 @@ void NXRP_SaveNPCToMap(int entnum, const char* npcType) {
 
 // Read the per-map JSON file and send entries to the player as an indexed list
 void NXRP_ListSavedNPCs(client_t* cl) {
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_npcs" : std::string("nxrp_npcs");
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
+	std::string filename;
+	std::vector<std::string> lines;
+	if (!NXRP_ReadPerMapLines("nxrp_npcs", lines, filename)) { NXRP_PrintConsoleToPlayer(cl, "No saved NPCs for this map"); return; }
 
-	std::ifstream ifs(filename);
-	if (!ifs.is_open()) { NXRP_PrintConsoleToPlayer(cl, "No saved NPCs for this map"); return; }
-
-	std::string line;
 	int idx = 0;
 	bool any = false;
-	while (std::getline(ifs, line)) {
-		if (line.empty()) continue;
+	for (const auto &s : lines) {
+		if (s.empty()) continue;
 		any = true;
-		std::string s = line;
 		// extract ent
 		auto extract_int = [&](const char* key, int def)->int {
 			size_t p = s.find(key);
@@ -265,19 +228,13 @@ void NXRP_ListSavedNPCs(client_t* cl) {
 
 // Load and spawn all saved NPC entries for the current map. Returns number spawned.
 int NXRP_LoadSavedNPCsForMap(client_t* cl) {
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_npcs" : std::string("nxrp_npcs");
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
+	std::string filename;
+	std::vector<std::string> lines;
+	if (!NXRP_ReadPerMapLines("nxrp_npcs", lines, filename)) return 0;
 
-	std::ifstream ifs(filename);
-	if (!ifs.is_open()) return 0;
-
-	std::string line;
 	int count = 0;
 	int delay = 1;
-	while (std::getline(ifs, line)) {
+	for (const auto &line : lines) {
 		if (line.empty()) continue;
 		// extract npc type
 		std::string s = line;
@@ -300,6 +257,5 @@ int NXRP_LoadSavedNPCsForMap(client_t* cl) {
 		delay += 1; // stagger a bit
 		count++;
 	}
-	ifs.close();
 	return count;
 }

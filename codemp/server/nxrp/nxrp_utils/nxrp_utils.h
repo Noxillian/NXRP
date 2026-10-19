@@ -35,6 +35,23 @@ int NXRP_SpawnPropAtClient(client_t* cl, const char* modelPath, const vec3_t pro
 // Spawn prop with explicit collider extents at client location; returns entnum or -1.
 int NXRP_SpawnPropAtClientWithExtents(client_t* cl, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, float yaw);
 
+// Generic file helpers
+bool NXRP_ReadFileToString(const char* path, std::string& out);
+bool NXRP_WriteStringToFile(const char* path, const std::string& content);
+
+// Per-map file helpers (nxrp_props, nxrp_npcs directories)
+// Build the per-map filename for a given subdirectory (e.g. "nxrp_props" or "nxrp_npcs").
+bool NXRP_GetPerMapFilePath(const char* folder, std::string& outPath);
+// Read non-empty lines from a file into a vector<string>. Returns false if file not found.
+bool NXRP_ReadNonEmptyLinesFromFile(const std::string& path, std::vector<std::string>& outLines);
+// Convenience: read per-map file lines for the given folder (uses mapname and fs_homepath).
+bool NXRP_ReadPerMapLines(const char* folder, std::vector<std::string>& outLines, std::string& outPath);
+// Write lines to a file (overwrites). Returns true on success.
+bool NXRP_WriteLinesToFile(const std::string& path, const std::vector<std::string>& lines);
+
+// Ensure a named folder under fs_homepath (or relative) exists and return its path
+bool NXRP_GetFolderPath(const char* folder, std::string& outDir);
+
 // Persist and list NXRP-spawned models per-map in the homepath directory.
 // Save a spawned entity's model path and location to the map's JSON file.
 void NXRP_SaveSpawnToMap(int entnum, const char* modelPath);

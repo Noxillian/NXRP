@@ -5,6 +5,8 @@
 #include <fstream>
 #include <cctype>
 #include <sstream>
+#include <vector>
+#include <sys/stat.h>
 
 // Minimal JSON parsing for the simple skills schema used by NXRP. Lightweight
 // and tolerant parser; replace with a proper JSON library if needed.
@@ -92,6 +94,62 @@ bool NXRP_WriteStringToFile(const char *path, const std::string &content) {
 	if (!ofs.is_open()) return false;
 	ofs << content;
 	ofs.close();
+	return true;
+}
+
+// Helper: build per-map file path for a given folder inside fs_homepath (or relative)
+bool NXRP_GetPerMapFilePath(const char* folder, std::string& outPath) {
+	if (!folder) return false;
+	const char* home = Cvar_VariableString("fs_homepath");
+	std::string dir = (home && home[0]) ? std::string(home) + std::string("/") + folder : std::string(folder);
+#if defined(_WIN32)
+	// Ensure directory exists
+	CreateDirectoryA(dir.c_str(), NULL);
+#else
+	mkdir(dir.c_str(), 0755);
+#endif
+	const char* map = Cvar_VariableString("mapname");
+	if (!map || !map[0]) map = "nomap";
+	outPath = dir + "/" + std::string(map) + ".json";
+	return true;
+}
+
+bool NXRP_GetFolderPath(const char* folder, std::string& outDir) {
+	if (!folder) return false;
+	const char* home = Cvar_VariableString("fs_homepath");
+	std::string dir = (home && home[0]) ? std::string(home) + std::string("/") + folder : std::string(folder);
+#if defined(_WIN32)
+	CreateDirectoryA(dir.c_str(), NULL);
+#else
+	mkdir(dir.c_str(), 0755);
+#endif
+	outDir = dir;
+	return true;
+}
+
+// Read non-empty lines from a file into a vector<string>.
+bool NXRP_ReadNonEmptyLinesFromFile(const std::string& path, std::vector<std::string>& outLines) {
+	outLines.clear();
+	std::ifstream ifs(path);
+	if (!ifs.is_open()) return false;
+	std::string line;
+	while (std::getline(ifs, line)) {
+		if (!line.empty()) outLines.push_back(line);
+	}
+	ifs.close();
+	return true;
+}
+
+bool NXRP_ReadPerMapLines(const char* folder, std::vector<std::string>& outLines, std::string& outPath) {
+	if (!NXRP_GetPerMapFilePath(folder, outPath)) return false;
+	return NXRP_ReadNonEmptyLinesFromFile(outPath, outLines);
+}
+
+bool NXRP_WriteLinesToFile(const std::string& path, const std::vector<std::string>& lines) {
+	FILE* f = fopen(path.c_str(), "w");
+	if (!f) return false;
+	for (const auto &l : lines) { fputs(l.c_str(), f); fputc('\n', f); }
+	fclose(f);
 	return true;
 }
 

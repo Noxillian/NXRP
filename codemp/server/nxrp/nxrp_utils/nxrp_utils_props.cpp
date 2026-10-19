@@ -12,17 +12,77 @@
 
 // Read the per-map JSON file and send entries to the player as a simple indexed list.
 void NXRP_ListSavedSpawns(client_t* cl) {
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
+	std::string filename;
+	std::vector<std::string> lines;
+	if (!NXRP_ReadPerMapLines("nxrp_props", lines, filename)) { NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map"); return; }
 
-	std::ifstream ifs(filename);
-	if (!ifs.is_open()) {
-		NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
-		return;
+	// Print a simple indexed list of saved spawn entries for this map.
+	int idx = 0;
+	const size_t maxLen = 900; // keep within safe console buffer
+	bool any = false;
+	for (const auto &line : lines) {
+		if (line.empty()) continue;
+		any = true;
+		// Parse the JSON-ish line and print a concise one-line summary per saved spawn.
+		// Expected format: { "ent": <n>, "index": <n>, "model": "<path>", "origin": [x, y, z], "angles": [ax, ay, az] }
+		std::string s = line;
+		if (s.size() > maxLen) s = s.substr(0, maxLen - 3) + "...";
+
+		// helper to extract integer fields
+		auto extract_int = [&](const char* key, int def)->int {
+			size_t p = s.find(key);
+			if (p == std::string::npos) return def;
+			size_t colon = s.find(':', p + strlen(key)); if (colon == std::string::npos) return def;
+			size_t v = colon + 1; while (v < s.size() && isspace((unsigned char)s[v])) ++v;
+			size_t e = v; if (e < s.size() && (s[e] == '-' || isdigit((unsigned char)s[e]))) ++e; while (e < s.size() && isdigit((unsigned char)s[e])) ++e;
+			if (e > v) {
+				try { return std::stoi(s.substr(v, e-v)); } catch(...) { return def; }
+			}
+			return def;
+		};
+
+		int entv = extract_int("\"ent\"", -1);
+		int idxv = extract_int("\"index\"", idx);
+
+		// extract model path
+		std::string model;
+		size_t mpos = s.find("\"model\"");
+		if (mpos != std::string::npos) {
+			size_t colon = s.find(':', mpos);
+			if (colon != std::string::npos) {
+				size_t q = s.find('"', colon);
+				if (q != std::string::npos) {
+					size_t qe = s.find('"', q+1);
+					if (qe != std::string::npos && qe > q) model = s.substr(q+1, qe-q-1);
+				}
+			}
+		}
+
+		// extract origin and angles
+		float ox=0, oy=0, oz=0, ax=0, ay=0, az=0;
+		size_t opos = s.find("\"origin\"");
+		if (opos != std::string::npos) {
+			opos = s.find('[', opos);
+			if (opos != std::string::npos) {
+				sscanf(s.c_str()+opos, "[%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz);
+			}
+		}
+		size_t apos = s.find("\"angles\"");
+		if (apos != std::string::npos) {
+			apos = s.find('[', apos);
+			if (apos != std::string::npos) {
+				sscanf(s.c_str()+apos, "[%f %*[, ] %f %*[, ] %f", &ax, &ay, &az);
+			}
+		}
+
+		if (model.empty()) model = "<unknown>";
+		NXRP_PrintConsoleToPlayerFmt(cl, "%d: ent=%d model=%s origin=%.0f,%.0f,%.0f angles=%.0f,%.0f,%.0f", idx, entv, model.c_str(), ox, oy, oz, ax, ay, az);
+		idx++;
 	}
+	if (!any) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
+	if (idx == 0) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
+	return;
+}
 
 // Helper implementations moved from admincmds: place helper functions here
 // so admin command wrappers remain thin and delegate behavior to utils.
@@ -36,18 +96,9 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 	int scanned = sscanf(args, "%31s %f", dirTok, &amount);
 	if (scanned < 2) return false;
 
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
-
-	std::ifstream ifs(filename);
-	if (!ifs.is_open()) { NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map"); return false; }
+	std::string filename;
 	std::vector<std::string> lines;
-	std::string line;
-	while (std::getline(ifs, line)) { if (!line.empty()) lines.push_back(line); }
-	ifs.close();
+	if (!NXRP_ReadPerMapLines("nxrp_props", lines, filename)) { NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map"); return false; }
 
 	if (index < 0 || index >= (int)lines.size()) { NXRP_PrintConsoleToPlayer(cl, "Invalid saved spawn index"); return false; }
 
@@ -139,19 +190,10 @@ bool NXRP_MoveLastSpawnTo(client_t* cl, const char* chatCursor) {
 	sharedEntity_t* e = SV_GentityNum(last);
 	if (!e) { NXRP_PrintConsoleToPlayer(cl, "Last spawned entity not found"); return false; }
 
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
-
+	std::string filename;
 	std::vector<std::string> lines;
-	std::ifstream ifs(filename);
-	if (ifs.is_open()) {
-		std::string line;
-		while (std::getline(ifs, line)) { if (!line.empty()) lines.push_back(line); }
-		ifs.close();
-	}
+	NXRP_GetPerMapFilePath("nxrp_props", filename);
+	NXRP_ReadNonEmptyLinesFromFile(filename, lines);
 
 	bool removed = false;
 	std::string removedLine;
@@ -339,16 +381,15 @@ bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor) {
 	return false;
 }
 
-	std::string line;
 	int idx = 0;
 	const size_t maxLen = 900; // keep within safe console buffer
 	bool any = false;
-	while (std::getline(ifs, line)) {
+	for (const auto &line : lines) {
 		if (line.empty()) continue;
 		any = true;
-// Parse the JSON-ish line and print a concise one-line summary per saved spawn.
-// Expected format: { "ent": <n>, "index": <n>, "model": "<path>", "origin": [x, y, z], "angles": [ax, ay, az] }
-	std::string s = line;
+		// Parse the JSON-ish line and print a concise one-line summary per saved spawn.
+		// Expected format: { "ent": <n>, "index": <n>, "model": "<path>", "origin": [x, y, z], "angles": [ax, ay, az] }
+		std::string s = line;
 	if (s.size() > maxLen) s = s.substr(0, maxLen - 3) + "...";
 
 	// helper to extract integer fields
@@ -404,7 +445,6 @@ bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor) {
 	idx++;
 	}
 	if (!any) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
-	ifs.close();
 	if (idx == 0) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
 }
 
@@ -415,21 +455,9 @@ int NXRP_SpawnPropAtClientWithExtents(client_t* cl, const char* modelPath, const
 
 // Remove a saved spawn entry by its zero-based index. This rewrites the per-map file.
 bool NXRP_RemoveSavedSpawnByIndex(int index) {
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
-
-	std::ifstream ifs(filename);
-	if (!ifs.is_open()) return false;
-
+	std::string filename;
 	std::vector<std::string> lines;
-	std::string line;
-	while (std::getline(ifs, line)) {
-		if (!line.empty()) lines.push_back(line);
-	}
-	ifs.close();
+	if (!NXRP_ReadPerMapLines("nxrp_props", lines, filename)) return false;
 
 	if (index < 0 || index >= (int)lines.size()) return false;
 
@@ -471,13 +499,7 @@ bool NXRP_RemoveSavedSpawnByIndex(int index) {
 
 	// Remove the selected entry and rewrite file
 	lines.erase(lines.begin() + index);
-	FILE* f = fopen(filename.c_str(), "w");
-	if (!f) return false;
-	for (const auto &l : lines) {
-		fputs(l.c_str(), f);
-		fputc('\n', f);
-	}
-	fclose(f);
+	if (!NXRP_WriteLinesToFile(filename, lines)) return false;
 	return true;
 }
 
@@ -489,27 +511,12 @@ void NXRP_SaveSpawnToMap(int entnum, const char* modelPath) {
 	if (!e) return;
 
 	char buf[1024];
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
-#if defined(_WIN32)
-	CreateDirectoryA(dir.c_str(), NULL);
-#else
-	mkdir(dir.c_str(), 0755);
-#endif
-
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
+	std::string filename;
+	NXRP_GetPerMapFilePath("nxrp_props", filename);
 
 	int nextIndex = 0;
-	{
-		std::ifstream existing(filename);
-		if (existing.is_open()) {
-			std::string l;
-			while (std::getline(existing, l)) { if (!l.empty()) nextIndex++; }
-			existing.close();
-		}
-	}
+	std::vector<std::string> lines;
+	if (NXRP_ReadNonEmptyLinesFromFile(filename, lines)) nextIndex = (int)lines.size();
 
 	FILE* f = fopen(filename.c_str(), "a");
 	if (!f) return;
@@ -525,11 +532,9 @@ void NXRP_SaveSpawnToMap(int entnum, const char* modelPath) {
 // Load saved spawns for the current map and attempt to spawn them into the world.
 // Returns the number of spawns successfully created.
 int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
+	// Ensure per-map directory exists (handled by NXRP_GetPerMapFilePath)
+	std::string filename;
+	NXRP_GetPerMapFilePath("nxrp_props", filename);
 
 	std::ifstream ifs(filename);
 	if (!ifs.is_open()) {
@@ -638,13 +643,21 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 	// If it looks like a path, attempt to match it against the JSON catalog's model fields first.
 	bool looksLikePath = (sname.find('/') != std::string::npos || sname.find('\\') != std::string::npos || sname.find('.') != std::string::npos);
 
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
-	std::string jsonPath = (home && home[0]) ? std::string(home) + "/nxrp_props_catalog.json" : std::string("nxrp_props_catalog.json");
-	std::ifstream jifs(jsonPath);
-	if (jifs.is_open()) {
-		std::string content((std::istreambuf_iterator<char>(jifs)), std::istreambuf_iterator<char>());
-		jifs.close();
+	// Read optional JSON catalog from the nxrp_props folder. Use NXRP helpers
+	// to determine the per-map directory so we avoid duplicating fs_homepath logic.
+	std::string perMapPath;
+	NXRP_GetPerMapFilePath("nxrp_props", perMapPath);
+	// Derive directory from the per-map path (strip trailing /<map>.json)
+	std::string dir = perMapPath;
+	{
+		size_t p1 = dir.find_last_of('/');
+		size_t p2 = dir.find_last_of('\\');
+		size_t p = (p1 == std::string::npos) ? p2 : ((p2 == std::string::npos) ? p1 : std::max(p1, p2));
+		if (p != std::string::npos) dir = dir.substr(0, p);
+	}
+	std::string jsonPath = dir + "/nxrp_props_catalog.json";
+	std::string content;
+	if (NXRP_ReadFileToString(jsonPath.c_str(), content)) {
 		// crude JSON parsing: if name is a key, use that entry. If name looks like a path, search for an entry whose model matches the path.
 		std::string key = '"' + sname + '"';
 		size_t kpos = content.find(key);
