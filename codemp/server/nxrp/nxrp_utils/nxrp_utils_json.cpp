@@ -1,4 +1,4 @@
-// Renamed from nxrp_jsonreader.cpp to nxrp_util_json.cpp
+// Renamed from nxrp_util_json.cpp to nxrp_utils_json.cpp
 #include "server/nxrp/nxrp_main.h"
 #include "server/nxrp/nxrp_utils/nxrp_utils.h"
 
@@ -185,4 +185,3 @@ bool NXRP_SetAccountFieldInFile(const char *filepath, const char *field, const s
 	newContent += content.substr(end);
 	return NXRP_WriteStringToFile(filepath, newContent);
 }
-
