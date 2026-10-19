@@ -290,9 +290,13 @@ int NXRP_GetRoundNumber(void) {
 
 
 void NXRP_OnNPCKilled(client_t *killer, const char *npcName) {
-	// NPC kill event output disabled while focusing on engine kill log behavior.
-	(void)killer;
-	(void)npcName;
+	const char *pName = "Unknown";
+	if (killer) {
+		if (killer->nxrp_username[0]) pName = killer->nxrp_username;
+		else if (killer->name[0]) pName = killer->name;
+	}
+	const char *nName = (npcName && npcName[0]) ? npcName : "NPC";
+	NXRP_PrintConsoleToPlayer(NULL, va("^3[NXRP-NPCKILL]^7 %s killed %s", pName, nName));
 }
 
 // Called when a player first enters the game
