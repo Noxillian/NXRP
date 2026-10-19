@@ -33,7 +33,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/timing.h"
 #include "NPCNav/navigator.h"
 #include "killstreak.h"
-#include "sys/sys_loadlib.h"
 
 botlib_export_t	*botlib_export;
 
