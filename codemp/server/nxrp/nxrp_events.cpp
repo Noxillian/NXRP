@@ -207,21 +207,17 @@ void NXRP_OnPlayerDisconnect(int clientNum) {
 void NXRP_OnPlayerKilled(client_t *attacker, client_t *victim, int meansOfDeath) {
 	const char *aName = attacker ? (attacker->nxrp_username[0] ? attacker->nxrp_username : attacker->name) : "World";
 	const char *vName = victim ? (victim->nxrp_username[0] ? victim->nxrp_username : victim->name) : "Unknown";
-	NXRP_PrintConsoleToPlayer(NULL, va("Kill: %s killed %s (mod %d)", aName, vName, meansOfDeath));
-	// Broadcast a concise chat notification when the game reports a kill so
-	// players see the same event without parsing server logs.
-	SV_SendServerCommand(NULL, va("chat \"%s killed %s\"", aName, vName));
+	NXRP_PrintConsoleToPlayer(NULL, va("^3[NXRP-PLAYERKILL]^7 %s killed %s (mod %d)", aName, vName, meansOfDeath));
 }
 
 void NXRP_OnScoreChanged(client_t *cl, int oldScore, int newScore) {
 	const char *name = cl ? (cl->nxrp_username[0] ? cl->nxrp_username : cl->name) : "Unknown";
 	//NXRP_PrintConsoleToPlayer(NULL, va("Score changed: %s %d -> %d", name, oldScore, newScore));
 
-	// If the player's score increased, send them a chat notification
+	// If the player's score increased, send them a notification
 	//if ( cl && newScore > oldScore ) {
 	//	int delta = newScore - oldScore;
-		// Use server chat to inform the player. Escape quotes via format.
-		//SV_SendServerCommand( cl, "chat \"You scored %d point%s! Total: %d\"\n", delta, (delta==1)?"":"s", newScore );
+		//NXRP_PrintConsoleToPlayer(cl, va("You scored %d point%s! Total: %d", delta, (delta==1)?"":"s", newScore));
 	//}
 }
 
@@ -261,8 +257,6 @@ void NXRP_OnRoundEnd(int winningTeam) {
 
 void NXRP_OnRoundStart(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Round started");
-	// Announce in chat as well
-	SV_SendServerCommand(NULL, "chat \"^3[NXRP]^7 Round started\"");
 	// Increment round counter and re-resolve/reapply FFA hooks at round start
 	nxrp_roundNumber++;
 	NXRP_FFA_Init();
@@ -303,11 +297,7 @@ void NXRP_OnNPCKilled(client_t *killer, const char *npcName) {
 		else if (killer->name[0]) pName = killer->name;
 	}
 	const char *nName = npcName && npcName[0] ? npcName : "NPC";
-
-	NXRP_PrintConsoleToPlayer(NULL, va("%s defeated %s", pName, nName));
-
-	// Broadcast the same defeated string to all players (server logs already include this form)
-	SV_SendServerCommand(NULL, va("chat \"%s defeated %s\"", pName, nName));
+	NXRP_PrintConsoleToPlayer(NULL, va("^3[NXRP-NPCKILL]^7 %s defeated %s", pName, nName));
 }
 
 // Called when a player first enters the game
