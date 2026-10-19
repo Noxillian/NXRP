@@ -67,9 +67,9 @@ static std::string NXRP_ToLowerCopy( const std::string &in ) {
 
 // Called at server startup to ensure <fs_homepath>/nxrp/skills.json exists.
 void NXRP_EnsureRuntimeSkills(void) {
-	const char *homepath = Cvar_VariableString("fs_homepath");
-	std::string nxrpDir = (homepath && homepath[0]) ? std::string(homepath) + "/nxrp" : std::string("nxrp");
-	std::string filepath = nxrpDir + "/skills.json";
+	std::string dir;
+	NXRP_GetFolderPath("nxrp", dir);
+	std::string filepath = dir + "/skills.json";
 	std::ifstream ifs(filepath);
 	if (ifs.is_open()) { ifs.close(); return; }
 

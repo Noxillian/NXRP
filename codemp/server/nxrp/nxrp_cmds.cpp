@@ -22,8 +22,9 @@
 qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-	const char *home = Cvar_VariableString("fs_homepath");
-	NXRP_Skills_ListImpl(cl, home);
+	std::string dir;
+	NXRP_GetFolderPath("nxrp", dir); // ensure nxrp folder exists; Skills impl will resolve files inside
+	NXRP_Skills_ListImpl(cl, dir.c_str());
 	return qtrue;
 }
 
@@ -39,8 +40,9 @@ qboolean NXRP_cmd_skill( client_t *cl, const char *chatCursor ) {
 	char tok[MAX_TOKEN_CHARS] = {0};
 	if (sscanf(chatCursor, "%31s", tok) < 1) { NXRP_PrintConsoleToPlayer(cl, "Usage: !skill <skillid>"); return qtrue; }
 
-	const char *home = Cvar_VariableString("fs_homepath");
-	NXRP_Skill_PurchaseImpl(cl, home, tok);
+	std::string dir;
+	NXRP_GetFolderPath("nxrp", dir);
+	NXRP_Skill_PurchaseImpl(cl, dir.c_str(), tok);
 	return qtrue;
 }
 
@@ -125,16 +127,9 @@ qboolean NXRP_cmd_register( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	const char *home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_accounts" : std::string("nxrp_accounts");
-	#if defined(_WIN32)
-		_mkdir(dir.c_str());
-	#else
-		mkdir(dir.c_str(), 0755);
-	#endif
-
+	std::string dir;
+	NXRP_GetFolderPath("nxrp_accounts", dir);
 	std::string filepath = dir + "/" + safe + ".json";
-
 	std::ifstream ifs(filepath);
 	if (ifs.good()) {
 		NXRP_PrintConsoleToPlayer(cl, "Username already exists");
@@ -196,10 +191,9 @@ qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	const char *home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_accounts" : std::string("nxrp_accounts");
+	std::string dir;
+	NXRP_GetFolderPath("nxrp_accounts", dir);
 	std::string filepath = dir + "/" + safe + ".json";
-
 	std::ifstream ifs(filepath);
 	if (!ifs.is_open()) {
 		NXRP_PrintConsoleToPlayer(cl, "Login failed: unknown user");
@@ -268,14 +262,12 @@ qboolean NXRP_cmd_account( client_t *cl, const char *chatCursor ) {
 	for (char c : user) if (std::isalnum((unsigned char)c) || c == '_') safe.push_back((char)std::tolower((unsigned char)c));
 	if (safe.empty()) { NXRP_PrintConsoleToPlayer(cl, "Invalid stored username"); return qtrue; }
 
-	const char *home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_accounts" : std::string("nxrp_accounts");
+	std::string dir;
+	NXRP_GetFolderPath("nxrp_accounts", dir);
 	std::string filepath = dir + "/" + safe + ".json";
 
-	std::ifstream ifs(filepath);
-	if (!ifs.is_open()) { NXRP_PrintConsoleToPlayer(cl, "Account file not found"); return qtrue; }
-	std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
-	ifs.close();
+	std::string content;
+	if (!NXRP_ReadFileToString(filepath.c_str(), content)) { NXRP_PrintConsoleToPlayer(cl, "Account file not found"); return qtrue; }
 
 	std::string level, exp, credits, skillpoints;
 	std::string tmp;

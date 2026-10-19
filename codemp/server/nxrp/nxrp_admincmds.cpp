@@ -59,6 +59,7 @@ qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
 	}
 
 	if (!Q_stricmp(sub, "s")) {
+		// forward to NPC spawn helper via delayed VM command; keep admincmds lightweight
 		const char* q2 = p;
 		while (*q2 && !isspace((unsigned char)*q2)) q2++;
 		while (*q2 == ' ' || *q2 == '\t') q2++;
@@ -96,6 +97,7 @@ qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
+
 	NXRP_PrintConsoleToPlayer(cl, "Usage: !npc s <type> | !npc load | !npc list | !npc r <index>");
 	return qtrue;
 }
@@ -106,114 +108,7 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
-	if (!args || !*args) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !prop <index> <up|down|left|right|forward|back> <amount>");
-		return qtrue;
-	}
-
-	char dirTok[32] = {0};
-	float amount = 0.0f;
-	int scanned = sscanf(args, "%31s %f", dirTok, &amount);
-	if (scanned < 2) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !prop <index> <dir> <amount>");
-		return qtrue;
-	}
-
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
-
-	std::ifstream ifs(filename);
-	if (!ifs.is_open()) { NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map"); return qtrue; }
-	std::vector<std::string> lines;
-	std::string line;
-	while (std::getline(ifs, line)) { if (!line.empty()) lines.push_back(line); }
-	ifs.close();
-
-	if (index < 0 || index >= (int)lines.size()) { NXRP_PrintConsoleToPlayer(cl, "Invalid saved spawn index"); return qtrue; }
-
-	std::string target = lines[index];
-
-	const char* s = target.c_str();
-	std::string modelPath;
-	float ox=0, oy=0, oz=0;
-	const char* modelKey = "\"model\"";
-	const char* originKey = "\"origin\"";
-	const char* m = strstr(s, modelKey);
-	if (m) { m = strchr(m, ':'); if (m) m++; while (m && *m && isspace((unsigned char)*m)) m++; if (m && *m == '"') { m++; const char* me = strchr(m, '"'); if (me && me > m) modelPath.assign(m, me - m); } }
-	const char* o = strstr(s, originKey);
-	if (o) { o = strchr(o, '['); if (o) { o++; sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz); } }
-
-	// Free any runtime entity referenced in this saved entry to avoid duplicates
-	int entToFree = -1;
-	size_t entPos = target.find("\"ent\"");
-	if (entPos != std::string::npos) {
-		size_t colon = target.find(':', entPos);
-		if (colon != std::string::npos) {
-			size_t valStart = colon + 1;
-			while (valStart < target.size() && isspace((unsigned char)target[valStart])) ++valStart;
-			size_t valEnd = valStart;
-			if (valEnd < target.size() && (target[valEnd] == '-' || isdigit((unsigned char)target[valEnd]))) ++valEnd;
-			while (valEnd < target.size() && isdigit((unsigned char)target[valEnd])) ++valEnd;
-			if (valEnd > valStart) {
-				try { entToFree = std::stoi(target.substr(valStart, valEnd - valStart)); } catch(...) { entToFree = -1; }
-			}
-		}
-	}
-	if (entToFree >= 0 && entToFree < sv.num_entities) {
-		sharedEntity_t* oldEnt = SV_GentityNum(entToFree);
-		if (oldEnt) {
-			NXRP_FreeEntity((void*)oldEnt);
-			NXRP_RegisterSpawn(-1);
-			NXRP_PrintConsoleToPlayer(cl, va("Freed old saved runtime entity %d", entToFree));
-		}
-	}
-
-	if (modelPath.empty()) { NXRP_PrintConsoleToPlayer(cl, "Saved entry missing model path"); return qtrue; }
-
-	// compute delta vector based on direction
-	float dx=0, dy=0, dz=0;
-	if (!Q_stricmp(dirTok, "up")) dz = amount;
-	else if (!Q_stricmp(dirTok, "down")) dz = -amount;
-	else if (!Q_stricmp(dirTok, "left")) dx = -amount;
-	else if (!Q_stricmp(dirTok, "right")) dx = amount;
-	else if (!Q_stricmp(dirTok, "forward")) dy = amount;
-	else if (!Q_stricmp(dirTok, "back")) dy = -amount;
-	else { NXRP_PrintConsoleToPlayer(cl, "Unknown direction; use up/down/left/right/forward/back"); return qtrue; }
-
-	// compute new position and respawn using NXRP_PlaceModel
-	vec3_t newFloor = { ox + dx, oy + dy, oz + dz };
-	newFloor[0] = roundf(newFloor[0]); newFloor[1] = roundf(newFloor[1]); newFloor[2] = roundf(newFloor[2]);
-
-	vec3_t mins = { -24.0f, -24.0f, -8.0f };
-	vec3_t maxs = { 24.0f, 24.0f, 24.0f };
-	float yaw = 0.0f;
-	// try to parse saved yaw from entry
-	const char* anglesKey = "\"angles\"";
-	const char* a = strstr(s, anglesKey);
-	if (a) { a = strchr(a, '['); if (a) { a++; float ax=0, ay=0, az=0; sscanf(a, "%f %*[, ] %f %*[, ] %f", &ax, &ay, &az); yaw = ay; } }
-
-	vec3_t zeroOffset = {0.0f, 0.0f, 0.0f};
-	int ent = NXRP_PlaceModel(modelPath.c_str(), mins, maxs, yaw, zeroOffset, newFloor);
-	if (ent >= 0) {
-		NXRP_RegisterSpawn(ent);
-		// update saved entry with new origin
-		char buf[1024];
-		snprintf(buf, sizeof(buf), "{ \"ent\": %d, \"id\": %d, \"index\": %d, \"model\": \"%s\", \"origin\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f] }",
-			ent, ent, index, modelPath.c_str(), newFloor[0], newFloor[1], newFloor[2], 0.0f, yaw, 0.0f);
-		lines[index] = std::string(buf);
-		FILE* f = fopen(filename.c_str(), "w");
-		if (f) {
-			for (const auto &ll : lines) { fputs(ll.c_str(), f); fputc('\n', f); }
-			fclose(f);
-		}
-		NXRP_PrintConsoleToPlayer(cl, va("Moved saved spawn %d by %s %.1f", index, dirTok, amount));
-	} else {
-		NXRP_PrintConsoleToPlayer(cl, "Failed to respawn model at new location");
-	}
-
+	NXRP_MoveSavedSpawnByIndex(cl, index, args);
 	return qtrue;
 }
 
@@ -223,173 +118,7 @@ qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
-	if (!chatCursor || !*chatCursor) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !prop m <x> <y> <z>");
-		return qtrue;
-	}
-
-	float x=0,y=0,z=0;
-	int cnt = sscanf(chatCursor, "%f %f %f", &x, &y, &z);
-	if (cnt != 3) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !prop m <x> <y> <z>");
-		return qtrue;
-	}
-
-	int last = NXRP_GetLastSpawn();
-	if (last < 0) { NXRP_PrintConsoleToPlayer(cl, "No last spawned model to move"); return qtrue; }
-	if (last < 0 || last >= sv.num_entities) { NXRP_PrintConsoleToPlayer(cl, "Invalid last spawned model id"); return qtrue; }
-
-	sharedEntity_t* e = SV_GentityNum(last);
-	if (!e) { NXRP_PrintConsoleToPlayer(cl, "Last spawned entity not found"); return qtrue; }
-
-	// Remove saved entry that corresponds to 'last' if present (find by ent field) so we can re-save at new location
-	// Load file and find matching line by ent
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_props" : std::string("nxrp_props");
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
-
-	// Read lines
-	std::vector<std::string> lines;
-	std::ifstream ifs(filename);
-	if (ifs.is_open()) {
-		std::string line;
-		while (std::getline(ifs, line)) { if (!line.empty()) lines.push_back(line); }
-		ifs.close();
-	}
-
-	// Instead of matching by runtime ent id, use the last saved entry in the file.
-	bool removed = false;
-	std::string removedLine;
-	if (!lines.empty()) {
-		removedLine = lines.back();
-		lines.pop_back();
-		removed = true;
-		// rewrite file immediately with remaining entries
-		FILE* f = fopen(filename.c_str(), "w");
-		if (f) {
-			for (const auto &ll : lines) { fputs(ll.c_str(), f); fputc('\n', f); }
-			fclose(f);
-		}
-	} else {
-		// nothing to remove; proceed to move and save new location anyway
-	}
-
-	// Free the old entity and spawn a new one at the requested coordinates
-	NXRP_PrintConsoleToPlayer(cl, va("Freeing old entity %d before respawn", last));
-	void* dll = GVM_GetDllHandle();
-	if (!dll) { NXRP_PrintConsoleToPlayer(cl, "Game VM not available"); return qtrue; }
-	void (*G_FreeEntity_f)(void*) = (void (*)(void*))Sys_LoadFunction(dll, "G_FreeEntity");
-	if (!G_FreeEntity_f) {
-		NXRP_PrintConsoleToPlayer(cl, "G_FreeEntity not available; aborting move");
-		return qtrue;
-	}
-	{
-		void* old = GVM_BeginNative();
-		G_FreeEntity_f(e);
-		GVM_EndNative(old);
-	}
-	// mark that last spawn is gone
-	NXRP_RegisterSpawn(-1);
-	NXRP_PrintConsoleToPlayer(cl, "Old entity freed");
-
-	// spawn new at x y z using the model path parsed from the removed line
-	if (!removed || removedLine.empty()) {
-		NXRP_PrintConsoleToPlayer(cl, "Could not find saved model entry for the last spawn; aborting move.");
-		return qtrue;
-	}
-
-	// parse model path and angles from removedLine
-	std::string modelPathStr;
-	float savedAx=0.0f, savedAy=0.0f, savedAz=0.0f;
-	const char* s = removedLine.c_str();
-	const char* modelKey = "\"model\"";
-	const char* anglesKey = "\"angles\"";
-	const char* m = strstr(s, modelKey);
-	if (m) {
-		m = strchr(m, ':'); if (m) m++;
-		while (m && *m && isspace((unsigned char)*m)) m++;
-		if (m && *m == '"') {
-			m++;
-			// find closing quote - handle simple escaped quotes by searching for '"' directly
-			const char* me = strchr(m, '"');
-			if (me && me > m) modelPathStr.assign(m, me - m);
-		}
-	}
-	const char* a = strstr(s, anglesKey);
-	if (a) {
-		a = strchr(a, '[');
-		if (a) {
-			a++;
-			// sscanf may encounter commas or spaces; accept both
-			sscanf(a, "%f %*[, ] %f %*[, ] %f", &savedAx, &savedAy, &savedAz);
-		}
-	}
-
-	// Basic validation and debug output
-	if (modelPathStr.empty()) {
-		NXRP_PrintConsoleToPlayer(cl, "Saved entry missing model path; aborting move.");
-		return qtrue;
-	}
-	// Trim whitespace from modelPathStr
-	{
-		size_t a = modelPathStr.find_first_not_of(" \t\r\n");
-		size_t b = modelPathStr.find_last_not_of(" \t\r\n");
-		if (a == std::string::npos) modelPathStr.clear(); else modelPathStr = modelPathStr.substr(a, b - a + 1);
-	}
-	// Debug: show parsed values and the raw removed line
-	NXRP_PrintConsoleToPlayer(cl, va("Moving model '%s' to (%.0f %.0f %.0f) with saved yaw %.1f", modelPathStr.c_str(), x, y, z, savedAy));
-	NXRP_PrintConsoleToPlayer(cl, va("Saved line: %s", removedLine.c_str()));
-
-	// Quick check: query the game VM for the model index to ensure the model exists
-	void* dll_check = GVM_GetDllHandle();
-	if (dll_check) {
-		int (*gModelIndex_f)(const char*) = (int (*)(const char*))Sys_LoadFunction(dll_check, "G_ModelIndex");
-		if (gModelIndex_f) {
-			void* old = GVM_BeginNative();
-			int idx = gModelIndex_f(modelPathStr.c_str());
-			GVM_EndNative(old);
-			NXRP_PrintConsoleToPlayer(cl, va("G_ModelIndex('%s') = %d", modelPathStr.c_str(), idx));
-		}
-	}
-
-	if (modelPathStr.empty()) {
-		NXRP_PrintConsoleToPlayer(cl, "Saved entry missing model path; aborting move.");
-		return qtrue;
-	}
-
-	// Parse saved origin from the removed line and add the provided offsets (x,y,z)
-	float savedOx = 0.0f, savedOy = 0.0f, savedOz = 0.0f;
-	const char* originKey = "\"origin\"";
-	const char* o = strstr(removedLine.c_str(), originKey);
-	if (o) {
-		o = strchr(o, '[');
-		if (o) {
-			o++;
-			sscanf(o, "%f %*[, ] %f %*[, ] %f", &savedOx, &savedOy, &savedOz);
-		}
-	}
-
-	// Compute the new floor as saved origin + provided offsets
-	vec3_t newFloor = { savedOx + x, savedOy + y, savedOz + z };
-	// snap to integers like spawn/save behavior
-	newFloor[0] = roundf(newFloor[0]); newFloor[1] = roundf(newFloor[1]); newFloor[2] = roundf(newFloor[2]);
-
-	vec3_t mins = { -24.0f, -24.0f, -8.0f };
-	vec3_t maxs = {  24.0f,  24.0f, 24.0f };
-	float yaw = savedAy; // preserve saved yaw
-
-	vec3_t zeroOffset2 = {0.0f, 0.0f, 0.0f};
-	int newEnt = NXRP_PlaceModel(modelPathStr.c_str(), mins, maxs, yaw, zeroOffset2, newFloor);
-	if (newEnt >= 0) {
-		NXRP_RegisterSpawn(newEnt);
-		NXRP_SaveSpawnToMap(newEnt, modelPathStr.c_str());
-		NXRP_PrintConsoleToPlayer(cl, va("Moved model and respawned as entity %d", newEnt));
-	} else {
-		NXRP_PrintConsoleToPlayer(cl, "Failed to respawn model at new location");
-	}
-
+	NXRP_MoveLastSpawnTo(cl, chatCursor);
 	return qtrue;
 }
 
@@ -399,6 +128,7 @@ qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 	NXRP_PrintConsoleToPlayer(cl, "Loading saved spawns...");
+	// Uses the shared utils loader for per-map saved spawns.
 	int count = NXRP_LoadSavedSpawnsForMap(cl);
 	NXRP_PrintConsoleToPlayer(cl, va("Loaded %d saved spawns for this map", count));
 	return qtrue;
@@ -411,7 +141,6 @@ qboolean NXRP_cmdAdmin_prop_r( client_t *cl, const char *chatCursor ) {
 
 	int idx = -1;
 	if (!chatCursor || sscanf(chatCursor, "%*s %d", &idx) < 1) {
-		// Try plain number
 		if (!chatCursor || sscanf(chatCursor, "%d", &idx) < 1) {
 			NXRP_PrintConsoleToPlayer(cl, "Usage: !prop r <index>");
 			return qtrue;
@@ -681,116 +410,12 @@ qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor ) {
 qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
-	// chatCursor may be: "model <path> [angle]" or "<path> [angle]"
-	if (!chatCursor) {
-	NXRP_PrintConsoleToPlayer(cl, "Usage: !prop s <model_path> [angle]");
+	// Delegate full spawn behavior to nxrp_utils implementation
+	if (!chatCursor || !*chatCursor) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !prop s <model_path> [angle]");
 		return qtrue;
 	}
-
-	// Skip leading spaces
-	const char* p = chatCursor;
-	while (*p == ' ' || *p == '\t') p++;
-
-	// If the first token is "model" or "pmodel", skip it
-	char firstTok[MAX_TOKEN_CHARS] = {0};
-	if (sscanf(p, "%31s", firstTok) == 1) {
-		if (!Q_stricmp(firstTok, "model") || !Q_stricmp(firstTok, "pmodel")) {
-			const char* q = p;
-			while (*q && *q != ' ' && *q != '\t') q++;
-			while (*q == ' ' || *q == '\t') q++;
-			p = q;
-		}
-	}
-
-	if (!p || !*p) {
-	NXRP_PrintConsoleToPlayer(cl, "Usage: !prop s <model_path> [angle]");
-		return qtrue;
-	}
-
-	// Parse path and optional angle OR treat first token as a catalog name
-	char path[512] = {0};
-	float angle = 0.0f;
-	int scanned = sscanf(p, "%511s %f", path, &angle);
-	if (scanned < 1) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !prop s <model_path|catalog_name> [angle]");
-		return qtrue;
-	}
-
-	// normalize angle into [0,360)
-	while (angle < 0.0f) angle += 360.0f;
-	while (angle >= 360.0f) angle -= 360.0f;
-
-	// If the provided token matches a catalog entry, use its model and extents
-	std::string modelFromCatalog;
-	vec3_t mins = { -24.0f, -24.0f, -8.0f };
-	vec3_t maxs = { 24.0f, 24.0f, 24.0f };
-	// Kept as colliderOrigin for clarity; represents collider offset parsed as collideroffset.
-	vec3_t colliderOrigin = { 0.0f, 0.0f, 0.0f };
-	vec3_t floor = { 0.0f, 0.0f, 0.0f };
-	float catalogYaw = angle;
-	// Quick diagnostic: check whether the runtime JSON catalog exists and contains the model path
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string jsonPath;
-	if (home && home[0]) jsonPath = std::string(home) + "/nxrp_props_catalog.json";
-	else jsonPath = std::string("nxrp_props_catalog.json");
-	{
-		std::ifstream check(jsonPath);
-		if (!check.is_open()) {
-			NXRP_PrintConsoleToPlayer(cl, va("Catalog file not found at %s", jsonPath.c_str()));
-		} else {
-			std::string content((std::istreambuf_iterator<char>(check)), std::istreambuf_iterator<char>());
-			check.close();
-			if (content.find(path) == std::string::npos) {
-				NXRP_PrintConsoleToPlayer(cl, va("Catalog present but does not contain entry for %s", path));
-			} else {
-				// catalog file contains the model path but parser may still fail if formatting differs
-				NXRP_PrintConsoleToPlayer(cl, va("Catalog contains %s; attempting to parse entry", path));
-			}
-		}
-	}
-	bool hasCatalog = NXRP_GetPropFromCatalog(path, modelFromCatalog, mins, maxs, colliderOrigin, catalogYaw);
-	const float eps = 0.001f;
-	if (hasCatalog) {
-		// use catalog model and extents
-		Q_strncpyz(path, modelFromCatalog.c_str(), sizeof(path));
-		NXRP_PrintConsoleToPlayer(cl, "found prop in list, using custom collider box");
-		// also notify the player in chat for visibility
-		if (modelFromCatalog.empty()) {
-			SV_SendServerCommand(cl, "chat \"^3[NXRP]^7 Using custom collider\"\n");
-		} else {
-			SV_SendServerCommand(cl, "chat \"^3[NXRP]^7 Using custom collider for %s\"\n", modelFromCatalog.c_str());
-		}
-		// If the user provided an explicit angle, prefer it. Otherwise use catalog yaw if non-zero.
-		if (scanned < 2) {
-			if (fabsf(catalogYaw) >= eps) angle = catalogYaw;
-		}
-		// For entity placement, always prefer the client's origin (do NOT use colliderOrigin to place the object)
-		if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
-	} else {
-		if (cl && cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
-		// Inform the admin that no catalog entry was found for this model/path
-		NXRP_PrintConsoleToPlayer(cl, va("No catalog entry found for %s", path));
-	}
-
-	// If we have a catalog entry, treat mins/maxs as half-extents centered at colliderOrigin.
-	// Convert to prop mins/maxs relative to the entity origin by offsetting by colliderOrigin.
-	vec3_t adjMins, adjMaxs;
-	if (hasCatalog) {
-		for (int i = 0; i < 3; ++i) { adjMins[i] = mins[i] + colliderOrigin[i]; adjMaxs[i] = maxs[i] + colliderOrigin[i]; }
-	} else {
-		VectorCopy(mins, adjMins);
-		VectorCopy(maxs, adjMaxs);
-	}
-
-	int ent = NXRP_PlaceModel(path, adjMins, adjMaxs, angle, colliderOrigin, floor);
-	if (ent >= 0) {
-		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", path, ent));
-		NXRP_RegisterSpawn(ent);
-		// Persist the spawn to the per-map JSON so admins can later list/manage them.
-		NXRP_SaveSpawnToMap(ent, path);
-	} else {
-		NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model.");
-	}
+	NXRP_AdminSpawnProp(cl, chatCursor);
 	return qtrue;
 }
 

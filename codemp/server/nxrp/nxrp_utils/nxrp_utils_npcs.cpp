@@ -1,4 +1,4 @@
-// NPC persistence and helpers
+// NPC persistence and helpers (moved from codemp/server/nxrp/nxrp_npcs.cpp)
 #include "server/nxrp/nxrp_utils/nxrp_utils.h"
 #include "server/nxrp/nxrp_main.h"
 #include "server/sv_gameapi.h"
@@ -28,19 +28,9 @@ void NXRP_PushPendingNPCName(const char* name) {
 
 // Remove a saved NPC entry by its zero-based index. This rewrites the per-map file.
 bool NXRP_RemoveSavedNPCByIndex(int index) {
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_npcs" : std::string("nxrp_npcs");
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
-
-	std::ifstream ifs(filename);
-	if (!ifs.is_open()) return false;
-
+	std::string filename;
 	std::vector<std::string> lines;
-	std::string line;
-	while (std::getline(ifs, line)) { if (!line.empty()) lines.push_back(line); }
-	ifs.close();
+	if (!NXRP_ReadPerMapLines("nxrp_npcs", lines, filename)) return false;
 
 	if (index < 0 || index >= (int)lines.size()) return false;
 
@@ -82,10 +72,7 @@ bool NXRP_RemoveSavedNPCByIndex(int index) {
 
 	// Remove the entry and rewrite
 	lines.erase(lines.begin() + index);
-	FILE* f = fopen(filename.c_str(), "w");
-	if (!f) return false;
-	for (const auto &l : lines) { fputs(l.c_str(), f); fputc('\n', f); }
-	fclose(f);
+	if (!NXRP_WriteLinesToFile(filename, lines)) return false;
 	return true;
 }
 
@@ -150,29 +137,12 @@ void NXRP_SaveNPCToMap(int entnum, const char* npcType) {
 	if (!e) return;
 
 	char buf[1024];
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_npcs" : std::string("nxrp_npcs");
-#if defined(_WIN32)
-	CreateDirectoryA(dir.c_str(), NULL);
-#else
-	mkdir(dir.c_str(), 0755);
-#endif
-
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
-
+	std::string filename;
+	std::vector<std::string> lines;
+	NXRP_GetPerMapFilePath("nxrp_npcs", filename);
 	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_SaveNPCToMap: will append to %s", filename.c_str());
-
 	int nextIndex = 0;
-	{
-		std::ifstream existing(filename);
-		if (existing.is_open()) {
-			std::string l;
-			while (std::getline(existing, l)) { if (!l.empty()) nextIndex++; }
-			existing.close();
-		}
-	}
+	if (NXRP_ReadNonEmptyLinesFromFile(filename, lines)) nextIndex = (int)lines.size();
 
 	FILE* f = fopen(filename.c_str(), "a");
 	if (!f) return;
@@ -193,27 +163,19 @@ void NXRP_SaveNPCToMap(int entnum, const char* npcType) {
 
 // Read the per-map JSON file and send entries to the player as an indexed list
 void NXRP_ListSavedNPCs(client_t* cl) {
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_npcs" : std::string("nxrp_npcs");
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
+	std::string filename;
+	std::vector<std::string> lines;
+	if (!NXRP_ReadPerMapLines("nxrp_npcs", lines, filename)) { NXRP_PrintConsoleToPlayer(cl, "No saved NPCs for this map"); return; }
 
-	std::ifstream ifs(filename);
-	if (!ifs.is_open()) {
-		NXRP_PrintConsoleToPlayer(cl, "No saved NPCs for this map");
-		return;
-	}
-
-	std::string line;
 	int idx = 0;
 	bool any = false;
-	while (std::getline(ifs, line)) {
-		if (line.empty()) continue;
+	for (const auto &s : lines) {
+		if (s.empty()) continue;
 		any = true;
-		std::string s = line;
+		int entv = NXRP_ExtractIntField(s, "\"ent\"", -1);
+
 		// extract npc type
-		std::string npc;
+		std::string npcType;
 		size_t mpos = s.find("\"npc\"");
 		if (mpos != std::string::npos) {
 			size_t colon = s.find(':', mpos);
@@ -221,53 +183,66 @@ void NXRP_ListSavedNPCs(client_t* cl) {
 				size_t q = s.find('"', colon);
 				if (q != std::string::npos) {
 					size_t qe = s.find('"', q+1);
-					if (qe != std::string::npos && qe > q) npc = s.substr(q+1, qe-q-1);
+					if (qe != std::string::npos && qe > q) npcType = s.substr(q+1, qe-q-1);
 				}
 			}
 		}
-		if (npc.empty()) npc = "<unknown>";
-		NXRP_PrintConsoleToPlayerFmt(cl, "%d: npc=%s", idx, npc.c_str());
+
+		// extract origin and angles
+		float ox=0, oy=0, oz=0, ax=0, ay=0, az=0;
+		size_t opos = s.find("\"origin\"");
+		if (opos != std::string::npos) {
+			opos = s.find('[', opos);
+			if (opos != std::string::npos) {
+				sscanf(s.c_str()+opos, "[%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz);
+			}
+		}
+		size_t apos = s.find("\"angles\"");
+		if (apos != std::string::npos) {
+			apos = s.find('[', apos);
+			if (apos != std::string::npos) {
+				sscanf(s.c_str()+apos, "[%f %*[, ] %f %*[, ] %f", &ax, &ay, &az);
+			}
+		}
+
+		if (npcType.empty()) npcType = "<unknown>";
+		NXRP_PrintConsoleToPlayerFmt(cl, "%d: ent=%d npc=%s origin=%.0f,%.0f,%.0f angles=%.0f,%.0f,%.0f", idx, entv, npcType.c_str(), ox, oy, oz, ax, ay, az);
 		idx++;
 	}
 	if (!any) NXRP_PrintConsoleToPlayer(cl, "No saved NPCs for this map");
 	ifs.close();
 }
 
-// Load and spawn all saved NPC entries for the current map. Returns number spawned
+// Load and spawn all saved NPC entries for the current map. Returns number spawned.
 int NXRP_LoadSavedNPCsForMap(client_t* cl) {
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_npcs" : std::string("nxrp_npcs");
-	const char* map = Cvar_VariableString("mapname");
-	if (!map || !map[0]) map = "nomap";
-	std::string filename = dir + "/" + std::string(map) + ".json";
-
-	std::ifstream ifs(filename);
-	if (!ifs.is_open()) { return 0; }
-
+	std::string filename;
 	std::vector<std::string> lines;
-	std::string line;
-	while (std::getline(ifs, line)) { if (!line.empty()) lines.push_back(line); }
-	ifs.close();
+	if (!NXRP_ReadPerMapLines("nxrp_npcs", lines, filename)) return 0;
 
-	int spawned = 0;
-	for (const auto &l : lines) {
-		// parse npc type
-		const char* s = l.c_str();
+	int count = 0;
+	int delay = 1;
+	for (const auto &line : lines) {
+		if (line.empty()) continue;
+		// extract npc type
+		std::string s = line;
 		std::string npcType;
-		const char* key = "\"npc\"";
-		const char* p = strstr(s, key);
-		if (p) {
-			p = strchr(p, ':'); if (p) p++; while (*p && isspace((unsigned char)*p)) p++;
-			if (*p == '"') { p++; const char* e = strchr(p, '"'); if (e && e > p) npcType.assign(p, e - p); }
+		size_t mpos = s.find("\"npc\"");
+		if (mpos != std::string::npos) {
+			size_t colon = s.find(':', mpos);
+			if (colon != std::string::npos) {
+				size_t q = s.find('"', colon);
+				if (q != std::string::npos) {
+					size_t qe = s.find('"', q+1);
+					if (qe != std::string::npos && qe > q) npcType = s.substr(q+1, qe-q-1);
+				}
+			}
 		}
 		if (npcType.empty()) continue;
-
-		NXRP_PushPendingNPCName(npcType.c_str());
-		char cmdBuf[128];
+		char cmdBuf[256];
 		Com_sprintf(cmdBuf, sizeof(cmdBuf), "npc spawn %s", npcType.c_str());
-		SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
-		spawned++;
+		SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), delay);
+		delay += 1; // stagger a bit
+		count++;
 	}
-
-	return spawned;
+	return count;
 }

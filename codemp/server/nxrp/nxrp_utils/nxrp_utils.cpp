@@ -299,8 +299,8 @@ bool NXRP_ReadAccountContentForClient(client_t* cl, std::string& outContent, std
 		return false;
 	}
 
-	const char *home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_accounts" : std::string("nxrp_accounts");
+	std::string dir;
+	NXRP_GetFolderPath("nxrp_accounts", dir);
 	std::string filepath = dir + "/" + safe + ".json";
 
 	// Use shared file helper to read the file content
@@ -330,8 +330,8 @@ bool NXRP_IsClientAdmin(client_t* cl) {
 		return false;
 	}
 
-	const char *home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_accounts" : std::string("nxrp_accounts");
+	std::string dir;
+	NXRP_GetFolderPath("nxrp_accounts", dir);
 	std::string filepath = dir + "/" + safe + ".json";
 
 	std::string sval;
