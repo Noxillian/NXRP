@@ -594,55 +594,7 @@ qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: remove all weapons and forcepowers from the invoking player
-qboolean NXRP_cmdAdmin_strip( client_t *cl, const char *chatCursor ) {
-	(void)chatCursor;
-	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-	if (!NXRP_IsClientAdmin(cl)) return qtrue;
-
-	if (!cl || !cl->gentity || !cl->gentity->playerState) {
-		NXRP_PrintConsoleToPlayer(cl, "Strip failed: no player entity");
-		return qtrue;
-	}
-
-	playerState_t* ps = cl->gentity->playerState;
-
-	// Remove weapon flags and set to no weapon
-	ps->stats[STAT_WEAPONS] = 0;
-	ps->weapon = WP_NONE;
-	ps->weaponstate = WEAPON_READY;
-
-	// Clear force powers
-	ps->fd.forcePowersKnown = 0;
-	ps->fd.forcePowersActive = 0;
-	ps->fd.forcePower = 0;
-	ps->fd.forcePowerMax = 0;
-	// Zero all per-power levels
-	const int numPowers = (int)(sizeof(ps->fd.forcePowerLevel) / sizeof(ps->fd.forcePowerLevel[0]));
-	for (int i = 0; i < numPowers; i++) ps->fd.forcePowerLevel[i] = 0;
-
-	// Ensure the client's userinfo and server state reflect the change
-	if (cl - svs.clients >= 0) {
-		char userinfo[MAX_INFO_STRING];
-		SV_GetUserinfo(cl - svs.clients, userinfo, sizeof(userinfo));
-		// Optionally clear saber info
-		Info_SetValueForKey(userinfo, "saber1", "");
-		SV_SetUserinfo(cl - svs.clients, userinfo);
-		// Ensure server-side parsing of the new userinfo occurs so the
-		// client's server state and derived fields update before notifying
-		// the game VM (matches behavior used elsewhere such as the boss cmd).
-		SV_UserinfoChanged(cl);
-		GVM_ClientUserinfoChanged(cl - svs.clients);
-
-		// Force the client to resend its userinfo shortly so the client
-		// refreshes any local model/saber state and removes lingering
-		// weapon/forcepower visuals/scripts on the client side.
-		SV_ExecuteClientCommandDelayed_h(cl, std::string("userinfo \"") + cl->userinfo + std::string("\""), 1);
-	}
-
-	NXRP_PrintConsoleToPlayer(cl, "You have been stripped of weapons and Force powers");
-	return qtrue;
-}
+// NXRP_cmdAdmin_strip removed
 
 // Admin-only: handle !spawn <npc_type>
 qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor ) {
@@ -668,53 +620,7 @@ qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: handle !test (spawn a default model)
-qboolean NXRP_cmdAdmin_test( client_t *cl, const char *chatCursor ) {
-	// Accept optional model path: "modelpath" or "model <path>"
-	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-	if (!NXRP_IsClientAdmin(cl)) { NXRP_PrintConsoleToPlayer(cl, "Test requires admin privileges to spawn models."); return qtrue; }
 
-	// Default model
-	const char* defaultModel = "models/map_objects/nar_shaddar/table01.md3";
-	const char* model = defaultModel;
-
-	// If a model path was provided, parse it (allow leading "model" token)
-	if (chatCursor && *chatCursor) {
-		const char* p = chatCursor;
-		while (*p == ' ' || *p == '\t') p++;
-		char firstTok[MAX_TOKEN_CHARS] = {0};
-		if (sscanf(p, "%31s", firstTok) == 1) {
-			if (!Q_stricmp(firstTok, "model") || !Q_stricmp(firstTok, "pmodel")) {
-				const char* q = p;
-				while (*q && *q != ' ' && *q != '\t') q++;
-				while (*q == ' ' || *q == '\t') q++;
-				if (*q) model = q;
-			} else {
-				model = p;
-			}
-		}
-	}
-
-	// Use Holo-style placement via NXRP_PlaceModel: default prop bounds and client yaw/floor
-	vec3_t mins = { -24.0f, -24.0f, -8.0f };
-	vec3_t maxs = {  24.0f,  24.0f, 24.0f };
-	float yaw = 0.0f;
-	vec3_t floor = {0.0f, 0.0f, 0.0f};
-	if (cl && cl->gentity) {
-		yaw = cl->gentity->s.angles[YAW];
-		VectorCopy(cl->gentity->r.currentOrigin, floor);
-	}
-
-	vec3_t zeroOffset3 = {0.0f, 0.0f, 0.0f};
-	int ent = NXRP_PlaceModel(model, mins, maxs, yaw, zeroOffset3, floor);
-	if (ent >= 0) {
-		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", model, ent));
-	NXRP_RegisterSpawn(ent);
-	} else {
-		NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model.");
-	}
-	return qtrue;
-}
 
 // Admin-only: teleport the invoking player 5 meters above current position
 qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor ) {
@@ -955,36 +861,6 @@ qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: remove the last NXRP-spawned model
-qboolean NXRP_cmdAdmin_mremove( client_t *cl, const char *chatCursor ) {
-	(void)chatCursor;
-	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-	if (!NXRP_IsClientAdmin(cl)) return qtrue;
-
-	int last = NXRP_GetLastSpawn();
-	if (last < 0) {
-		NXRP_PrintConsoleToPlayer(cl, "No last spawned model to remove");
-		return qtrue;
-	}
-	if (last < 0 || last >= sv.num_entities) {
-		NXRP_PrintConsoleToPlayer(cl, "Invalid last spawned model id");
-		return qtrue;
-	}
-
-	sharedEntity_t* e = SV_GentityNum(last);
-	if (!e) {
-		NXRP_PrintConsoleToPlayer(cl, "Last spawned entity not found");
-		return qtrue;
-	}
-
-	// Use NXRP_FreeEntity wrapper to ensure NXRP receives notifications
-	NXRP_FreeEntity((void*)e);
-
-	NXRP_RegisterSpawn(-1);
-	NXRP_PrintConsoleToPlayer(cl, va("Removed last spawned model entity %d", last));
-	return qtrue;
-}
-
 // Admin-only: list NXRP-saved spawns for the current map (prop namespace)
 qboolean NXRP_cmdAdmin_prop_list( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
@@ -996,29 +872,7 @@ qboolean NXRP_cmdAdmin_prop_list( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Admin-only: handle !test2 - spawn a prop using social-style place logic
-qboolean NXRP_cmdAdmin_test2( client_t *cl, const char *chatCursor ) {
-	(void)chatCursor;
-	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-	if (!NXRP_IsClientAdmin(cl)) { NXRP_PrintConsoleToPlayer(cl, "Test requires admin privileges to spawn models."); return qtrue; }
 
-	// Example model and approximate model bounds; these could be tuned per-model.
-	const char* model = "models/map_objects/nar_shaddar/table01.md3";
-	vec3_t mins = { -24.0f, -24.0f, -8.0f };
-	vec3_t maxs = {  24.0f,  24.0f, 24.0f };
-
-	// Use the client's yaw as the spawned prop's yaw
-	float yaw = 0.0f;
-	if (cl && cl->gentity) yaw = cl->gentity->s.angles[YAW];
-
-	int ent = NXRP_SpawnPropAtClient(cl, model, mins, maxs, yaw);
-	if (ent >= 0) {
-		NXRP_PrintConsoleToPlayer(cl, va("Spawned test2 model %s as entity %d", model, ent));
-	} else {
-		NXRP_PrintConsoleToPlayer(cl, "Failed to spawn test2 model.");
-	}
-	return qtrue;
-}
 
 // Admin-only: spawn a vehicle using the game's NPC vehicle spawn helper
 qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {

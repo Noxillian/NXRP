@@ -43,7 +43,7 @@ enum NXRP_SubCmd {
 	NXRP_SUB_TP,
 	NXRP_SUB_VEHICLE,
 	NXRP_SUB_INFO,
-	NXRP_SUB_TEST,
+
 	NXRP_SUB_ACCOUNT,
 	NXRP_SUB_GIVEALL,
 	NXRP_SUB_BOSS,
@@ -52,8 +52,7 @@ enum NXRP_SubCmd {
 	NXRP_SUB_LOGIN,
 	NXRP_SUB_POS,
 	NXRP_SUB_MODEL,
-	NXRP_SUB_MREMOVE,
-	NXRP_SUB_STRIP,
+
 	NXRP_SUB_PMODEL,
 	NXRP_SUB_LIST
 };
@@ -63,7 +62,6 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "spawn" ) )		return NXRP_SUB_SPAWN;
 	if ( !Q_stricmp( s, "info" ) )		return NXRP_SUB_INFO;
 	if ( !Q_stricmp( s, "skills" ) )		return NXRP_SUB_SKILLS;
-	if ( !Q_stricmp( s, "test" ) )		return NXRP_SUB_TEST;
 	if ( !Q_stricmp( s, "account" ) )	return NXRP_SUB_ACCOUNT;
 	if ( !Q_stricmp( s, "giveall" ) )	return NXRP_SUB_GIVEALL;
 	if ( !Q_stricmp( s, "noclip" ) )	return NXRP_SUB_NOCLIP;
@@ -73,11 +71,9 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "pos" ) )		return NXRP_SUB_POS;
 	if ( !Q_stricmp( s, "prop" ) )		return NXRP_SUB_MODEL;
 	if ( !Q_stricmp( s, "npc" ) )		return NXRP_SUB_NPC;
-	if ( !Q_stricmp( s, "strip" ) )		return NXRP_SUB_STRIP;
 	if ( !Q_stricmp( s, "boss" ) )		return NXRP_SUB_BOSS;
 	if ( !Q_stricmp( s, "vehicle" ) )	return NXRP_SUB_VEHICLE;
 	if ( !Q_stricmp( s, "list" ) )	return NXRP_SUB_LIST;
-	if ( !Q_stricmp( s, "addlevel" ) )	return NXRP_SUB_TEST; // map addlevel to test group handler for now
 	return NXRP_SUB_UNKNOWN;
 }
 
@@ -173,10 +169,7 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 
 	NXRP_SubCmd sc = NXRP_ParseSubcmd( subcmd );
 
-	// Direct literal check for addlevel command (test helper)
-	if (!Q_stricmp(subcmd, "addlevel")) {
-		return NXRP_cmd_addlevel(cl, dispatchCursor);
-	}
+	// Direct literal check for addlevel command removed
 
 	// Special handling for prop subcommands: support syntax
 	//   !nx prop s <modelpath>
@@ -276,14 +269,13 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 				return NXRP_cmdAdmin_prop_t(cl, p);
 			}
 			if (!Q_stricmp(firstTok, "test2")) {
-				return NXRP_cmdAdmin_test2(cl, dispatchCursor);
+				// test2 command removed
+				return qtrue;
 			}
 		}
 		break;
 	}
 
-	case NXRP_SUB_MREMOVE:
-		return NXRP_cmdAdmin_mremove(cl, dispatchCursor);
 
 	case NXRP_SUB_BOSS:
 		return NXRP_cmdAdmin_boss(cl, dispatchCursor);
@@ -291,8 +283,6 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 	case NXRP_SUB_LIST:
 		return NXRP_cmdAdmin_list(cl, dispatchCursor);
 
-	case NXRP_SUB_STRIP:
-		return NXRP_cmdAdmin_strip(cl, dispatchCursor);
 
 	case NXRP_SUB_VEHICLE:
 		return NXRP_cmdAdmin_vehicle(cl, dispatchCursor);
@@ -309,8 +299,6 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 	case NXRP_SUB_INFO:
 		return NXRP_cmd_info( cl, dispatchCursor );
 
-	case NXRP_SUB_TEST:
-		return NXRP_cmd_test(cl, dispatchCursor);
 
 	case NXRP_SUB_ACCOUNT:
 		return NXRP_cmd_account( cl, dispatchCursor );

@@ -20,39 +20,7 @@
 
 // hex helpers moved to nxrp_utils.cpp
 
-// Test command: !test - list detailed skills from repo skills.json
-qboolean NXRP_cmd_test( client_t *cl, const char *chatCursor ) {
-	(void)chatCursor;
-	NXRP_Skills_TestImpl(cl);
-	return qtrue;
-}
-
-// Test command: !addlevel - add 1 level to the invoking player's account
-qboolean NXRP_cmd_addlevel( client_t *cl, const char *chatCursor ) {
-	(void)chatCursor;
-	if (!cl) return qtrue;
-	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-
-	std::string content, safe;
-	if (!NXRP_ReadAccountContentForClient(cl, content, safe)) return qtrue;
-
-	const char* home = Cvar_VariableString("fs_homepath");
-	std::string dir = (home && home[0]) ? std::string(home) + "/nxrp_accounts" : std::string("nxrp_accounts");
-	std::string filepath = dir + "/" + safe + ".json";
-	int level = 0;
-	if (!NXRP_GetAccountLevelFromFile(filepath.c_str(), level)) {
-		NXRP_PrintConsoleToPlayer(cl, "Account missing or invalid level field");
-		return qtrue;
-	}
-	level += 1;
-	if (!NXRP_SetAccountLevelInFile(filepath.c_str(), level)) {
-		NXRP_PrintConsoleToPlayer(cl, "Failed to write account file");
-		return qtrue;
-	}
-
-	NXRP_PrintConsoleToPlayer(cl, va("Added 1 level. New level: %d", level));
-	return qtrue;
-}
+// removed obsolete test/addlevel commands
 
 // Minimal skills listing handler
 qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
