@@ -3009,7 +3009,7 @@ void SV_BindGame( void ) {
 					NXRP_PrintConsoleToPlayer(cl, "Killed NPC");
 					const char *npcName = NULL;
 					if ( victimEnt->targetname && victimEnt->targetname[0] ) npcName = victimEnt->targetname;
-					else if ( victimEnt->NPC_type && victimEnt->NPC_type[0] ) npcName = victimEnt->NPC_type;
+					else if ( victimEnt->classname && victimEnt->classname[0] ) npcName = victimEnt->classname;
 					NXRP_OnNPCKilled( attacker, npcName );
 					return;
 				}
