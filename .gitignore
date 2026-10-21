@@ -175,3 +175,6 @@ pip-log.txt
 *.so
 *.py
 .vs/
+
+# Local Copilot workspace instructions
+.github/copilot-instructions.md
