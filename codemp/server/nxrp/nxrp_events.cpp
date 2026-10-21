@@ -308,6 +308,8 @@ void NXRP_OnRoundStart(void) {
 
 void NXRP_OnRoundRestart(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Round restart");
+	int loadedProps = NXRP_LoadSavedSpawnsForMap(NULL);
+	NXRP_PrintConsoleToPlayer(NULL, va("Loaded %d saved props for this map", loadedProps));
 	// Reset round-detection state so the next round start is detected
 	nxrp_roundBegunFlag = qfalse;
 	nxrp_roundStartTime = 0;

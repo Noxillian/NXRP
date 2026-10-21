@@ -340,6 +340,19 @@ bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor) {
 	float catalogYaw = angle;
 
 	bool hasCatalog = NXRP_GetPropFromCatalog(path, modelFromCatalog, mins, maxs, colliderOrigin, catalogYaw);
+	if (!hasCatalog) {
+		char altPath[512] = {0};
+		const char* raw = path;
+		if (raw[0] == '/') raw++;
+
+		if (strncmp(raw, "models/", 7) != 0) {
+			Com_sprintf(altPath, sizeof(altPath), "models/%s", raw);
+			hasCatalog = NXRP_GetPropFromCatalog(altPath, modelFromCatalog, mins, maxs, colliderOrigin, catalogYaw);
+		} else {
+			Q_strncpyz(altPath, raw + 7, sizeof(altPath));
+			hasCatalog = NXRP_GetPropFromCatalog(altPath, modelFromCatalog, mins, maxs, colliderOrigin, catalogYaw);
+		}
+	}
 	const float eps = 0.001f;
 	if (hasCatalog) {
 		Q_strncpyz(path, modelFromCatalog.c_str(), sizeof(path));
