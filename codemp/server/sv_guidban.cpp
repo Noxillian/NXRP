@@ -358,6 +358,59 @@ static void GuidBan_CountDrop( guidBan_t *b, const char *name, const char *addr 
 
 /*
 ==================
+SV_SharedLog
+
+A line in a log beside guidbans.txt, shared by every server: unix time,
+server (its fs_homepath folder - the MBIIEZ instance), then the caller's
+tab-separated fields. One write() per line on an O_APPEND file, so servers
+writing at once don't mix their lines.
+==================
+*/
+void SV_SharedLog( const char *file, const char *fields ) {
+	char path[MAX_OSPATH], home[MAX_OSPATH], server[64], line[1024];
+	const char *banPath = GuidBan_Path();
+	const char *slash = strrchr( banPath, '/' );
+	const int dirLen = slash ? (int)( slash - banPath ) + 1 : 0;
+	Com_sprintf( path, sizeof( path ), "%.*s%s", dirLen, banPath, file );
+
+	// the server: the last folder of fs_homepath
+	Q_strncpyz( home, Cvar_VariableString( "fs_homepath" ), sizeof( home ) );
+	for ( int len = strlen( home ); len > 0 && home[len - 1] == '/'; len-- ) {
+		home[len - 1] = '\0';
+	}
+	const char *base = strrchr( home, '/' );
+	GuidBan_CopyField( server, base ? base + 1 : home, sizeof( server ) );
+	const int len = Com_sprintf( line, sizeof( line ), "%ld\t%s\t%s\n", (long)time( NULL ), server, fields );
+	const int fd = open( path, O_WRONLY | O_APPEND | O_CREAT, 0644 );
+	if ( fd >= 0 ) {
+		if ( write( fd, line, len ) < 0 ) {
+			Com_DPrintf( "%s: write failed\n", file );
+		}
+		close( fd );
+	}
+}
+
+/*
+==================
+SV_ConnLog
+
+A line in connections.log (SV_SharedLog), for tracing players: event
+("connect" or "rename"), slot, IP, GUID, name, and for a rename the name
+before. MBIIEZ reads it (Connections) and trims it.
+==================
+*/
+void SV_ConnLog( const char *event, int slot, const char *ip, const char *guid, const char *name, const char *oldName ) {
+	char addr[NET_ADDRSTRMAXLEN], g[64];
+	char n[MAX_NAME_LENGTH * 2], o[MAX_NAME_LENGTH * 2];
+	GuidBan_Addr( addr, ip, sizeof( addr ) );
+	GuidBan_CopyField( g, guid ? guid : "", sizeof( g ) );
+	GuidBan_CopyField( n, name ? name : "", sizeof( n ) );
+	GuidBan_CopyField( o, oldName ? oldName : "", sizeof( o ) );
+	SV_SharedLog( "connections.log", va( "%s\t%d\t%s\t%s\t%s\t%s", event, slot, addr, g, n, o ) );
+}
+
+/*
+==================
 SV_GuidBanned
 
 SV_DirectConnect: notes the connect in guidseen.txt, then is this

@@ -365,6 +365,10 @@ gotnewcl:
 
 	SV_UserinfoChanged( newcl );
 
+	if ( from.type != NA_BOT ) {
+		SV_ConnLog( "connect", clientNum, ip, Info_ValueForKey( newcl->userinfo, "ja_guid" ), newcl->name, NULL );
+	}
+
 	// send the connect packet to the client
 	NET_OutOfBandPrint( NS_SERVER, from, "connectResponse" );
 
@@ -1190,8 +1194,12 @@ void SV_UserinfoChanged( client_t *cl ) {
 	char	*val=NULL, *ip=NULL;
 	int		i=0, len=0;
 
-	// name for C code
-	Q_strncpyz( cl->name, Info_ValueForKey (cl->userinfo, "name"), sizeof(cl->name) );
+	// name for C code - a player in the game changing it goes in connections.log
+	const char *newName = Info_ValueForKey( cl->userinfo, "name" );
+	if ( cl->state >= CS_CONNECTED && cl->name[0] && strcmp( cl->name, newName ) && cl->netchan.remoteAddress.type != NA_BOT ) {
+		SV_ConnLog( "rename", (int)( cl - svs.clients ), NET_AdrToString( cl->netchan.remoteAddress ), Info_ValueForKey( cl->userinfo, "ja_guid" ), newName, cl->name );
+	}
+	Q_strncpyz( cl->name, newName, sizeof(cl->name) );
 
 	// rate command
 
@@ -2255,12 +2263,10 @@ static qboolean SV_ChatFloodCheck( client_t *cl ) {
 // someone keeps trying, and broadcasting each attempt would spam chat for
 // no added benefit once the pick is already blocked.
 // Siege classes that break the server, by class token (the "sc" key a pick
-// sends and CS_PLAYERS carries), with a name for the messages. Nute Gunray
-// crashes it; R2-D2 (h5_AstroR2, Legends) is broken too. socialOnly ones
-// are only blocked on social servers (g_socialMode).
+// sends and CS_PLAYERS carries), with a name for the messages. socialOnly
+// ones are only blocked on social servers (g_socialMode). Nute Gunray and
+// Palpatine used to be here; sv_vehguard.cpp covers what crashed them.
 static const struct { const char *cls; const char *name; qboolean socialOnly; } kBlockedClasses[] = {
-	{ "v7_NuteG",     "Nute Gunray",    qfalse },
-	{ "h5_AstroR2",   "R2-D2",          qfalse },
 	{ "h9_Yarael",    "Yarael Poof",    qtrue },
 	{ "v2_Hondo",     "Hondo Ohnaka",   qtrue },
 	{ "v7_Tarkin",    "Tarkin",         qtrue },
@@ -3319,6 +3325,7 @@ void SV_ClientThink (client_t *cl, usercmd_t *cmd) {
 		return;		// may have been kicked during the last usercmd
 	}
 
+	SV_VehicleGuardClient( cl );
 	GVM_ClientThink( cl - svs.clients, NULL );
 
 	SV_SocialClientThink( cl );
@@ -3841,14 +3848,10 @@ void SV_GunrayCheckFrame( void ) {
 		// overwriting a value this code is still holding a pointer to.
 		Q_strncpyz( model, csBuf[0] ? Info_ValueForKey( csBuf, "m" ) : "", sizeof( model ) );
 		Q_strncpyz( team, csBuf[0] ? Info_ValueForKey( csBuf, "t" ) : "", sizeof( team ) );
-		// Any blocked class (kBlockedClasses), by its "sc" class token -
-		// Gunray used to be recognised by his model alone.
+		// Any blocked class (kBlockedClasses), by its "sc" class token.
 		char sc[128];
 		Q_strncpyz( sc, csBuf[0] ? Info_ValueForKey( csBuf, "sc" ) : "", sizeof( sc ) );
 		const char *blockedName = SV_BlockedClassName( sc );
-		if ( !blockedName && !Q_stricmp( model, "gunray/default" ) ) {
-			blockedName = "Nute Gunray";
-		}
 		// Or one a running Holotable scenario leaves out.
 		const qboolean holoRefused = ( !blockedName && SV_HoloClassRefused( sc ) ) ? qtrue : qfalse;
 		if ( holoRefused ) {
