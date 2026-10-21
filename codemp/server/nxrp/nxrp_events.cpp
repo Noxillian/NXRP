@@ -46,7 +46,7 @@ void SV_NXRP_ScoreFrame(void) {
 	if (!svs.clients) return;
 	// If intermission is active, reset round start state so we trigger again
 	if (sv.configstrings[CS_INTERMISSION] && atoi(sv.configstrings[CS_INTERMISSION]) == 1) {
-		NXRP_PrintConsoleToPlayer(NULL, va("Round Restart"));
+		NXRP_PrintConsoleToPlayer(NULL, "Round Restart");
 		nxrp_roundStartTime = 0;
 		nxrp_roundBegunFlag = qfalse;
 		nxrp_prevRebelCountdown = 0;
@@ -214,11 +214,11 @@ void NXRP_OnScoreChanged(client_t *cl, int oldScore, int newScore) {
 	const char *name = cl ? (cl->nxrp_username[0] ? cl->nxrp_username : cl->name) : "Unknown";
 	//NXRP_PrintConsoleToPlayer(NULL, va("Score changed: %s %d -> %d", name, oldScore, newScore));
 
-	// If the player's score increased, send them a notification
-	//if ( cl && newScore > oldScore ) {
-	//	int delta = newScore - oldScore;
-		//NXRP_PrintConsoleToPlayer(cl, va("You scored %d point%s! Total: %d", delta, (delta==1)?"":"s", newScore));
-	//}
+	//If the player's score increased, send them a notification
+	if ( cl && newScore > oldScore ) {
+		int delta = newScore - oldScore;
+		NXRP_PrintConsoleToPlayer(cl, va("You scored %d point%s! Total: %d", delta, (delta==1)?"":"s", newScore));
+	}
 }
 
 void NXRP_OnNPCSpawned(const char *npcName) {
