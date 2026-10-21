@@ -269,7 +269,7 @@ void NXRP_OnNPCSpawned(const char *npcName) {
 }
 
 void NXRP_OnMapStart(void) {
-	//NXRP_PrintConsoleToPlayer(NULL, "Map started");
+	NXRP_PrintConsoleToPlayer(NULL, "Map started");
 	// Attempt to resolve MBII's gSiegeRoundBegun global in the game VM so
 	// we can detect the exact round-begin transition when available.
 	void* dll = GVM_GetDllHandle();
@@ -299,7 +299,7 @@ void NXRP_OnRoundEnd(int winningTeam) {
 }
 
 void NXRP_OnRoundStart(void) {
-	//NXRP_PrintConsoleToPlayer(NULL, "Round started");
+	NXRP_PrintConsoleToPlayer(NULL, "Round started");
 	// Increment round counter and re-resolve/reapply FFA hooks at round start
 	nxrp_roundNumber++;
 	NXRP_FFA_Init();
@@ -308,8 +308,6 @@ void NXRP_OnRoundStart(void) {
 
 void NXRP_OnRoundRestart(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Round restart");
-	int loadedProps = NXRP_LoadSavedSpawnsForMap(NULL);
-	NXRP_PrintConsoleToPlayer(NULL, va("Loaded %d saved props for this map", loadedProps));
 	// Reset round-detection state so the next round start is detected
 	nxrp_roundBegunFlag = qfalse;
 	nxrp_roundStartTime = 0;
