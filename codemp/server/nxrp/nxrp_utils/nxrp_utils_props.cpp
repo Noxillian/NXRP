@@ -304,6 +304,26 @@ bool NXRP_MoveLastSpawnTo(client_t* cl, const char* chatCursor) {
 }
 
 // Admin-prop spawn handler moved from nxrp_admincmds: spawn by path or catalog name
+static qboolean NXRP_ResolveCatalogForModel(const char* inPath, std::string& outModel, vec3_t& outMins, vec3_t& outMaxs, vec3_t& outOffset, float& outYaw) {
+	if (!inPath || !inPath[0]) return qfalse;
+
+	if (NXRP_GetPropFromCatalog(inPath, outModel, outMins, outMaxs, outOffset, outYaw)) return qtrue;
+
+	char altPath[512] = {0};
+	const char* raw = inPath;
+	if (raw[0] == '/') raw++;
+
+	if (strncmp(raw, "models/", 7) != 0) {
+		Com_sprintf(altPath, sizeof(altPath), "models/%s", raw);
+		if (NXRP_GetPropFromCatalog(altPath, outModel, outMins, outMaxs, outOffset, outYaw)) return qtrue;
+	} else {
+		Q_strncpyz(altPath, raw + 7, sizeof(altPath));
+		if (NXRP_GetPropFromCatalog(altPath, outModel, outMins, outMaxs, outOffset, outYaw)) return qtrue;
+	}
+
+	return qfalse;
+}
+
 bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor) {
 	if (!chatCursor) return false;
 
@@ -339,20 +359,7 @@ bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor) {
 	vec3_t floor = {0.0f,0.0f,0.0f};
 	float catalogYaw = angle;
 
-	bool hasCatalog = NXRP_GetPropFromCatalog(path, modelFromCatalog, mins, maxs, colliderOrigin, catalogYaw);
-	if (!hasCatalog) {
-		char altPath[512] = {0};
-		const char* raw = path;
-		if (raw[0] == '/') raw++;
-
-		if (strncmp(raw, "models/", 7) != 0) {
-			Com_sprintf(altPath, sizeof(altPath), "models/%s", raw);
-			hasCatalog = NXRP_GetPropFromCatalog(altPath, modelFromCatalog, mins, maxs, colliderOrigin, catalogYaw);
-		} else {
-			Q_strncpyz(altPath, raw + 7, sizeof(altPath));
-			hasCatalog = NXRP_GetPropFromCatalog(altPath, modelFromCatalog, mins, maxs, colliderOrigin, catalogYaw);
-		}
-	}
+	bool hasCatalog = (NXRP_ResolveCatalogForModel(path, modelFromCatalog, mins, maxs, colliderOrigin, catalogYaw) == qtrue);
 	const float eps = 0.001f;
 	if (hasCatalog) {
 		Q_strncpyz(path, modelFromCatalog.c_str(), sizeof(path));
@@ -519,7 +526,7 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 
 		// attempt to find prop extents in catalog or use saved collider metadata
 		vec3_t mins, maxs, origin; float yaw = ay; // use yaw from angles' second component if present
-		bool hasCatalog = NXRP_GetPropFromCatalog(modelPath.c_str(), modelPath, mins, maxs, origin, yaw);
+		bool hasCatalog = (NXRP_ResolveCatalogForModel(modelPath.c_str(), modelPath, mins, maxs, origin, yaw) == qtrue);
 		bool hasSavedCollider = (savedPropMins[0] != 0.0f || savedPropMins[1] != 0.0f || savedPropMins[2] != 0.0f
 			|| savedPropMaxs[0] != 0.0f || savedPropMaxs[1] != 0.0f || savedPropMaxs[2] != 0.0f
 			|| savedColliderOffset[0] != 0.0f || savedColliderOffset[1] != 0.0f || savedColliderOffset[2] != 0.0f);

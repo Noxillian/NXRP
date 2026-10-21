@@ -200,6 +200,7 @@ int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMa
 		e->r.svFlags = 0;
 		SV_LinkEntity(e);
 	}
+	NXRP_PrintConsoleToPlayer(NULL, va("Placed model %s", name));
 	return e->s.number;
 }
 
