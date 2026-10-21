@@ -351,21 +351,13 @@ bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor) {
 		NXRP_PrintConsoleToPlayer(cl, va("No catalog entry found for %s", path));
 	}
 
-	vec3_t adjMins, adjMaxs;
-	if (hasCatalog) {
-		for (int i = 0; i < 3; ++i) { adjMins[i] = mins[i] + colliderOrigin[i]; adjMaxs[i] = maxs[i] + colliderOrigin[i]; }
-	} else {
-		VectorCopy(mins, adjMins);
-		VectorCopy(maxs, adjMaxs);
-	}
-
-	int ent = NXRP_PlaceModel(path, adjMins, adjMaxs, angle, colliderOrigin, floor);
+	int ent = NXRP_PlaceModel(path, mins, maxs, angle, colliderOrigin, floor);
 	if (ent >= 0) {
 		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", path, ent));
 		NXRP_RegisterSpawn(ent);
 	// Save spawn including collider extents and origin offset so loading will
 	// recreate the same collider as when spawned via !prop s
-	NXRP_SaveSpawnToMap(ent, path, adjMins, adjMaxs, colliderOrigin, angle);
+	NXRP_SaveSpawnToMap(ent, path, mins, maxs, colliderOrigin, angle);
 		return true;
 	}
 	NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model.");
