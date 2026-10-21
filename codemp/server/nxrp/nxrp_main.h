@@ -117,6 +117,7 @@ void NXRP_OnRoundEnd(int winningTeam);
 void NXRP_OnRoundRestart(void);
 void NXRP_OnMatchStart(void);
 void NXRP_OnMatchEnd(void);
+qboolean NXRP_TryMarkNPCKillSeen(int entNum);
 
 // Round index helper (1-based within the current map). Returns 0 before
 // the first round has started.
@@ -125,6 +126,7 @@ int NXRP_GetRoundNumber(void);
 // Server-side NXRP helpers
 void SV_NXRP_ScoreInit(void);
 void SV_NXRP_ScoreFrame(void);
+void SV_NXRP_NPCDeathPollFrame(void);
 
 // FFA respawn helpers
 void NXRP_FFA_Init(void);

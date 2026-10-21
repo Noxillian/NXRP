@@ -25,11 +25,47 @@ static int* nxrp_rebelCountdown = NULL;
 static int* nxrp_imperialCountdown = NULL;
 static int nxrp_prevRebelCountdown = 0;
 static int nxrp_prevImperialCountdown = 0;
+static qboolean nxrp_npcDeadSeen[MAX_GENTITIES];
+
+qboolean NXRP_TryMarkNPCKillSeen(int entNum) {
+	if (entNum < 0 || entNum >= MAX_GENTITIES) return qfalse;
+	if (nxrp_npcDeadSeen[entNum]) return qfalse;
+	nxrp_npcDeadSeen[entNum] = qtrue;
+	return qtrue;
+}
+
+void SV_NXRP_NPCDeathPollFrame(void) {
+	if (!svs.clients) return;
+	for (int entNum = sv_maxclients->integer; entNum < sv.num_entities && entNum < MAX_GENTITIES; entNum++) {
+		sharedEntity_t *ent = SV_GentityNum(entNum);
+		if (!ent || ent->s.eType != ET_NPC) {
+			nxrp_npcDeadSeen[entNum] = qfalse;
+			continue;
+		}
+		qboolean dead = qfalse;
+		if (ent->s.eFlags & EF_DEAD) dead = qtrue;
+		if (ent->playerState && ent->playerState->stats[STAT_HEALTH] <= 0) dead = qtrue;
+		if (ent->health <= 0) dead = qtrue;
+		if (dead) {
+			if (NXRP_TryMarkNPCKillSeen(entNum)) {
+				const char *npcName = NULL;
+				if (ent->targetname && ent->targetname[0]) npcName = ent->targetname;
+				else if (ent->classname && ent->classname[0]) npcName = ent->classname;
+				NXRP_OnNPCKilled(NULL, npcName);
+			}
+		} else {
+			nxrp_npcDeadSeen[entNum] = qfalse;
+		}
+	}
+}
 
 void SV_NXRP_ScoreInit(void) {
 	for (int i = 0; i < MAX_CLIENTS; i++) {
 		nxrp_lastScore[i] = 0;
 		nxrp_lastKills[i] = 0;
+	}
+	for (int i = 0; i < MAX_GENTITIES; i++) {
+		nxrp_npcDeadSeen[i] = qfalse;
 	}
 	NXRP_FFA_Frame();
 }
@@ -297,6 +333,7 @@ void NXRP_OnNPCKilled(client_t *killer, const char *npcName) {
 	}
 	const char *nName = (npcName && npcName[0]) ? npcName : "NPC";
 	NXRP_PrintConsoleToPlayer(NULL, va("^3[NXRP-NPCKILL]^7 %s killed %s", pName, nName));
+	SV_SendServerCommand(NULL, va("chat \"^3[NXRP-NPCKILL]^7 %s killed %s\"", pName, nName));
 }
 
 // Called when a player first enters the game

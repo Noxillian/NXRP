@@ -3005,12 +3005,12 @@ void SV_BindGame( void ) {
 			if ( victimClientNum >= 0 && victimClientNum < sv.num_entities ) {
 				sharedEntity_t *victimEnt = SV_GentityNum( victimClientNum );
 				if ( victimEnt && victimEnt->s.eType == ET_NPC ) {
-					client_t *cl = attacker;
-					NXRP_PrintConsoleToPlayer(cl, "Killed NPC");
-					const char *npcName = NULL;
-					if ( victimEnt->targetname && victimEnt->targetname[0] ) npcName = victimEnt->targetname;
-					else if ( victimEnt->classname && victimEnt->classname[0] ) npcName = victimEnt->classname;
-					NXRP_OnNPCKilled( attacker, npcName );
+					if ( NXRP_TryMarkNPCKillSeen(victimClientNum) ) {
+						const char *npcName = NULL;
+						if ( victimEnt->targetname && victimEnt->targetname[0] ) npcName = victimEnt->targetname;
+						else if ( victimEnt->classname && victimEnt->classname[0] ) npcName = victimEnt->classname;
+						NXRP_OnNPCKilled( attacker, npcName );
+					}
 					return;
 				}
 			}

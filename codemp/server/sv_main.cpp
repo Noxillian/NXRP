@@ -1351,6 +1351,7 @@ void SV_Frame( int msec ) {
 
 	// NXRP per-frame hooks (score polling / round detection)
 	SV_NXRP_ScoreFrame();
+	SV_NXRP_NPCDeathPollFrame();
 
 	// per-frame credit/bounty award (must run once per frame)
 	SV_EconomyFrame();

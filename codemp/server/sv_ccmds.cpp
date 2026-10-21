@@ -31,6 +31,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "game/bg_mb2.h"
 #include "qcommon/stringed_ingame.h"
 #include "server/sv_gameapi.h"
+#include "server/nxrp/nxrp_main.h"
 #include "qcommon/game_version.h"
 #include "game/bg_weapons.h"
 
@@ -693,6 +694,7 @@ static void SV_MapRestart_f( void ) {
 	// had been changed from their default values will generate broadcast updates
 	sv.state = SS_LOADING;
 	sv.restarting = qtrue;
+	NXRP_OnRoundRestart();
 
 	SV_RestartGame();
 
