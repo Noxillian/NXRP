@@ -26,6 +26,7 @@ static int* nxrp_imperialCountdown = NULL;
 static int nxrp_prevRebelCountdown = 0;
 static int nxrp_prevImperialCountdown = 0;
 static qboolean nxrp_npcDeadSeen[MAX_GENTITIES];
+static qboolean nxrp_npcEverAlive[MAX_GENTITIES];
 
 qboolean NXRP_TryMarkNPCKillSeen(int entNum) {
 	if (entNum < 0 || entNum >= MAX_GENTITIES) return qfalse;
@@ -40,21 +41,26 @@ void SV_NXRP_NPCDeathPollFrame(void) {
 		sharedEntity_t *ent = SV_GentityNum(entNum);
 		if (!ent || ent->s.eType != ET_NPC) {
 			nxrp_npcDeadSeen[entNum] = qfalse;
+			nxrp_npcEverAlive[entNum] = qfalse;
 			continue;
 		}
 		qboolean dead = qfalse;
 		if (ent->s.eFlags & EF_DEAD) dead = qtrue;
 		if (ent->playerState && ent->playerState->stats[STAT_HEALTH] <= 0) dead = qtrue;
 		if (ent->health <= 0) dead = qtrue;
-		if (dead) {
+		if (!dead) {
+			nxrp_npcEverAlive[entNum] = qtrue;
+			nxrp_npcDeadSeen[entNum] = qfalse;
+			continue;
+		}
+
+		if (nxrp_npcEverAlive[entNum]) {
 			if (NXRP_TryMarkNPCKillSeen(entNum)) {
 				const char *npcName = NULL;
 				if (ent->targetname && ent->targetname[0]) npcName = ent->targetname;
 				else if (ent->classname && ent->classname[0]) npcName = ent->classname;
 				NXRP_OnNPCKilled(NULL, npcName);
 			}
-		} else {
-			nxrp_npcDeadSeen[entNum] = qfalse;
 		}
 	}
 }
@@ -66,6 +72,7 @@ void SV_NXRP_ScoreInit(void) {
 	}
 	for (int i = 0; i < MAX_GENTITIES; i++) {
 		nxrp_npcDeadSeen[i] = qfalse;
+		nxrp_npcEverAlive[i] = qfalse;
 	}
 	NXRP_FFA_Frame();
 }
@@ -262,7 +269,7 @@ void NXRP_OnNPCSpawned(const char *npcName) {
 }
 
 void NXRP_OnMapStart(void) {
-	NXRP_PrintConsoleToPlayer(NULL, "Map started");
+	//NXRP_PrintConsoleToPlayer(NULL, "Map started");
 	// Attempt to resolve MBII's gSiegeRoundBegun global in the game VM so
 	// we can detect the exact round-begin transition when available.
 	void* dll = GVM_GetDllHandle();
@@ -292,7 +299,7 @@ void NXRP_OnRoundEnd(int winningTeam) {
 }
 
 void NXRP_OnRoundStart(void) {
-	NXRP_PrintConsoleToPlayer(NULL, "Round started");
+	//NXRP_PrintConsoleToPlayer(NULL, "Round started");
 	// Increment round counter and re-resolve/reapply FFA hooks at round start
 	nxrp_roundNumber++;
 	NXRP_FFA_Init();
