@@ -31,7 +31,6 @@ qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_pos( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_prop_s( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_prop_r( client_t *cl, const char *chatCursor );
-qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_prop_list( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args );

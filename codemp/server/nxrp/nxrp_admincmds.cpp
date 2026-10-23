@@ -112,16 +112,6 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
 	return qtrue;
 }
 
-// Admin-only: move the last spawned prop to specified x y z (world coordinates)
-// Usage: !prop m <x> <y> <z>
-qboolean NXRP_cmdAdmin_prop_m( client_t *cl, const char *chatCursor ) {
-	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
-	if (!NXRP_IsClientAdmin(cl)) return qtrue;
-
-	NXRP_MoveLastSpawnTo(cl, chatCursor);
-	return qtrue;
-}
-
 // Admin-only: load saved prop spawns for the current map: !prop load
 qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;

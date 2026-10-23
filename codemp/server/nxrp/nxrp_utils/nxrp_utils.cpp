@@ -63,12 +63,9 @@ int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath)
 		org[2] += zOffset;
 	}
 	// finalize spawn at client using NXRP_PlaceModel
-	vec3_t mins = { -24.0f, -24.0f, -8.0f };
-	vec3_t maxs = {  24.0f,  24.0f, 24.0f };
 	float yaw = 0.0f;
 	if (cl && cl->gentity) yaw = cl->gentity->s.angles[YAW];
-	vec3_t zeroOffset = {0.0f, 0.0f, 0.0f};
-	int entnum = NXRP_PlaceModel(modelPath, mins, maxs, yaw, zeroOffset, org);
+	int entnum = NXRP_PlaceModel(modelPath, org, yaw);
 	NXRP_PrintConsoleToPlayer(NULL, "Spawned Model at Client");
 	if (entnum >= 0) {
 		NXRP_RegisterSpawn(entnum);
@@ -76,144 +73,14 @@ int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath)
 	return entnum;
 }
 
-// Place a model with explicit prop bounds and yaw at a floor position.
-int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMaxs, float yaw, const vec3_t colliderOffset, const vec3_t floor)
-{
-	if (!name || !name[0]) return -1;
-
-	void* dll = GVM_GetDllHandle();
-	if (!dll) return -1;
-
-	void* gGSpawn_f = Sys_LoadFunction(dll, "G_Spawn");
-	int (*gModelIndex_f)(const char*) = (int (*)(const char*))Sys_LoadFunction(dll, "G_ModelIndex");
-	void* (*gGSpawn)() = (void* (*)())gGSpawn_f;
-	if (!gGSpawn || !gModelIndex_f) return -1;
-
-	void* old = GVM_BeginNative();
-	sharedEntity_t* e = (sharedEntity_t*)gGSpawn();
-	const int model0 = e ? gModelIndex_f(name) : 0;
-	int model = model0;
-	// If the model wasn't found, try common alternate path forms the user
-	// might provide (with or without the leading "models/" prefix or a
-	// leading slash). This preserves compatibility with older commands that
-	// accepted shorter names.
-	if (model == 0 && name && name[0]) {
-		// build a small buffer for alternates
-		char alt[MAX_QPATH];
-		// try without leading '/', if present
-		const char* s = name;
-		if (s[0] == '/') s++;
-		// if it already starts with "models/", try without that prefix
-		const char* prefix = "models/";
-		size_t prefixLen = strlen(prefix);
-		if (strncmp(s, prefix, prefixLen) == 0) {
-			// try s + prefixLen
-			Q_strncpyz(alt, s + prefixLen, sizeof(alt));
-			model = gModelIndex_f(alt);
-		}
-		// if still not found and it doesn't start with models/, try prefixing it
-		if (model == 0 && strncmp(s, prefix, prefixLen) != 0) {
-			Com_sprintf(alt, sizeof(alt), "models/%s", s);
-			model = gModelIndex_f(alt);
-		}
-		// lastly, try without any leading slash version in case caller used one
-		if (model == 0 && name[0] == '/') {
-			Q_strncpyz(alt, name + 1, sizeof(alt));
-			model = gModelIndex_f(alt);
-		}
-	}
-	GVM_EndNative(old);
-	if (!e) return -1;
-	// If the model index couldn't be resolved, free the spawned entity and fail
-	if (model <= 0) {
-		// attempt to free the entity to avoid leaving a gizmo/default model
-		void* dll2 = GVM_GetDllHandle();
-		if (dll2) {
-			void* gFreeEntity_f = Sys_LoadFunction(dll2, "G_FreeEntity");
-			void (*gFreeEntity)(void*) = (void (*)(void*))gFreeEntity_f;
-			if (gFreeEntity) {
-				void* old2 = GVM_BeginNative();
-				gFreeEntity((void*)e);
-				GVM_EndNative(old2);
-			}
-		}
-		return -1;
-	}
-
-	vec3_t org = { floor[0], floor[1], floor[2] - propMins[2] };
-	// Snap spawn origin to whole units so spawned props align to integer coordinates
-	org[0] = roundf(org[0]); org[1] = roundf(org[1]); org[2] = roundf(org[2]);
-	e->s.eType = ET_GENERAL;
-	e->s.modelindex = model;
-	VectorCopy(org, e->s.pos.trBase);
-	VectorCopy(org, e->s.origin);
-	VectorCopy(org, e->r.currentOrigin);
-	e->s.pos.trType = TR_STATIONARY;
-	VectorSet(e->s.apos.trBase, 0.0f, yaw, 0.0f);
-	VectorCopy(e->s.apos.trBase, e->s.angles);
-	VectorCopy(e->s.apos.trBase, e->r.currentAngles);
-	e->s.apos.trType = TR_STATIONARY;
-
-	// If the provided prop bounds are all zero, treat this as "no collider":
-	// do not construct a collision box or mark the entity as solid.
-	bool noCollider = (propMins[0] == 0.0f && propMins[1] == 0.0f && propMins[2] == 0.0f
-		&& propMaxs[0] == 0.0f && propMaxs[1] == 0.0f && propMaxs[2] == 0.0f);
-
-	if (noCollider) {
-		// leave r.mins/maxs as zero-length and set absmin/absmax to the origin
-		VectorSet(e->r.mins, 0.0f, 0.0f, 0.0f);
-		VectorSet(e->r.maxs, 0.0f, 0.0f, 0.0f);
-		VectorCopy(e->s.pos.trBase, e->r.absmin);
-		VectorCopy(e->s.pos.trBase, e->r.absmax);
-		// do not mark contents solid - leave as default (no collider)
-		e->r.svFlags = 0;
-		SV_LinkEntity(e);
-	} else {
-		// Compute a rotated box around the yaw like social.cpp does
-		const float c = cosf(DEG2RAD(yaw)), sn = sinf(DEG2RAD(yaw));
-		vec3_t mins = { 99999.0f, 99999.0f, propMins[2] }, maxs = { -99999.0f, -99999.0f, propMaxs[2] };
-		for (int k = 0; k < 4; k++) {
-			const float x = (k & 1) ? propMaxs[0] : propMins[0];
-			const float y = (k & 2) ? propMaxs[1] : propMins[1];
-			const float rx = x * c - y * sn, ry = x * sn + y * c;
-			mins[0] = Q_min(mins[0], rx); maxs[0] = Q_max(maxs[0], rx);
-			mins[1] = Q_min(mins[1], ry); maxs[1] = Q_max(maxs[1], ry);
-		}
-		VectorCopy(mins, e->r.mins);
-		VectorCopy(maxs, e->r.maxs);
-
-		// Apply colliderOffset to shift the collision bounds relative to the entity origin
-		// Rotate the colliderOffset by the entity yaw so offsets defined in model-local
-		// coordinates are applied correctly when the model is rotated.
-		vec3_t rotOffset;
-		rotOffset[0] = colliderOffset[0] * c - colliderOffset[1] * sn;
-		rotOffset[1] = colliderOffset[0] * sn + colliderOffset[1] * c;
-		rotOffset[2] = colliderOffset[2];
-		VectorAdd(e->r.mins, rotOffset, e->r.mins);
-		VectorAdd(e->r.maxs, rotOffset, e->r.maxs);
-
-		// Use the rotated prop bounds as-is (match Holo_PlaceModel behavior):
-		// copy mins/maxs already set above and enable solid contents, then link.
-		VectorAdd(e->s.pos.trBase, e->r.mins, e->r.absmin);
-		VectorAdd(e->s.pos.trBase, e->r.maxs, e->r.absmax);
-
-		e->r.contents = CONTENTS_SOLID;
-		e->r.svFlags = 0;
-		SV_LinkEntity(e);
-	}
-	NXRP_PrintConsoleToPlayer(NULL, va("Placed model %s", name));
-	return e->s.number;
-}
-
 // Spawn a prop at the client's origin using given model and prop bounds
 int NXRP_SpawnPropAtClient(client_t* cl, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, float yaw)
 {
 	if (!cl || !modelPath) return -1;
-	vec3_t floor;
-	if (cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, floor);
-	else { VectorSet(floor, 0,0,0); }
-	vec3_t zeroOffset2 = {0.0f, 0.0f, 0.0f};
-	return NXRP_PlaceModel(modelPath, propMins, propMaxs, yaw, zeroOffset2, floor);
+	vec3_t position;
+	if (cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, position);
+	else { VectorSet(position, 0,0,0); }
+	return NXRP_PlaceModel(modelPath, position, yaw);
 }
 
 // Simple tracking for last NXRP spawn

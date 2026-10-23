@@ -19,12 +19,9 @@ bool NXRP_ReadAccountContentForClient(client_t* cl, std::string& outContent, std
 // Returns the new entity number, or -1 on failure.
 int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath);
 
-// Place a model at a given floor position with explicit prop bounds and yaw.
+// Place a model at a given position with yaw.
 // Returns the new entity number, or -1 on failure.
-// Place a model at a given floor position with explicit prop bounds and yaw.
-// The colliderOffset parameter shifts the collision box relative to the entity origin
-// without moving the entity itself.
-int NXRP_PlaceModel(const char* name, const vec3_t propMins, const vec3_t propMaxs, float yaw, const vec3_t colliderOffset, const vec3_t floor);
+int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle);
 
 // Track last NXRP-spawned entity and allow adjustments
 void NXRP_RegisterSpawn(int entnum);
@@ -71,9 +68,6 @@ bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor);
 // Move a saved spawn (by index) by a cardinal direction and amount.
 // args: "<dir> <amount>"
 bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args);
-
-// Move the last spawned model to absolute coordinates parsed from chatCursor: "<x> <y> <z>"
-bool NXRP_MoveLastSpawnTo(client_t* cl, const char* chatCursor);
 
 // Look up a prop definition by name from a per-module catalog file and return
 // model path, extents (mins/maxs), origin and yaw angle when found.

@@ -228,8 +228,6 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 			return NXRP_cmdAdmin_prop_s(cl, p);
 		} else if (!Q_stricmp(action, "r")) {
 			return NXRP_cmdAdmin_prop_r(cl, p);
-		} else if (!Q_stricmp(action, "m")) {
-			return NXRP_cmdAdmin_prop_m(cl, p);
 		} else if (!Q_stricmp(action, "load")) {
 			return NXRP_cmdAdmin_prop_load(cl, dispatchCursor);
 		} else if (!Q_stricmp(action, "list")) {
