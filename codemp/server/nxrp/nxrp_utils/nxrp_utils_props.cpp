@@ -104,7 +104,6 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 		if (s.size() > maxLen) s = s.substr(0, maxLen - 3) + "...";
 
 		int entv = NXRP_ExtractIntField(s, "\"ent\"", -1);
-		int idxv = NXRP_ExtractIntField(s, "\"index\"", idx);
 
 		// extract model path
 		std::string model;
@@ -220,6 +219,8 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 	if (newEnt >= 0) {
 		NXRP_RegisterSpawn(newEnt);
 		// update saved entry with new origin and preserve collider metadata when present
+		vec3_t mins = {0.0f, 0.0f, 0.0f};
+		vec3_t maxs = {0.0f, 0.0f, 0.0f};
 		char buf[1024];
 		snprintf(buf, sizeof(buf), "{ \"ent\": %d, \"id\": %d, \"index\": %d, \"model\": \"%s\", \"origin\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f], \"propMins\": [%.2f, %.2f, %.2f], \"propMaxs\": [%.2f, %.2f, %.2f], \"colliderOffset\": [%.2f, %.2f, %.2f], \"yaw\": %.2f }",
 			newEnt, newEnt, index, modelPath.c_str(), newFloor[0], newFloor[1], newFloor[2], 0.0f, yaw, 0.0f,

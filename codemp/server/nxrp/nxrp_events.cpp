@@ -201,7 +201,6 @@ void NXRP_OnPlayerKilled(client_t *attacker, client_t *victim, int meansOfDeath)
 }
 
 void NXRP_OnScoreChanged(client_t *cl, int oldScore, int newScore) {
-	const char *name = cl ? (cl->nxrp_username[0] ? cl->nxrp_username : cl->name) : "Unknown";
 	//NXRP_PrintConsoleToPlayer(NULL, va("Score changed: %s %d -> %d", name, oldScore, newScore));
 
 	//If the player's score increased, send them a notification
