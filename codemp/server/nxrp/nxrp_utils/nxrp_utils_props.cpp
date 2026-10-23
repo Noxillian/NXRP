@@ -21,8 +21,24 @@ int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
 	vec3_t propMaxs = { 24.0f, 24.0f, 24.0f };
 	vec3_t colliderOrigin = { 0.0f, 0.0f, 0.0f };
 	float catalogYaw = 0.0f;
-	if (NXRP_GetPropFromCatalog(modelPath, resolvedModel, propMins, propMaxs, colliderOrigin, catalogYaw) && !resolvedModel.empty()) {
+	bool foundInCatalog = NXRP_GetPropFromCatalog(modelPath, resolvedModel, propMins, propMaxs, colliderOrigin, catalogYaw);
+	if (foundInCatalog && !resolvedModel.empty()) {
 		modelPath = resolvedModel.c_str();
+	}
+
+	if (propMins[0] == 0.0f && propMins[1] == 0.0f && propMins[2] == 0.0f
+		&& propMaxs[0] == 0.0f && propMaxs[1] == 0.0f && propMaxs[2] == 0.0f) {
+		VectorSet(propMins, -24.0f, -24.0f, -8.0f);
+		VectorSet(propMaxs, 24.0f, 24.0f, 24.0f);
+		NXRP_PrintConsoleToPlayer(NULL, "NXRP: collider extents were zero; applied default collider");
+	}
+
+	for (int i = 0; i < 3; ++i) {
+		if (propMins[i] > propMaxs[i]) {
+			const float t = propMins[i];
+			propMins[i] = propMaxs[i];
+			propMaxs[i] = t;
+		}
 	}
 
 	void* dll = GVM_GetDllHandle();
@@ -37,7 +53,10 @@ int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
 	sharedEntity_t* e = (sharedEntity_t*)gGSpawn();
 	const int model = e ? gModelIndex_f(modelPath) : 0;
 	GVM_EndNative(old);
-	if (!e || model <= 0) return -1;
+	if (!e || model <= 0) {
+		NXRP_PrintConsoleToPlayer(NULL, va("NXRP: failed to resolve model index for %s", modelPath));
+		return -1;
+	}
 
 	vec3_t org = { position[0], position[1], position[2] - propMins[2] };
 	org[0] = roundf(org[0]); org[1] = roundf(org[1]); org[2] = roundf(org[2]);
@@ -56,6 +75,7 @@ int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
 		&& propMaxs[0] == 0.0f && propMaxs[1] == 0.0f && propMaxs[2] == 0.0f);
 
 	if (noCollider) {
+		NXRP_PrintConsoleToPlayer(NULL, va("NXRP: no collider for %s", modelPath));
 		VectorSet(e->r.mins, 0.0f, 0.0f, 0.0f);
 		VectorSet(e->r.maxs, 0.0f, 0.0f, 0.0f);
 		VectorCopy(e->s.pos.trBase, e->r.absmin);
@@ -74,6 +94,10 @@ int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
 		}
 		VectorCopy(mins, e->r.mins);
 		VectorCopy(maxs, e->r.maxs);
+		NXRP_PrintConsoleToPlayer(NULL, va("NXRP: applied collider mins=[%.2f %.2f %.2f] maxs=[%.2f %.2f %.2f] at origin=[%.2f %.2f %.2f]",
+			e->r.mins[0], e->r.mins[1], e->r.mins[2],
+			e->r.maxs[0], e->r.maxs[1], e->r.maxs[2],
+			e->s.pos.trBase[0], e->s.pos.trBase[1], e->s.pos.trBase[2]));
 		VectorAdd(e->s.pos.trBase, e->r.mins, e->r.absmin);
 		VectorAdd(e->s.pos.trBase, e->r.maxs, e->r.absmax);
 
@@ -466,6 +490,7 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 	qboolean loadedCatalog = qfalse;
 	if (NXRP_ReadFileToString(jsonPath.c_str(), content)) {
 		loadedCatalog = qtrue;
+		NXRP_PrintConsoleToPlayer(NULL, va("NXRP: props catalog found: %s", jsonPath.c_str()));
 	} else {
 		// Fallback: allow catalog under fs_homepath/nxrp as well
 		std::string nxrpDir;
@@ -473,8 +498,12 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 			std::string altJsonPath = nxrpDir + "/nxrp_props_catalog.json";
 			if (NXRP_ReadFileToString(altJsonPath.c_str(), content)) {
 				loadedCatalog = qtrue;
+				NXRP_PrintConsoleToPlayer(NULL, va("NXRP: props catalog found: %s", altJsonPath.c_str()));
 			}
 		}
+	}
+	if (!loadedCatalog) {
+		NXRP_PrintConsoleToPlayer(NULL, "NXRP: props catalog not found");
 	}
 	if (loadedCatalog) {
 		// crude JSON parsing: if name is a key, use that entry. If name looks like a path, search for an entry whose model matches the path.
@@ -553,6 +582,8 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 				}
 
 				if (outModel.empty()) outModel = sname;
+				NXRP_PrintConsoleToPlayer(NULL, va("NXRP: model found in catalog: %s", sname.c_str()));
+				NXRP_PrintConsoleToPlayer(NULL, va("NXRP: catalog collider size: [%.2f %.2f %.2f]", outMaxs[0] - outMins[0], outMaxs[1] - outMins[1], outMaxs[2] - outMins[2]));
 				return true;
 			}
 		}
@@ -564,7 +595,10 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 	std::ifstream ifs;
 	ifs.open(cat1);
 	if (!ifs.is_open()) ifs.open(cat2);
-	if (!ifs.is_open()) return false;
+	if (!ifs.is_open()) {
+		NXRP_PrintConsoleToPlayer(NULL, va("NXRP: model not found in catalog: %s", sname.c_str()));
+		return false;
+	}
 
 	std::string line;
 	while (std::getline(ifs, line)) {
@@ -597,11 +631,14 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 			if (!outMins[0] && !outMins[1] && !outMins[2]) { outMins[0]=-24; outMins[1]=-24; outMins[2]=-8; }
 			if (!outMaxs[0] && !outMaxs[1] && !outMaxs[2]) { outMaxs[0]=24; outMaxs[1]=24; outMaxs[2]=24; }
 			if (!outYaw) outYaw = 0.0f;
+			NXRP_PrintConsoleToPlayer(NULL, va("NXRP: model found in catalog: %s", sname.c_str()));
+			NXRP_PrintConsoleToPlayer(NULL, va("NXRP: catalog collider size: [%.2f %.2f %.2f]", outMaxs[0] - outMins[0], outMaxs[1] - outMins[1], outMaxs[2] - outMins[2]));
 			ifs.close();
 			return true;
 		}
 	}
 	ifs.close();
+	NXRP_PrintConsoleToPlayer(NULL, va("NXRP: model not found in catalog: %s", sname.c_str()));
 	return false;
 }
 
