@@ -2910,9 +2910,6 @@ void SV_InitGame( qboolean restart ) {
 	// Same reason: G_InitGame recomputes MBII's respawn-mode flag every round.
 	SV_SocialGameInit();
 
-	// Ensure runtime skills.json exists under fs_homepath/nxrp
-	NXRP_EnsureRuntimeSkills();
-
 	// restart == qtrue is a routine round-to-round restart (SV_RestartGame,
 	// via MBII's own "map_restart 0"), not a fresh map load
 	// (SV_InitGameProgs/SV_SpawnServer pass qfalse) - see SV_EconomyRoundRestart
@@ -2986,22 +2983,7 @@ void SV_BindGame( void ) {
 		gi.ROFF_Cache							= SV_ROFF_Cache;
 		gi.ROFF_Play							= SV_ROFF_Play;
 		gi.ROFF_Purge_Ent						= SV_ROFF_Purge_Ent;
-		gi.NXRP_EntityFreed						= NULL;
-		gi.NXRP_PlayerKilled					= []( int attackerClientNum, int victimClientNum, int meansOfDeath ) {
-			client_t *attacker = NULL;
-			if ( attackerClientNum >= 0 && attackerClientNum < sv_maxclients->integer ) {
-				attacker = &svs.clients[attackerClientNum];
-			}
 
-			// Player victim (client slot)
-			if ( victimClientNum >= 0 && victimClientNum < sv_maxclients->integer ) {
-				NXRP_OnPlayerKilled( attacker, &svs.clients[victimClientNum], meansOfDeath );
-				return;
-			}
-
-			// Fallback for unknown/non-client victims
-			NXRP_OnPlayerKilled( attacker, NULL, meansOfDeath );
-		};
 		gi.ICARUS_RunScript						= ICARUS_RunScript;
 		gi.ICARUS_RegisterScript				= SV_ICARUS_RegisterScript;
 		gi.ICARUS_Init							= ICARUS_Init;

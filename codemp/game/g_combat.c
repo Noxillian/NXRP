@@ -2508,12 +2508,6 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 		G_LogWeaponFrag(killer, self->s.number);
 	}
 
-	// If the server has registered a kill callback, notify it so server-side
-	// modules (like NXRP) can react to kills immediately without parsing logs.
-	if ( trap && trap->NXRP_PlayerKilled ) {
-		trap->NXRP_PlayerKilled( killer, self->s.number, meansOfDeath );
-	}
-
 	// broadcast the death event to everyone
 	if (self->s.eType != ET_NPC && !g_noPDuelCheck)
 	{

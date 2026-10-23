@@ -859,10 +859,6 @@ typedef struct gameImport_s {
 	int			(*ICARUS_GetFloatVariable)				( const char *name, float *value );
 	int			(*ICARUS_GetStringVariable)				( const char *name, const char *value );
 	int			(*ICARUS_GetVectorVariable)				( const char *name, const vec3_t value );
-	// NXRP notifications
-	void		(*NXRP_Use)								( int clientNum, int entNum );
-	void		(*NXRP_EntityFreed)						( int entNum, int attackerClientNum );
-	void		(*NXRP_PlayerKilled)					( int attackerClientNum, int victimClientNum, int meansOfDeath );
 
 	// navigation
 	void		(*Nav_Init)								( void );

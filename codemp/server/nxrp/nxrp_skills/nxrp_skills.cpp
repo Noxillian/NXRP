@@ -735,10 +735,6 @@ static std::string NXRP_ToLowerCopySimple(const std::string &in) {
 	return out;
 }
 
-void NXRP_EnsureRuntimeSkills(void) {
-	// skills.json is optional in the minimal implementation
-}
-
 void NXRP_LoadRepoSkills() {
 	// Always attempt to load the repository skills.json so runtime reflects
 	// the current repo contents (useful during development). If the repo
