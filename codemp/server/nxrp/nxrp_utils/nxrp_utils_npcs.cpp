@@ -84,8 +84,7 @@ void NXRP_HandlePendingNPCSpawn(int entnum) {
 	std::string name = nxrp_pending_npc_names.front();
 	nxrp_pending_npc_names.pop_front();
 	NXRP_TrackNPC(entnum, name.c_str());
-	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_HandlePendingNPCSpawn: saving ent=%d name=%s", entnum, name.c_str());
-	NXRP_SaveNPCToMap(entnum, name.c_str());
+	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_HandlePendingNPCSpawn: tracked ent=%d name=%s", entnum, name.c_str());
 }
 
 void NXRP_TrackNPC(int entnum, const char* name) {
@@ -149,6 +148,31 @@ void NXRP_SaveNPCToMap(int entnum, const char* npcType) {
 	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_SaveNPCToMap: saved ent=%d type=%s to %s", entnum, npcType, filename.c_str());
 }
 
+bool NXRP_SaveNPCAtClientToMap(client_t* cl, const char* npcType) {
+	if (!cl || !cl->gentity || !npcType || !npcType[0]) return false;
+
+	std::string filename;
+	std::vector<std::string> lines;
+	NXRP_GetPerMapFilePath("nxrp_npcs", filename);
+	int nextIndex = 0;
+	if (NXRP_ReadNonEmptyLinesFromFile(filename, lines)) nextIndex = (int)lines.size();
+
+	FILE* f = fopen(filename.c_str(), "a");
+	if (!f) return false;
+
+	const vec3_t& org = cl->gentity->r.currentOrigin;
+	const vec3_t& ang = cl->gentity->s.angles;
+	char buf[1024];
+	snprintf(buf, sizeof(buf), "{ \"id\": %d, \"index\": %d, \"npc\": \"%s\", \"position\": [%.0f %.0f %.0f], \"angles\": [%.0f %.0f %.0f] }\n",
+		nextIndex, nextIndex, npcType,
+		org[0], org[1], org[2],
+		ang[0], ang[1], ang[2]);
+	fputs(buf, f);
+	fclose(f);
+	NXRP_PrintConsoleToPlayerFmt(cl, "Saved NPC %s at position %.0f %.0f %.0f (index %d)", npcType, org[0], org[1], org[2], nextIndex);
+	return true;
+}
+
 // Read the per-map JSON file and send entries to the player as an indexed list
 void NXRP_ListSavedNPCs(client_t* cl) {
 	std::string filename;
@@ -160,7 +184,7 @@ void NXRP_ListSavedNPCs(client_t* cl) {
 	for (const auto &s : lines) {
 		if (s.empty()) continue;
 		any = true;
-		int entv = NXRP_ExtractIntField(s, "\"ent\"", -1);
+		int idv = NXRP_ExtractIntField(s, "\"id\"", -1);
 
 		// extract npc type
 		std::string npcType;
@@ -176,9 +200,10 @@ void NXRP_ListSavedNPCs(client_t* cl) {
 			}
 		}
 
-		// extract origin and angles
+		// extract position and angles
 		float ox=0, oy=0, oz=0, ax=0, ay=0, az=0;
-		size_t opos = s.find("\"origin\"");
+		size_t opos = s.find("\"position\"");
+		if (opos == std::string::npos) opos = s.find("\"origin\"");
 		if (opos != std::string::npos) {
 			opos = s.find('[', opos);
 			if (opos != std::string::npos) {
@@ -194,7 +219,7 @@ void NXRP_ListSavedNPCs(client_t* cl) {
 		}
 
 		if (npcType.empty()) npcType = "<unknown>";
-		NXRP_PrintConsoleToPlayerFmt(cl, "%d: ent=%d npc=%s origin=%.0f,%.0f,%.0f angles=%.0f,%.0f,%.0f", idx, entv, npcType.c_str(), ox, oy, oz, ax, ay, az);
+		NXRP_PrintConsoleToPlayerFmt(cl, "%d: id=%d npc=%s position=%.0f,%.0f,%.0f angles=%.0f,%.0f,%.0f", idx, idv, npcType.c_str(), ox, oy, oz, ax, ay, az);
 		idx++;
 	}
 	if (!any) NXRP_PrintConsoleToPlayer(cl, "No saved NPCs for this map");
@@ -213,6 +238,7 @@ int NXRP_LoadSavedNPCsForMap(client_t* cl) {
 		// extract npc type
 		std::string s = line;
 		std::string npcType;
+		float px = 0.0f, py = 0.0f, pz = 0.0f;
 		size_t mpos = s.find("\"npc\"");
 		if (mpos != std::string::npos) {
 			size_t colon = s.find(':', mpos);
@@ -224,11 +250,25 @@ int NXRP_LoadSavedNPCsForMap(client_t* cl) {
 				}
 			}
 		}
+		size_t ppos = s.find("\"position\"");
+		if (ppos != std::string::npos) {
+			ppos = s.find('[', ppos);
+			if (ppos != std::string::npos) {
+				sscanf(s.c_str()+ppos, "[%f %*[, ] %f %*[, ] %f", &px, &py, &pz);
+			}
+		}
 		if (npcType.empty()) continue;
+		if (cl) {
+			char posCmd[128];
+			Com_sprintf(posCmd, sizeof(posCmd), "setviewpos %.0f %.0f %.0f", px, py, pz);
+			SV_ExecuteClientCommandDelayed_h(cl, std::string(posCmd), delay);
+			delay += 1;
+		}
 		char cmdBuf[256];
 		Com_sprintf(cmdBuf, sizeof(cmdBuf), "npc spawn %s", npcType.c_str());
+		NXRP_PushPendingNPCName(npcType.c_str());
 		SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), delay);
-		delay += 1; // stagger a bit
+		delay += 2; // allow setviewpos to apply before spawn
 		count++;
 	}
 	return count;

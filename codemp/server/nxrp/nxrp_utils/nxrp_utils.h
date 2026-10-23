@@ -106,6 +106,7 @@ void NXRP_UntrackNPC(int entnum);
 void NXRP_PushPendingNPCName(const char* name);
 // NPC persistence helpers: save/load NPCs per-map
 void NXRP_SaveNPCToMap(int entnum, const char* npcType);
+bool NXRP_SaveNPCAtClientToMap(client_t* cl, const char* npcType);
 int NXRP_LoadSavedNPCsForMap(client_t* cl);
 // Send a player a list of saved NPCs for the current map.
 void NXRP_ListSavedNPCs(client_t* cl);

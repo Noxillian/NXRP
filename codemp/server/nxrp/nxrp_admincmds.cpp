@@ -69,6 +69,9 @@ qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor ) {
 		char cmdBuf[128];
 		Com_sprintf(cmdBuf, sizeof(cmdBuf), "npc spawn %s", tok);
 		NXRP_PrintConsoleToPlayer(cl, "^3Spawning NPC");
+		if (!NXRP_SaveNPCAtClientToMap(cl, tok)) {
+			NXRP_PrintConsoleToPlayer(cl, "Failed to save NPC spawn to map file");
+		}
 		NXRP_PushPendingNPCName(tok);
 		SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
 		return qtrue;
