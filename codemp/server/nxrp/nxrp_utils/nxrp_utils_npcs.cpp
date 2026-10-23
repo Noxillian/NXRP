@@ -268,8 +268,23 @@ int NXRP_LoadSavedNPCsForMap(client_t* cl) {
 	std::vector<std::string> lines;
 	if (!NXRP_ReadPerMapLines("nxrp_npcs", lines, filename)) return 0;
 
+	sharedEntity_t* spawnerEnt = (cl && cl->gentity) ? cl->gentity : NULL;
+	if (!spawnerEnt) {
+		for (int i = 0; i < sv_maxclients->integer; ++i) {
+			if (svs.clients[i].state == CS_ACTIVE && svs.clients[i].gentity) {
+				spawnerEnt = svs.clients[i].gentity;
+				break;
+			}
+		}
+	}
+
+	void* dll = GVM_GetDllHandle();
+	void* (*gNPCSpawnType)(void*, char*, char*, int, int, int) = NULL;
+	if (dll) {
+		gNPCSpawnType = (void* (*)(void*, char*, char*, int, int, int))Sys_LoadFunction(dll, "NPC_SpawnType");
+	}
+
 	int count = 0;
-	int delay = 1;
 	for (const auto &line : lines) {
 		if (line.empty()) continue;
 		// extract npc type
@@ -304,11 +319,26 @@ int NXRP_LoadSavedNPCsForMap(client_t* cl) {
 		}
 		if (npcType.empty()) continue;
 		vec3_t savedPos = { px, py, pz };
+
+		if (gNPCSpawnType && spawnerEnt) {
+			void* old = GVM_BeginNative();
+			sharedEntity_t* spawned = (sharedEntity_t*)gNPCSpawnType(spawnerEnt, (char*)npcType.c_str(), NULL, 0, 0, 0);
+			GVM_EndNative(old);
+			if (spawned) {
+				NXRP_TeleportEntityTo(spawned, savedPos, ay);
+				NXRP_TrackNPC(spawned->s.number, npcType.c_str());
+				if (cl) {
+					NXRP_PrintConsoleToPlayerFmt(cl, "Loaded NPC %s at %.0f %.0f %.0f", npcType.c_str(), px, py, pz);
+				}
+				count++;
+				continue;
+			}
+		}
+
 		NXRP_PushPendingNPCSpawnAt(npcType.c_str(), savedPos, ay);
 		char cmdBuf[256];
 		Com_sprintf(cmdBuf, sizeof(cmdBuf), "npc spawn %s", npcType.c_str());
-		SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), delay);
-		delay += 1;
+		SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), count + 1);
 		count++;
 	}
 	return count;

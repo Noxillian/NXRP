@@ -288,7 +288,13 @@ qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor ) {
 	}
 
 	float x = 0.0f, y = 0.0f, z = 0.0f;
-	if (!chatCursor || sscanf(chatCursor, "%f %f %f", &x, &y, &z) != 3) {
+	const char* p = chatCursor ? chatCursor : "";
+	while (*p == ' ' || *p == '\t') ++p;
+	if (!Q_stricmpn(p, "tp", 2) && (p[2] == '\0' || p[2] == ' ' || p[2] == '\t')) {
+		p += 2;
+		while (*p == ' ' || *p == '\t') ++p;
+	}
+	if (!*p || sscanf(p, "%f %f %f", &x, &y, &z) != 3) {
 		NXRP_PrintConsoleToPlayer(cl, "Usage: !tp <x> <y> <z>");
 		return qtrue;
 	}
