@@ -2910,8 +2910,6 @@ void SV_InitGame( qboolean restart ) {
 	// Same reason: G_InitGame recomputes MBII's respawn-mode flag every round.
 	SV_SocialGameInit();
 
-	// NXRP FFA disabled per user request; initialization/frame calls removed.
-
 	// Ensure runtime skills.json exists under fs_homepath/nxrp
 	NXRP_EnsureRuntimeSkills();
 
@@ -2999,20 +2997,6 @@ void SV_BindGame( void ) {
 			if ( victimClientNum >= 0 && victimClientNum < sv_maxclients->integer ) {
 				NXRP_OnPlayerKilled( attacker, &svs.clients[victimClientNum], meansOfDeath );
 				return;
-			}
-
-			// NPC victim (entity index) - resolve name directly from the victim entity.
-			if ( victimClientNum >= 0 && victimClientNum < sv.num_entities ) {
-				sharedEntity_t *victimEnt = SV_GentityNum( victimClientNum );
-				if ( victimEnt && victimEnt->s.eType == ET_NPC ) {
-					if ( NXRP_TryMarkNPCKillSeen(victimClientNum) ) {
-						const char *npcName = NULL;
-						if ( victimEnt->targetname && victimEnt->targetname[0] ) npcName = victimEnt->targetname;
-						else if ( victimEnt->classname && victimEnt->classname[0] ) npcName = victimEnt->classname;
-						NXRP_OnNPCKilled( attacker, npcName );
-					}
-					return;
-				}
 			}
 
 			// Fallback for unknown/non-client victims

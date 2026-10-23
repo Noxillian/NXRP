@@ -99,7 +99,6 @@ struct NXRP_SimpleSkill {
 bool NXRP_ParseSkillsJson(const std::string &content, std::vector<NXRP_SimpleSkill> &out);
 
 // Event helpers
-void NXRP_OnNPCKilled( client_t *killer, const char *npcName );
 void NXRP_OnPlayerSpawned( client_t *cl );
 // Forward declaration for player-killed events delivered from the game VM via trap
 void NXRP_OnPlayerKilled(client_t *attacker, client_t *victim, int meansOfDeath);
@@ -117,7 +116,6 @@ void NXRP_OnRoundEnd(int winningTeam);
 void NXRP_OnRoundRestart(void);
 void NXRP_OnMatchStart(void);
 void NXRP_OnMatchEnd(void);
-qboolean NXRP_TryMarkNPCKillSeen(int entNum);
 
 // Round index helper (1-based within the current map). Returns 0 before
 // the first round has started.
@@ -126,7 +124,6 @@ int NXRP_GetRoundNumber(void);
 // Server-side NXRP helpers
 void SV_NXRP_ScoreInit(void);
 void SV_NXRP_ScoreFrame(void);
-void SV_NXRP_NPCDeathPollFrame(void);
 
 // FFA respawn helpers
 void NXRP_FFA_Init(void);
