@@ -123,11 +123,11 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 		if (line.empty()) continue;
 		any = true;
 		// Parse the JSON-ish line and print a concise one-line summary per saved spawn.
-		// Expected format: { "ent": <n>, "index": <n>, "model": "<path>", "origin": [x, y, z], "angles": [ax, ay, az] }
+		// Expected format: { "id": <n>, "index": <n>, "model": "<path>", "position": [x, y, z], "angles": [ax, ay, az] }
 		std::string s = line;
 		if (s.size() > maxLen) s = s.substr(0, maxLen - 3) + "...";
 
-		int entv = NXRP_ExtractIntField(s, "\"ent\"", -1);
+		int idv = NXRP_ExtractIntField(s, "\"id\"", -1);
 
 		// extract model path
 		std::string model;
@@ -143,9 +143,10 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 			}
 		}
 
-		// extract origin and angles
+		// extract position and angles
 		float ox=0, oy=0, oz=0, ax=0, ay=0, az=0;
-		size_t opos = s.find("\"origin\"");
+		size_t opos = s.find("\"position\"");
+		if (opos == std::string::npos) opos = s.find("\"origin\"");
 		if (opos != std::string::npos) {
 			opos = s.find('[', opos);
 			if (opos != std::string::npos) {
@@ -161,7 +162,7 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 		}
 
 		if (model.empty()) model = "<unknown>";
-		NXRP_PrintConsoleToPlayerFmt(cl, "%d: ent=%d model=%s origin=%.0f,%.0f,%.0f angles=%.0f,%.0f,%.0f", idx, entv, model.c_str(), ox, oy, oz, ax, ay, az);
+		NXRP_PrintConsoleToPlayerFmt(cl, "%d: id=%d model=%s position=%.0f,%.0f,%.0f angles=%.0f,%.0f,%.0f", idx, idv, model.c_str(), ox, oy, oz, ax, ay, az);
 		idx++;
 	}
 	if (!any) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
@@ -192,34 +193,20 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 	std::string modelPath;
 	float ox=0, oy=0, oz=0;
 	const char* modelKey = "\"model\"";
-	const char* originKey = "\"origin\"";
+	const char* originKey = "\"position\"";
 	const char* m = strstr(s, modelKey);
 	if (m) { m = strchr(m, ':'); if (m) m++; while (m && *m && isspace((unsigned char)*m)) m++; if (m && *m == '"') { m++; const char* me = strchr(m, '"'); if (me && me > m) modelPath.assign(m, me - m); } }
 	const char* o = strstr(s, originKey);
 	if (o) { o = strchr(o, '['); if (o) { o++; sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz); } }
 
 	// Free any runtime entity referenced in this saved entry to avoid duplicates
-	int entToFree = -1;
-	size_t entPos = target.find("\"ent\"");
-	if (entPos != std::string::npos) {
-		size_t colon = target.find(':', entPos);
-		if (colon != std::string::npos) {
-			size_t valStart = colon + 1;
-			while (valStart < target.size() && isspace((unsigned char)target[valStart])) ++valStart;
-			size_t valEnd = valStart;
-			if (valEnd < target.size() && (target[valEnd] == '-' || isdigit((unsigned char)target[valEnd]))) ++valEnd;
-			while (valEnd < target.size() && isdigit((unsigned char)target[valEnd])) ++valEnd;
-			if (valEnd > valStart) {
-				try { entToFree = std::stoi(target.substr(valStart, valEnd - valStart)); } catch(...) { entToFree = -1; }
-			}
-		}
-	}
-	if (entToFree >= 0 && entToFree < sv.num_entities) {
-		sharedEntity_t* oldEnt = SV_GentityNum(entToFree);
+	int idToFree = NXRP_ExtractIntField(target, "\"id\"", -1);
+	if (idToFree >= 0 && idToFree < sv.num_entities) {
+		sharedEntity_t* oldEnt = SV_GentityNum(idToFree);
 		if (oldEnt) {
 			NXRP_FreeEntity((void*)oldEnt);
 			NXRP_RegisterSpawn(-1);
-			NXRP_PrintConsoleToPlayer(cl, va("Freed old saved runtime entity %d", entToFree));
+			NXRP_PrintConsoleToPlayer(cl, va("Freed old saved runtime entity %d", idToFree));
 		}
 	}
 
@@ -242,13 +229,10 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 	int newEnt = NXRP_PlaceModel(modelPath.c_str(), newFloor, yaw);
 	if (newEnt >= 0) {
 		NXRP_RegisterSpawn(newEnt);
-		// update saved entry with new origin and preserve collider metadata when present
-		vec3_t mins = {0.0f, 0.0f, 0.0f};
-		vec3_t maxs = {0.0f, 0.0f, 0.0f};
+		// update saved entry
 		char buf[1024];
-		snprintf(buf, sizeof(buf), "{ \"ent\": %d, \"id\": %d, \"index\": %d, \"model\": \"%s\", \"origin\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f], \"propMins\": [%.2f, %.2f, %.2f], \"propMaxs\": [%.2f, %.2f, %.2f], \"colliderOffset\": [%.2f, %.2f, %.2f], \"yaw\": %.2f }",
-			newEnt, newEnt, index, modelPath.c_str(), newFloor[0], newFloor[1], newFloor[2], 0.0f, yaw, 0.0f,
-			mins[0], mins[1], mins[2], maxs[0], maxs[1], maxs[2], 0.0f, 0.0f, 0.0f, yaw);
+		snprintf(buf, sizeof(buf), "{ \"id\": %d, \"index\": %d, \"model\": \"%s\", \"position\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f] }",
+			newEnt, index, modelPath.c_str(), newFloor[0], newFloor[1], newFloor[2], 0.0f, yaw, 0.0f);
 		lines[index] = std::string(buf);
 		FILE* f = fopen(filename.c_str(), "w");
 		if (f) {
@@ -367,6 +351,10 @@ bool NXRP_RemoveSavedSpawnByIndex(int index) {
 // recreate the same collision box as when spawned via !prop s.
 void NXRP_SaveSpawnToMap(int entnum, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, const vec3_t colliderOffset, float yaw) {
 	if (entnum < 0 || !modelPath) return;
+	(void)propMins;
+	(void)propMaxs;
+	(void)colliderOffset;
+	(void)yaw;
 
 	sharedEntity_t* e = SV_GentityNum(entnum);
 	if (!e) return;
@@ -382,15 +370,10 @@ void NXRP_SaveSpawnToMap(int entnum, const char* modelPath, const vec3_t propMin
 	FILE* f = fopen(filename.c_str(), "a");
 	if (!f) return;
 
-	// Store collider extents and collider offset (origin) along with saved origin
-	snprintf(buf, sizeof(buf), "{ \"ent\": %d, \"id\": %d, \"index\": %d, \"model\": \"%s\", \"origin\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f], \"propMins\": [%.2f, %.2f, %.2f], \"propMaxs\": [%.2f, %.2f, %.2f], \"colliderOffset\": [%.2f, %.2f, %.2f], \"yaw\": %.2f }\n",
-		entnum, entnum, nextIndex, modelPath,
+	snprintf(buf, sizeof(buf), "{ \"id\": %d, \"index\": %d, \"model\": \"%s\", \"position\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f] }\n",
+		entnum, nextIndex, modelPath,
 		e->s.pos.trBase[0], e->s.pos.trBase[1], e->s.pos.trBase[2],
-		e->s.apos.trBase[0], e->s.apos.trBase[1], e->s.apos.trBase[2],
-		propMins[0], propMins[1], propMins[2],
-		propMaxs[0], propMaxs[1], propMaxs[2],
-		colliderOffset[0], colliderOffset[1], colliderOffset[2],
-		yaw);
+		e->s.apos.trBase[0], e->s.apos.trBase[1], e->s.apos.trBase[2]);
 	fputs(buf, f);
 	fclose(f);
 }
@@ -416,7 +399,7 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 		float ox=0, oy=0, oz=0;
 		float ax=0, ay=0, az=0;
 		const char* modelKey = "\"model\"";
-		const char* originKey = "\"origin\"";
+		const char* originKey = "\"position\"";
 		const char* anglesKey = "\"angles\"";
 		const char* m = strstr(s, modelKey);
 		if (m) { m = strchr(m, ':'); if (m) m++; while (m && *m && isspace((unsigned char)*m)) m++; if (m && *m == '"') { m++; const char* me = strchr(m, '"'); if (me && me > m) modelPath.assign(m, me - m); } }
@@ -425,21 +408,14 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 		const char* a = strstr(s, anglesKey);
 		if (a) { a = strchr(a, '['); if (a) { a++; sscanf(a, "%f %*[, ] %f %*[, ] %f", &ax, &ay, &az); } }
 
-		// Parse optional saved yaw metadata
-		float savedYaw = ay;
-		const char* yawKey = "\"yaw\"";
-		const char* yk = strstr(s, yawKey);
-		if (yk) { yk = strchr(yk, ':'); if (yk) { float ytmp; if (sscanf(yk, ":%f", &ytmp) == 1) savedYaw = ytmp; } }
-
 		if (modelPath.empty()) continue;
 
 		vec3_t savedPosition = { ox, oy, oz };
-		float yaw = savedYaw;
+		float yaw = ay;
 		if (cl) {
-			NXRP_PrintConsoleToPlayer(cl, va("NXRP: loading prop %s; savedOrigin=[%.2f %.2f %.2f] yaw=%.2f savedPosition=[%.2f %.2f %.2f]",
+			NXRP_PrintConsoleToPlayer(cl, va("NXRP: loading prop %s; savedPosition=[%.2f %.2f %.2f] yaw=%.2f",
 				modelPath.c_str(), ox, oy, oz,
-				yaw,
-				savedPosition[0], savedPosition[1], savedPosition[2]));
+				yaw));
 		}
 		int ent = NXRP_PlaceModel(modelPath.c_str(), savedPosition, yaw);
 		if (ent >= 0) {
@@ -490,7 +466,7 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 	qboolean loadedCatalog = qfalse;
 	if (NXRP_ReadFileToString(jsonPath.c_str(), content)) {
 		loadedCatalog = qtrue;
-		NXRP_PrintConsoleToPlayer(NULL, va("NXRP: props catalog found: %s", jsonPath.c_str()));
+		//NXRP_PrintConsoleToPlayer(NULL, va("NXRP: props catalog found: %s", jsonPath.c_str()));
 	} else {
 		// Fallback: allow catalog under fs_homepath/nxrp as well
 		std::string nxrpDir;
@@ -498,7 +474,7 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 			std::string altJsonPath = nxrpDir + "/nxrp_props_catalog.json";
 			if (NXRP_ReadFileToString(altJsonPath.c_str(), content)) {
 				loadedCatalog = qtrue;
-				NXRP_PrintConsoleToPlayer(NULL, va("NXRP: props catalog found: %s", altJsonPath.c_str()));
+				//NXRP_PrintConsoleToPlayer(NULL, va("NXRP: props catalog found: %s", altJsonPath.c_str()));
 			}
 		}
 	}
@@ -583,7 +559,7 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 
 				if (outModel.empty()) outModel = sname;
 				NXRP_PrintConsoleToPlayer(NULL, va("NXRP: model found in catalog: %s", sname.c_str()));
-				NXRP_PrintConsoleToPlayer(NULL, va("NXRP: catalog collider size: [%.2f %.2f %.2f]", outMaxs[0] - outMins[0], outMaxs[1] - outMins[1], outMaxs[2] - outMins[2]));
+				//NXRP_PrintConsoleToPlayer(NULL, va("NXRP: catalog collider size: [%.2f %.2f %.2f]", outMaxs[0] - outMins[0], outMaxs[1] - outMins[1], outMaxs[2] - outMins[2]));
 				return true;
 			}
 		}
@@ -632,7 +608,7 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 			if (!outMaxs[0] && !outMaxs[1] && !outMaxs[2]) { outMaxs[0]=24; outMaxs[1]=24; outMaxs[2]=24; }
 			if (!outYaw) outYaw = 0.0f;
 			NXRP_PrintConsoleToPlayer(NULL, va("NXRP: model found in catalog: %s", sname.c_str()));
-			NXRP_PrintConsoleToPlayer(NULL, va("NXRP: catalog collider size: [%.2f %.2f %.2f]", outMaxs[0] - outMins[0], outMaxs[1] - outMins[1], outMaxs[2] - outMins[2]));
+			//NXRP_PrintConsoleToPlayer(NULL, va("NXRP: catalog collider size: [%.2f %.2f %.2f]", outMaxs[0] - outMins[0], outMaxs[1] - outMins[1], outMaxs[2] - outMins[2]));
 			ifs.close();
 			return true;
 		}
