@@ -69,6 +69,7 @@ int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath)
 	if (cl && cl->gentity) yaw = cl->gentity->s.angles[YAW];
 	vec3_t zeroOffset = {0.0f, 0.0f, 0.0f};
 	int entnum = NXRP_PlaceModel(modelPath, mins, maxs, yaw, zeroOffset, org);
+	NXRP_PrintConsoleToPlayer(NULL, "Spawned Model at Client");
 	if (entnum >= 0) {
 		NXRP_RegisterSpawn(entnum);
 	}

@@ -2,68 +2,22 @@
 #include "server/nxrp/nxrp_utils/nxrp_utils.h"
 #include "server/sv_gameapi.h"
 #include "sys/sys_loadlib.h"
-// Ensure the print helper is visible in this translation unit
+
 void NXRP_PrintConsoleToPlayer(client_t* cl, const char* text);
-// Forward-declare kills-changed handler so SV_NXRP_ScoreFrame can call it before
-// the function is defined later in this file.
 void NXRP_OnKillsChanged(client_t *cl, int oldKills, int newKills);
 
-// Score polling state
 static int nxrp_lastScore[MAX_CLIENTS];
-// Kill polling state
 static int nxrp_lastKills[MAX_CLIENTS];
-// Round start tracking - set when round begins (svs.time), reset on intermission
 static int nxrp_roundStartTime = 0;
-// 1-based round counter for the current map; 0 before first round
 static int nxrp_roundNumber = 0;
-// Pointer into the game VM for MBII's gSiegeRoundBegun flag (if available)
 static qboolean* nxrp_gSiegeRoundBegun = NULL;
-// Local cached state to detect transition
 static qboolean nxrp_roundBegunFlag = qfalse;
-// MBII per-round timer pointers (optional)
 static int* nxrp_rebelCountdown = NULL;
 static int* nxrp_imperialCountdown = NULL;
 static int nxrp_prevRebelCountdown = 0;
 static int nxrp_prevImperialCountdown = 0;
 static qboolean nxrp_npcDeadSeen[MAX_GENTITIES];
 static qboolean nxrp_npcEverAlive[MAX_GENTITIES];
-
-qboolean NXRP_TryMarkNPCKillSeen(int entNum) {
-	if (entNum < 0 || entNum >= MAX_GENTITIES) return qfalse;
-	if (nxrp_npcDeadSeen[entNum]) return qfalse;
-	nxrp_npcDeadSeen[entNum] = qtrue;
-	return qtrue;
-}
-
-void SV_NXRP_NPCDeathPollFrame(void) {
-	if (!svs.clients) return;
-	for (int entNum = sv_maxclients->integer; entNum < sv.num_entities && entNum < MAX_GENTITIES; entNum++) {
-		sharedEntity_t *ent = SV_GentityNum(entNum);
-		if (!ent || ent->s.eType != ET_NPC) {
-			nxrp_npcDeadSeen[entNum] = qfalse;
-			nxrp_npcEverAlive[entNum] = qfalse;
-			continue;
-		}
-		qboolean dead = qfalse;
-		if (ent->s.eFlags & EF_DEAD) dead = qtrue;
-		if (ent->playerState && ent->playerState->stats[STAT_HEALTH] <= 0) dead = qtrue;
-		if (ent->health <= 0) dead = qtrue;
-		if (!dead) {
-			nxrp_npcEverAlive[entNum] = qtrue;
-			nxrp_npcDeadSeen[entNum] = qfalse;
-			continue;
-		}
-
-		if (nxrp_npcEverAlive[entNum]) {
-			if (NXRP_TryMarkNPCKillSeen(entNum)) {
-				const char *npcName = NULL;
-				if (ent->targetname && ent->targetname[0]) npcName = ent->targetname;
-				else if (ent->classname && ent->classname[0]) npcName = ent->classname;
-				NXRP_OnNPCKilled(NULL, npcName);
-			}
-		}
-	}
-}
 
 void SV_NXRP_ScoreInit(void) {
 	for (int i = 0; i < MAX_CLIENTS; i++) {
@@ -76,20 +30,13 @@ void SV_NXRP_ScoreInit(void) {
 	}
 	NXRP_FFA_Frame();
 }
-// FFA frame call removed per user request: callers should still build.
-// Called when a player uses (presses use) on an entity. entnum is the gentity index.
-void NXRP_OnNPCUsed( client_t *user, int entnum ) {
-	if (!user) return;
-	// Log NPC use for now; nxrp_npcs provides APIs to map entnums to NPC names.
-	NXRP_PrintConsoleToPlayer(NULL, va("NXRP_OnNPCUsed called by %s on ent=%d", user->name, entnum));
-}
 
 void SV_NXRP_ScoreFrame(void) {
 
 	if (!svs.clients) return;
 	// If intermission is active, reset round start state so we trigger again
 	if (sv.configstrings[CS_INTERMISSION] && atoi(sv.configstrings[CS_INTERMISSION]) == 1) {
-		NXRP_PrintConsoleToPlayer(NULL, "Round Restart");
+		NXRP_PrintConsoleToPlayer(NULL, "Round Start: Intermission");
 		nxrp_roundStartTime = 0;
 		nxrp_roundBegunFlag = qfalse;
 		nxrp_prevRebelCountdown = 0;
@@ -104,10 +51,7 @@ void SV_NXRP_ScoreFrame(void) {
 				client_t* cl = &svs.clients[i];
 				if (cl->state == CS_ACTIVE && cl->gentity) {
 					nxrp_roundStartTime = svs.time;
-					NXRP_OnMapStart();
-
-					// Also treat this as a round start.
-					NXRP_OnRoundStart();
+					NXRP_PrintConsoleToPlayer(NULL, "Round Start: First active player");
 					nxrp_roundBegunFlag = qtrue;
 
 					// Initialize last-kill counters from current persistent values
@@ -115,6 +59,7 @@ void SV_NXRP_ScoreFrame(void) {
 						client_t* cl2 = &svs.clients[j];
 						if (cl2->state == CS_ACTIVE && cl2->gentity && cl2->gentity->playerState) {
 							nxrp_lastKills[j] = cl2->gentity->playerState->persistant[PERS_KILLED];
+							NXRP_PrintConsoleToPlayer(NULL, "Kill Count persistent Values");
 						}
 					}
 					break;
@@ -128,7 +73,7 @@ void SV_NXRP_ScoreFrame(void) {
 			// detect transition from non-positive to positive countdown
 			if ((r > 0 && nxrp_prevRebelCountdown <= 0) || (im > 0 && nxrp_prevImperialCountdown <= 0)) {
 				nxrp_roundBegunFlag = qtrue;
-				NXRP_OnRoundStart();
+				NXRP_PrintConsoleToPlayer(NULL, "Round Start: Count Down");
 			}
 			nxrp_prevRebelCountdown = r;
 			nxrp_prevImperialCountdown = im;
@@ -138,7 +83,7 @@ void SV_NXRP_ScoreFrame(void) {
 			const qboolean begun = (*nxrp_gSiegeRoundBegun) ? qtrue : qfalse;
 			if (begun && !nxrp_roundBegunFlag) {
 				nxrp_roundBegunFlag = qtrue;
-				NXRP_OnRoundStart();
+				NXRP_PrintConsoleToPlayer(NULL, "Round Start: Siege Round");
 			}
 		}
 	}
@@ -148,7 +93,8 @@ void SV_NXRP_ScoreFrame(void) {
 		int newScore = cl->gentity->playerState->persistant[PERS_SCORE];
 		int oldScore = nxrp_lastScore[i];
 		if (newScore != oldScore) {
-			NXRP_OnScoreChanged(cl, oldScore, newScore);
+			//NXRP_OnScoreChanged(cl, oldScore, newScore);
+			NXRP_PrintConsoleToPlayer(NULL, "Score Change");
 			nxrp_lastScore[i] = newScore;
 		}
 
@@ -156,7 +102,8 @@ void SV_NXRP_ScoreFrame(void) {
 		int newKills = cl->gentity->playerState->persistant[PERS_KILLED];
 		int oldKills = nxrp_lastKills[i];
 		if (newKills != oldKills) {
-			NXRP_OnKillsChanged(cl, oldKills, newKills);
+			NXRP_PrintConsoleToPlayer(NULL, "Kill detetected");
+			//NXRP_OnKillsChanged(cl, oldKills, newKills);
 			nxrp_lastKills[i] = newKills;
 		}
 	}
@@ -264,10 +211,6 @@ void NXRP_OnScoreChanged(client_t *cl, int oldScore, int newScore) {
 	}
 }
 
-void NXRP_OnNPCSpawned(const char *npcName) {
-	NXRP_PrintConsoleToPlayer(NULL, va("NPC spawned: %s", npcName ? npcName : "<unknown>"));
-}
-
 void NXRP_OnMapStart(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Map started");
 	// Attempt to resolve MBII's gSiegeRoundBegun global in the game VM so
@@ -331,20 +274,9 @@ int NXRP_GetRoundNumber(void) {
 	return nxrp_roundNumber;
 }
 
-
-void NXRP_OnNPCKilled(client_t *killer, const char *npcName) {
-	const char *pName = "Unknown";
-	if (killer) {
-		if (killer->nxrp_username[0]) pName = killer->nxrp_username;
-		else if (killer->name[0]) pName = killer->name;
-	}
-	const char *nName = (npcName && npcName[0]) ? npcName : "NPC";
-	NXRP_PrintConsoleToPlayer(NULL, va("^3[NXRP-NPCKILL]^7 %s killed %s", pName, nName));
-	SV_SendServerCommand(NULL, va("chat \"^3[NXRP-NPCKILL]^7 %s killed %s\"", pName, nName));
-}
-
 // Called when a player first enters the game
 void NXRP_OnPlayerSpawned(client_t *cl) {
+	NXRP_PrintConsoleToPlayer(NULL, "Player Spawned");
 	/*const char* pName = "Unknown";
 	if (!cl) {
 		NXRP_PrintConsoleToPlayer(NULL, "Unknown player spawned");

@@ -136,7 +136,7 @@ int SV_SpawnModelAtClient(client_t* cl, const char* modelPath)
 	e->r.contents = CONTENTS_SOLID;
 	e->r.svFlags = 0;
 	SV_LinkEntity(e);
-
+	NXRP_PrintConsoleToPlayer(NULL, "sv spawn model at client");
 	return e->s.number;
 }
 

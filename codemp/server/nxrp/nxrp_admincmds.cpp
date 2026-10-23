@@ -165,7 +165,7 @@ qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 	const qboolean cheats = Cvar_VariableIntegerValue("sv_cheats") ? qtrue : qfalse;
 	if (!cheats) {
 		Cvar_Set("sv_cheats", "1");
-		GVM_RunFrame(sv.time);
+		//GVM_RunFrame(sv.time);
 	}
 
 	NXRP_PrintConsoleToPlayer(cl, "You have been promoted to Boss (giveall kit)");
@@ -216,7 +216,7 @@ qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 
 	if (!cheats) {
 		Cvar_Set("sv_cheats", "0");
-		GVM_RunFrame(sv.time);
+		//GVM_RunFrame(sv.time);
 	}
 
 	return qtrue;

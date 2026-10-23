@@ -73,7 +73,7 @@ except Exception:
 
 echo "==> Finding caded.i386 instances..."
 INSTANCES_TO_RESTART=()
-CONFIG_DIR="/root/mbiiez/configs"
+CONFIG_DIR="/home/nox/mb2/mbiiez/configs"
 
 if [ -d "$CONFIG_DIR" ]; then
     for config_file in "$CONFIG_DIR"/*.json; do
