@@ -307,14 +307,20 @@ int NXRP_LoadSavedNPCsForMap(client_t* cl) {
 		if (ppos != std::string::npos) {
 			ppos = s.find('[', ppos);
 			if (ppos != std::string::npos) {
-				sscanf(s.c_str()+ppos, "[%f %*[, ] %f %*[, ] %f", &px, &py, &pz);
+				int parsed = sscanf(s.c_str()+ppos, "[%f %f %f]", &px, &py, &pz);
+				if (parsed != 3) {
+					parsed = sscanf(s.c_str()+ppos, "[%f, %f, %f]", &px, &py, &pz);
+				}
 			}
 		}
 		size_t apos = s.find("\"angles\"");
 		if (apos != std::string::npos) {
 			apos = s.find('[', apos);
 			if (apos != std::string::npos) {
-				sscanf(s.c_str()+apos, "[%f %*[, ] %f %*[, ] %f", &ax, &ay, &az);
+				int parsed = sscanf(s.c_str()+apos, "[%f %f %f]", &ax, &ay, &az);
+				if (parsed != 3) {
+					parsed = sscanf(s.c_str()+apos, "[%f, %f, %f]", &ax, &ay, &az);
+				}
 			}
 		}
 		if (npcType.empty()) continue;
