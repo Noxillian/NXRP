@@ -108,6 +108,7 @@ void NXRP_UntrackNPC(int entnum);
 // Push a pending NPC name so the next NXRP_RegisterSpawn will associate the
 // registered entnum with this name (used when spawn is asynchronous).
 void NXRP_PushPendingNPCName(const char* name);
+void NXRP_PushPendingNPCSpawnAt(const char* name, const vec3_t position, float yaw);
 // NPC persistence helpers: save/load NPCs per-map
 void NXRP_SaveNPCToMap(int entnum, const char* npcType);
 bool NXRP_SaveNPCAtClientToMap(client_t* cl, const char* npcType);

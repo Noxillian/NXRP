@@ -16,11 +16,28 @@
 
 // Pending NPC names queued until NXRP_RegisterSpawn associates them with entnums
 static std::deque<std::string> nxrp_pending_npc_names;
+struct nxrp_pending_npc_spawn_t {
+	std::string name;
+	vec3_t position;
+	float yaw;
+};
+static std::deque<nxrp_pending_npc_spawn_t> nxrp_pending_npc_spawns;
 
 void NXRP_PushPendingNPCName(const char* name) {
 	if (!name) return;
 	nxrp_pending_npc_names.push_back(std::string(name));
 	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_PushPendingNPCName queued: %s (queue=%zu)", name, nxrp_pending_npc_names.size());
+}
+
+void NXRP_PushPendingNPCSpawnAt(const char* name, const vec3_t position, float yaw) {
+	if (!name || !name[0]) return;
+	nxrp_pending_npc_spawn_t item;
+	item.name = name;
+	VectorCopy(position, item.position);
+	item.yaw = yaw;
+	nxrp_pending_npc_spawns.push_back(item);
+	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_PushPendingNPCSpawnAt queued: %s at %.0f %.0f %.0f yaw %.0f (queue=%zu)",
+		name, position[0], position[1], position[2], yaw, nxrp_pending_npc_spawns.size());
 }
 
 // Remove a saved NPC entry by its zero-based index. This rewrites the per-map file.
@@ -79,6 +96,26 @@ void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 // Associate any pending NPC name with the newly-registered entity number
 void NXRP_HandlePendingNPCSpawn(int entnum) {
 	if (entnum < 0) return;
+	if (!nxrp_pending_npc_spawns.empty()) {
+		nxrp_pending_npc_spawn_t item = nxrp_pending_npc_spawns.front();
+		nxrp_pending_npc_spawns.pop_front();
+		sharedEntity_t* ent = SV_GentityNum(entnum);
+		if (ent) {
+			if (!NXRP_TeleportEntityTo(ent, item.position, item.yaw)) {
+				VectorCopy(item.position, ent->r.currentOrigin);
+				VectorCopy(item.position, ent->s.origin);
+				if (ent->playerState) VectorCopy(item.position, ent->playerState->origin);
+				VectorSet(ent->s.angles, 0.0f, item.yaw, 0.0f);
+				VectorSet(ent->r.currentAngles, 0.0f, item.yaw, 0.0f);
+				SV_LinkEntity(ent);
+			}
+		}
+		NXRP_TrackNPC(entnum, item.name.c_str());
+		NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_HandlePendingNPCSpawn: positioned ent=%d name=%s at %.0f %.0f %.0f yaw %.0f",
+			entnum, item.name.c_str(), item.position[0], item.position[1], item.position[2], item.yaw);
+		return;
+	}
+
 	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_HandlePendingNPCSpawn ent=%d queue=%zu", entnum, nxrp_pending_npc_names.size());
 	if (nxrp_pending_npc_names.empty()) return;
 	std::string name = nxrp_pending_npc_names.front();
@@ -266,17 +303,12 @@ int NXRP_LoadSavedNPCsForMap(client_t* cl) {
 			}
 		}
 		if (npcType.empty()) continue;
-		if (cl) {
-			char posCmd[128];
-			Com_sprintf(posCmd, sizeof(posCmd), "setviewpos %.0f %.0f %.0f %.0f", px, py, pz, ay);
-			SV_ExecuteClientCommandDelayed_h(cl, std::string(posCmd), delay);
-			delay += 1;
-		}
+		vec3_t savedPos = { px, py, pz };
+		NXRP_PushPendingNPCSpawnAt(npcType.c_str(), savedPos, ay);
 		char cmdBuf[256];
 		Com_sprintf(cmdBuf, sizeof(cmdBuf), "npc spawn %s", npcType.c_str());
-		NXRP_PushPendingNPCName(npcType.c_str());
 		SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), delay);
-		delay += 2; // allow setviewpos to apply before spawn
+		delay += 1;
 		count++;
 	}
 	return count;

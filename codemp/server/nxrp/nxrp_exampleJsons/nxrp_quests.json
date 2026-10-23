@@ -1,0 +1,24 @@
+// !quest add questname
+// !quest questname setpos
+// !quest questname addnpc name
+// !quest questname cleannpcs
+// !quest questname settime x
+// !quest questname setreward x
+// !quest list
+// !quest
+
+{
+  "Wampa-Hunt": {
+    "questLvlMin": 1,
+    "questLvlMax2": 3,
+    "questPos": [ 13.0, 13.0, 2.0 ],
+    "questTime": 120,
+    "questReward_xp": 101,
+    "questReward_credits": 202,
+    "questNpcs": {
+      "wampa": {
+        "npcpos": [ 0.0, 0.0, 21.0 ]
+      }
+    }
+  }
+}

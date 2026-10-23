@@ -66,6 +66,7 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "login" ) )		return NXRP_SUB_LOGIN;
 	if ( !Q_stricmp( s, "skill" ) )		return NXRP_SUB_SKILL;
 	if ( !Q_stricmp( s, "pos" ) )		return NXRP_SUB_POS;
+	if ( !Q_stricmp( s, "tp" ) )		return NXRP_SUB_TP;
 	if ( !Q_stricmp( s, "prop" ) )		return NXRP_SUB_MODEL;
 	if ( !Q_stricmp( s, "npc" ) )		return NXRP_SUB_NPC;
 	if ( !Q_stricmp( s, "boss" ) )		return NXRP_SUB_BOSS;
