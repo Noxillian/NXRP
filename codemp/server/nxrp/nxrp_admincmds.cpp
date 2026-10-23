@@ -277,124 +277,30 @@ qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor ) {
 
 
 
-// Admin-only: teleport the invoking player 5 meters above current position
+// Admin-only: teleport command
 qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
-	// Allow forms:
-	//  - "" : teleport invoking player 5m up (legacy)
-	//  - "<dst>" : teleport invoking player to client number dst
-	//  - "<src> <dst>" : teleport player src to player dst
-
-	if (!chatCursor || !*chatCursor) {
-		// Legacy behavior: teleport self 5 meters up
-		if (!cl || !cl->gentity || !cl->gentity->playerState) {
-			NXRP_PrintConsoleToPlayer(cl, "Teleport failed: no player entity");
-			return qtrue;
-		}
-		const float meters = 5.0f;
-		const float unitsPerMeter = 32.0f;
-		const float zOffset = meters * unitsPerMeter;
-		vec3_t newOrg;
-		VectorCopy(cl->gentity->playerState->origin, newOrg);
-		newOrg[2] += zOffset;
-
-		void* dll = GVM_GetDllHandle();
-		if (dll) {
-			void (*TeleportPlayer_f)(void*, float*, float*) = (void (*)(void*, float*, float*))Sys_LoadFunction(dll, "TeleportPlayer");
-			if (TeleportPlayer_f) {
-				float angs[3] = {0.0f, cl->gentity->s.angles[YAW], 0.0f};
-				float orgf[3] = { newOrg[0], newOrg[1], newOrg[2] };
-				void* old = GVM_BeginNative();
-				TeleportPlayer_f(cl->gentity, orgf, angs);
-				GVM_EndNative(old);
-				NXRP_PrintConsoleToPlayer(cl, "Teleported 5 meters up");
-				return qtrue;
-			}
-		}
-		VectorCopy(newOrg, cl->gentity->playerState->origin);
-		VectorCopy(newOrg, cl->gentity->r.currentOrigin);
-		VectorCopy(newOrg, cl->gentity->s.origin);
-		cl->gentity->s.pos.trType = TR_STATIONARY;
-		SV_LinkEntity(cl->gentity);
-		NXRP_PrintConsoleToPlayer(cl, "Teleported 5 meters up (direct)");
+	if (!cl || !cl->gentity) {
+		NXRP_PrintConsoleToPlayer(cl, "Teleport failed: no player entity");
 		return qtrue;
 	}
 
-	// Parse ints
-	int src = -1, dst = -1;
-	int cnt = sscanf(chatCursor, "%d %d", &src, &dst);
-	if (cnt == 1) {
-		// teleport invoking player to dst (dst is client slot index from rcon/status)
-		dst = src; // reuse variable
-		if (dst < 0 || dst >= sv_maxclients->integer) { NXRP_PrintConsoleToPlayer(cl, "Invalid target client number"); return qtrue; }
-		if (svs.clients[dst].state < CS_CONNECTED || !svs.clients[dst].gentity) { NXRP_PrintConsoleToPlayer(cl, "Target player not found or not active"); return qtrue; }
-		if (!cl || !cl->gentity || !cl->gentity->playerState) { NXRP_PrintConsoleToPlayer(cl, "Teleport failed: no player entity"); return qtrue; }
-
-		sharedEntity_t* destEnt = svs.clients[dst].gentity;
-		vec3_t targetOrg;
-		VectorCopy(destEnt->playerState->origin, targetOrg);
-
-		void* dll = GVM_GetDllHandle();
-		if (dll) {
-			void (*TeleportPlayer_f)(void*, float*, float*) = (void (*)(void*, float*, float*))Sys_LoadFunction(dll, "TeleportPlayer");
-			if (TeleportPlayer_f) {
-				float angs[3] = {0.0f, destEnt->s.angles[YAW], 0.0f};
-				float orgf[3] = { targetOrg[0], targetOrg[1], targetOrg[2] };
-				void* old = GVM_BeginNative();
-				TeleportPlayer_f(cl->gentity, orgf, angs);
-				GVM_EndNative(old);
-				NXRP_PrintConsoleToPlayer(cl, va("Teleported you to player %d", dst));
-				return qtrue;
-			}
-		}
-
-		VectorCopy(targetOrg, cl->gentity->playerState->origin);
-		VectorCopy(targetOrg, cl->gentity->r.currentOrigin);
-		VectorCopy(targetOrg, cl->gentity->s.origin);
-		cl->gentity->s.pos.trType = TR_STATIONARY;
-		SV_LinkEntity(cl->gentity);
-		NXRP_PrintConsoleToPlayer(cl, va("Teleported you to player %d (direct)", dst));
-		return qtrue;
-	} else if (cnt == 2) {
-		// teleport src to dst (both are client slot indices)
-		if (src < 0 || src >= sv_maxclients->integer || dst < 0 || dst >= sv_maxclients->integer) { NXRP_PrintConsoleToPlayer(cl, "Invalid client numbers"); return qtrue; }
-		if (svs.clients[src].state < CS_CONNECTED || !svs.clients[src].gentity) { NXRP_PrintConsoleToPlayer(cl, "Source player not found or not active"); return qtrue; }
-		if (svs.clients[dst].state < CS_CONNECTED || !svs.clients[dst].gentity) { NXRP_PrintConsoleToPlayer(cl, "Target player not found or not active"); return qtrue; }
-
-		sharedEntity_t* srcEnt = svs.clients[src].gentity;
-		sharedEntity_t* destEnt = svs.clients[dst].gentity;
-
-		vec3_t targetOrg;
-		VectorCopy(destEnt->playerState->origin, targetOrg);
-
-		void* dll = GVM_GetDllHandle();
-		if (dll) {
-			void (*TeleportPlayer_f)(void*, float*, float*) = (void (*)(void*, float*, float*))Sys_LoadFunction(dll, "TeleportPlayer");
-			if (TeleportPlayer_f) {
-				float angs[3] = {0.0f, destEnt->s.angles[YAW], 0.0f};
-				float orgf[3] = { targetOrg[0], targetOrg[1], targetOrg[2] };
-				void* old = GVM_BeginNative();
-				TeleportPlayer_f(srcEnt, orgf, angs);
-				GVM_EndNative(old);
-				NXRP_PrintConsoleToPlayer(cl, va("Teleported player %d to player %d", src, dst));
-				return qtrue;
-			}
-		}
-
-		VectorCopy(targetOrg, srcEnt->playerState->origin);
-		VectorCopy(targetOrg, srcEnt->r.currentOrigin);
-		VectorCopy(targetOrg, srcEnt->s.origin);
-		srcEnt->s.pos.trType = TR_STATIONARY;
-		SV_LinkEntity(srcEnt);
-		NXRP_PrintConsoleToPlayer(cl, va("Teleported player %d to player %d (direct)", src, dst));
+	float x = 0.0f, y = 0.0f, z = 0.0f;
+	if (!chatCursor || sscanf(chatCursor, "%f %f %f", &x, &y, &z) != 3) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !tp <x> <y> <z>");
 		return qtrue;
 	}
 
-	NXRP_PrintConsoleToPlayer(cl, "Usage: !tp                (teleport self up 5m)");
-	NXRP_PrintConsoleToPlayer(cl, "       !tp <dst>          (teleport you to dst client number)");
-	NXRP_PrintConsoleToPlayer(cl, "       !tp <src> <dst>    (teleport client src to client dst)");
+	vec3_t target = { x, y, z };
+	float yaw = cl->gentity->s.angles[YAW];
+	if (!NXRP_TeleportClientToPosition(cl, target, yaw)) {
+		NXRP_PrintConsoleToPlayer(cl, "Teleport failed");
+		return qtrue;
+	}
+
+	NXRP_PrintConsoleToPlayerFmt(cl, "Teleported to %.2f %.2f %.2f", x, y, z);
 	return qtrue;
 }
 

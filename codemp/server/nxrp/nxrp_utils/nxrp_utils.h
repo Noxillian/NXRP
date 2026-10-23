@@ -19,6 +19,10 @@ bool NXRP_ReadAccountContentForClient(client_t* cl, std::string& outContent, std
 // Returns the new entity number, or -1 on failure.
 int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath);
 
+// Teleport helpers
+bool NXRP_TeleportEntityTo(sharedEntity_t* ent, const vec3_t position, float yaw);
+bool NXRP_TeleportClientToPosition(client_t* cl, const vec3_t position, float yaw);
+
 // Place a model at a given position with yaw.
 // Returns the new entity number, or -1 on failure.
 int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle);

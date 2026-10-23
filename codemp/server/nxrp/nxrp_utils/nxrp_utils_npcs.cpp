@@ -239,6 +239,7 @@ int NXRP_LoadSavedNPCsForMap(client_t* cl) {
 		std::string s = line;
 		std::string npcType;
 		float px = 0.0f, py = 0.0f, pz = 0.0f;
+		float ax = 0.0f, ay = 0.0f, az = 0.0f;
 		size_t mpos = s.find("\"npc\"");
 		if (mpos != std::string::npos) {
 			size_t colon = s.find(':', mpos);
@@ -257,10 +258,17 @@ int NXRP_LoadSavedNPCsForMap(client_t* cl) {
 				sscanf(s.c_str()+ppos, "[%f %*[, ] %f %*[, ] %f", &px, &py, &pz);
 			}
 		}
+		size_t apos = s.find("\"angles\"");
+		if (apos != std::string::npos) {
+			apos = s.find('[', apos);
+			if (apos != std::string::npos) {
+				sscanf(s.c_str()+apos, "[%f %*[, ] %f %*[, ] %f", &ax, &ay, &az);
+			}
+		}
 		if (npcType.empty()) continue;
 		if (cl) {
 			char posCmd[128];
-			Com_sprintf(posCmd, sizeof(posCmd), "setviewpos %.0f %.0f %.0f", px, py, pz);
+			Com_sprintf(posCmd, sizeof(posCmd), "setviewpos %.0f %.0f %.0f %.0f", px, py, pz, ay);
 			SV_ExecuteClientCommandDelayed_h(cl, std::string(posCmd), delay);
 			delay += 1;
 		}

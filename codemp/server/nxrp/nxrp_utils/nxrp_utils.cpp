@@ -11,6 +11,42 @@
 #include <map>
 #include <sstream>
 
+bool NXRP_TeleportEntityTo(sharedEntity_t* ent, const vec3_t position, float yaw)
+{
+	if (!ent) return false;
+
+	void* dll = GVM_GetDllHandle();
+	if (dll) {
+		void (*TeleportPlayer_f)(void*, float*, float*) = (void (*)(void*, float*, float*))Sys_LoadFunction(dll, "TeleportPlayer");
+		if (TeleportPlayer_f) {
+			float angs[3] = { 0.0f, yaw, 0.0f };
+			float orgf[3] = { position[0], position[1], position[2] };
+			void* old = GVM_BeginNative();
+			TeleportPlayer_f(ent, orgf, angs);
+			GVM_EndNative(old);
+			return true;
+		}
+	}
+
+	if (ent->playerState) {
+		VectorCopy(position, ent->playerState->origin);
+	}
+	VectorCopy(position, ent->r.currentOrigin);
+	VectorCopy(position, ent->s.origin);
+	VectorSet(ent->s.angles, 0.0f, yaw, 0.0f);
+	VectorSet(ent->r.currentAngles, 0.0f, yaw, 0.0f);
+	ent->s.pos.trType = TR_STATIONARY;
+	ent->s.apos.trType = TR_STATIONARY;
+	SV_LinkEntity(ent);
+	return true;
+}
+
+bool NXRP_TeleportClientToPosition(client_t* cl, const vec3_t position, float yaw)
+{
+	if (!cl || !cl->gentity) return false;
+	return NXRP_TeleportEntityTo(cl->gentity, position, yaw);
+}
+
 // Returns the new entity number, or -1 on failure.
 int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath)
 {
