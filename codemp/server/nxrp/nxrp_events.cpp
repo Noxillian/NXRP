@@ -36,7 +36,7 @@ void SV_NXRP_ScoreFrame(void) {
 	if (!svs.clients) return;
 	// If intermission is active, reset round start state so we trigger again
 	if (sv.configstrings[CS_INTERMISSION] && atoi(sv.configstrings[CS_INTERMISSION]) == 1) {
-		NXRP_PrintConsoleToPlayer(NULL, "Round Start: Intermission");
+		//NXRP_PrintConsoleToPlayer(NULL, "Round Start: Intermission");
 		nxrp_roundStartTime = 0;
 		nxrp_roundBegunFlag = qfalse;
 		nxrp_prevRebelCountdown = 0;
@@ -59,7 +59,7 @@ void SV_NXRP_ScoreFrame(void) {
 						client_t* cl2 = &svs.clients[j];
 						if (cl2->state == CS_ACTIVE && cl2->gentity && cl2->gentity->playerState) {
 							nxrp_lastKills[j] = cl2->gentity->playerState->persistant[PERS_KILLED];
-							NXRP_PrintConsoleToPlayer(NULL, "Kill Count persistent Values");
+							//NXRP_PrintConsoleToPlayer(NULL, "Kill Count persistent Values");
 						}
 					}
 					break;
@@ -94,7 +94,7 @@ void SV_NXRP_ScoreFrame(void) {
 		int oldScore = nxrp_lastScore[i];
 		if (newScore != oldScore) {
 			//NXRP_OnScoreChanged(cl, oldScore, newScore);
-			NXRP_PrintConsoleToPlayer(NULL, "Score Change");
+			//NXRP_PrintConsoleToPlayer(NULL, "Score Change WORKS");
 			nxrp_lastScore[i] = newScore;
 		}
 
@@ -179,7 +179,7 @@ void NXRP_OnPlayerBegin(int clientNum) {
 			else if ( cl->name[0] ) name = cl->name;
 		}
 	}
-	NXRP_PrintConsoleToPlayer(NULL, va("Player spawned: %s", name));
+	NXRP_PrintConsoleToPlayer(NULL, va("X Player spawned: %s", name));
 }
 
 void NXRP_OnPlayerDisconnect(int clientNum) {
@@ -252,6 +252,7 @@ void NXRP_OnRoundStart(void) {
 void NXRP_OnRoundRestart(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Round restart");
 	// Reset round-detection state so the next round start is detected
+
 	nxrp_roundBegunFlag = qfalse;
 	nxrp_roundStartTime = 0;
 	nxrp_prevRebelCountdown = 0;
@@ -260,6 +261,10 @@ void NXRP_OnRoundRestart(void) {
 	// Ensure FFA helpers reinitialize on round restart
 	NXRP_FFA_Init();
 	NXRP_FFA_Frame();
+
+	// Reload saved props for the current map on round restart (same behavior as !prop load)
+	int loadedProps = NXRP_LoadSavedSpawnsForMap(NULL);
+	NXRP_PrintConsoleToPlayer(NULL, va("Round restart: loaded %d saved props", loadedProps));
 }
 
 void NXRP_OnMatchStart(void) {
