@@ -34,6 +34,7 @@ qboolean NXRP_cmdAdmin_prop_r( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_prop_list( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args );
+qboolean NXRP_cmdAdmin_prop_a( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_prop_dir_chat( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor );

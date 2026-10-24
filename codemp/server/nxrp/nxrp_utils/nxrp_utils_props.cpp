@@ -192,12 +192,16 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 	const char* s = target.c_str();
 	std::string modelPath;
 	float ox=0, oy=0, oz=0;
+	float ax=0, ay=0, az=0;
 	const char* modelKey = "\"model\"";
 	const char* originKey = "\"position\"";
+	const char* anglesKey = "\"angles\"";
 	const char* m = strstr(s, modelKey);
 	if (m) { m = strchr(m, ':'); if (m) m++; while (m && *m && isspace((unsigned char)*m)) m++; if (m && *m == '"') { m++; const char* me = strchr(m, '"'); if (me && me > m) modelPath.assign(m, me - m); } }
 	const char* o = strstr(s, originKey);
 	if (o) { o = strchr(o, '['); if (o) { o++; sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz); } }
+	const char* a = strstr(s, anglesKey);
+	if (a) { a = strchr(a, '['); if (a) { a++; sscanf(a, "%f %*[, ] %f %*[, ] %f", &ax, &ay, &az); } }
 
 	// Free any runtime entity referenced in this saved entry to avoid duplicates
 	int idToFree = NXRP_ExtractIntField(target, "\"id\"", -1);
@@ -225,20 +229,71 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 	vec3_t newFloor = { ox + dx, oy + dy, oz + dz };
 	newFloor[0] = roundf(newFloor[0]); newFloor[1] = roundf(newFloor[1]); newFloor[2] = roundf(newFloor[2]);
 
-	float yaw = 0.0f;
+	float yaw = ay;
 	int newEnt = NXRP_PlaceModel(modelPath.c_str(), newFloor, yaw);
 	if (newEnt >= 0) {
 		NXRP_RegisterSpawn(newEnt);
 		// update saved entry
 		char buf[1024];
 		snprintf(buf, sizeof(buf), "{ \"id\": %d, \"index\": %d, \"model\": \"%s\", \"position\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f] }",
-			newEnt, index, modelPath.c_str(), newFloor[0], newFloor[1], newFloor[2], 0.0f, yaw, 0.0f);
+			newEnt, index, modelPath.c_str(), newFloor[0], newFloor[1], newFloor[2], ax, yaw, az);
 		lines[index] = std::string(buf);
 		FILE* f = fopen(filename.c_str(), "w");
 		if (f) {
 			for (const auto &ll : lines) { fputs(ll.c_str(), f); fputc('\n', f); }
 			fclose(f);
 		}
+
+bool NXRP_RotateSavedSpawnByIndex(client_t* cl, int index, float deltaYaw) {
+	std::string filename;
+	std::vector<std::string> lines;
+	if (!NXRP_ReadPerMapLines("nxrp_props", lines, filename)) { NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map"); return false; }
+	if (index < 0 || index >= (int)lines.size()) { NXRP_PrintConsoleToPlayer(cl, "Invalid saved spawn index"); return false; }
+
+	std::string target = lines[index];
+	const char* s = target.c_str();
+	std::string modelPath;
+	float ox=0, oy=0, oz=0;
+	float ax=0, ay=0, az=0;
+
+	const char* m = strstr(s, "\"model\"");
+	if (m) { m = strchr(m, ':'); if (m) m++; while (m && *m && isspace((unsigned char)*m)) m++; if (m && *m == '"') { m++; const char* me = strchr(m, '"'); if (me && me > m) modelPath.assign(m, me - m); } }
+	const char* o = strstr(s, "\"position\"");
+	if (o) { o = strchr(o, '['); if (o) { o++; sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz); } }
+	const char* a = strstr(s, "\"angles\"");
+	if (a) { a = strchr(a, '['); if (a) { a++; sscanf(a, "%f %*[, ] %f %*[, ] %f", &ax, &ay, &az); } }
+
+	if (modelPath.empty()) { NXRP_PrintConsoleToPlayer(cl, "Saved entry missing model path"); return false; }
+
+	float newYaw = ay + deltaYaw;
+	while (newYaw < 0.0f) newYaw += 360.0f;
+	while (newYaw >= 360.0f) newYaw -= 360.0f;
+
+	int idToFree = NXRP_ExtractIntField(target, "\"id\"", -1);
+	if (idToFree >= 0 && idToFree < sv.num_entities) {
+		sharedEntity_t* oldEnt = SV_GentityNum(idToFree);
+		if (oldEnt) {
+			NXRP_FreeEntity((void*)oldEnt);
+			NXRP_RegisterSpawn(-1);
+		}
+	}
+
+	vec3_t pos = { ox, oy, oz };
+	int newEnt = NXRP_PlaceModel(modelPath.c_str(), pos, newYaw);
+	if (newEnt < 0) return false;
+	NXRP_RegisterSpawn(newEnt);
+
+	char buf[1024];
+	snprintf(buf, sizeof(buf), "{ \"id\": %d, \"index\": %d, \"model\": \"%s\", \"position\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f] }",
+		newEnt, index, modelPath.c_str(), ox, oy, oz, ax, newYaw, az);
+	lines[index] = std::string(buf);
+
+	FILE* f = fopen(filename.c_str(), "w");
+	if (!f) return false;
+	for (const auto &ll : lines) { fputs(ll.c_str(), f); fputc('\n', f); }
+	fclose(f);
+	return true;
+}
 		NXRP_PrintConsoleToPlayer(cl, va("Moved saved spawn %d by %s %.1f", index, dirTok, amount));
 		return true;
 	}

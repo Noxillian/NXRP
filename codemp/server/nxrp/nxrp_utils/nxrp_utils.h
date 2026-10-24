@@ -72,6 +72,8 @@ bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor);
 // Move a saved spawn (by index) by a cardinal direction and amount.
 // args: "<dir> <amount>"
 bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args);
+// Rotate a saved spawn (by index) by a yaw delta in degrees.
+bool NXRP_RotateSavedSpawnByIndex(client_t* cl, int index, float deltaYaw);
 
 // Look up a prop definition by name from a per-module catalog file and return
 // model path, extents (mins/maxs), origin and yaw angle when found.

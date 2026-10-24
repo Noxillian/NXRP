@@ -227,6 +227,8 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 		}
 		if (!Q_stricmp(action, "s")) {
 			return NXRP_cmdAdmin_prop_s(cl, p);
+		} else if (!Q_stricmp(action, "a")) {
+			return NXRP_cmdAdmin_prop_a(cl, p);
 		} else if (!Q_stricmp(action, "r")) {
 			return NXRP_cmdAdmin_prop_r(cl, p);
 		} else if (!Q_stricmp(action, "load")) {

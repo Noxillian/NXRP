@@ -51,7 +51,6 @@ void SV_NXRP_ScoreFrame(void) {
 				client_t* cl = &svs.clients[i];
 				if (cl->state == CS_ACTIVE && cl->gentity) {
 					nxrp_roundStartTime = svs.time;
-					NXRP_PrintConsoleToPlayer(NULL, "Round Start: First active player");
 					nxrp_roundBegunFlag = qtrue;
 
 					// Initialize last-kill counters from current persistent values
@@ -62,6 +61,10 @@ void SV_NXRP_ScoreFrame(void) {
 							//NXRP_PrintConsoleToPlayer(NULL, "Kill Count persistent Values");
 						}
 					}
+
+					int loadedProps = NXRP_LoadSavedSpawnsForMap(NULL);
+					NXRP_PrintConsoleToPlayer(NULL, "Round Start: First active player | Loaded Props");
+
 					break;
 				}
 			}
@@ -263,8 +266,7 @@ void NXRP_OnRoundRestart(void) {
 	NXRP_FFA_Frame();
 
 	// Reload saved props for the current map on round restart (same behavior as !prop load)
-	int loadedProps = NXRP_LoadSavedSpawnsForMap(NULL);
-	NXRP_PrintConsoleToPlayer(NULL, va("Round restart: loaded %d saved props", loadedProps));
+	// NXRP_PrintConsoleToPlayer(NULL, va("Round restart: loaded %d saved props", loadedProps));
 }
 
 void NXRP_OnMatchStart(void) {
