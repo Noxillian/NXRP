@@ -423,12 +423,15 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePowersKnown |= (1 << MB_FORCE_PUSH);
 		ps->fd.forcePowerLevel[MB_FORCE_PUSH] = 2;
 		ps->fd.forcePowersActive&(MB_FORCE_PUSH) == 1;
+		ps->fd.forcePowerLevel[FP_PUSH] = 2;
+		ps->fd.forcePowersActive& (FP_PUSH) == 1;
 
 		ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
 		ps->fd.forcePowerLevel[FP_LIGHTNING] = 2;
 		ps->fd.forcePowersActive& (1 << FP_LIGHTNING) == 0;
 
 		ps->fd.forcePowersKnown |= (1 << FP_HEAL);
+		ps->fd.forcePowersKnown |= (1 << FP_PUSH);
 		ps->fd.forcePowerLevel[FP_HEAL] = 1;
 
 
@@ -438,7 +441,7 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePowerLevel[FP_LEVITATION] = 3;
 		ps->fd.forcePowerMax = 300;
 		ps->fd.forcePower = 200;
-		ps->fd.forcePowersActive |= (1 << FP_LIGHTNING);
+		ps->fd.forcePowersActive = (1 << FP_LIGHTNING);
 
 		SV_WannaGiveWeapon(target, WP_CLONE_PISTOL);
 		SV_WannaGiveWeapon(target, WP_SABER);

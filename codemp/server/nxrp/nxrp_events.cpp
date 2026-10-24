@@ -179,7 +179,7 @@ void NXRP_OnPlayerBegin(int clientNum) {
 			else if ( cl->name[0] ) name = cl->name;
 		}
 	}
-	NXRP_PrintConsoleToPlayer(NULL, va("Player begin: %s", name));
+	NXRP_PrintConsoleToPlayer(NULL, va("Player spawned: %s", name));
 }
 
 void NXRP_OnPlayerDisconnect(int clientNum) {
