@@ -177,47 +177,32 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 // args: "<dir> <amount>"
 bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 	if (!args) return false;
+
 	char dirTok[32] = {0};
 	float amount = 0.0f;
-	int scanned = sscanf(args, "%31s %f", dirTok, &amount);
-	if (scanned < 2) return false;
+	if (sscanf(args, "%31s %f", dirTok, &amount) < 2) return false;
 
 	std::string filename;
 	std::vector<std::string> lines;
 	if (!NXRP_ReadPerMapLines("nxrp_props", lines, filename)) { NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map"); return false; }
-
 	if (index < 0 || index >= (int)lines.size()) { NXRP_PrintConsoleToPlayer(cl, "Invalid saved spawn index"); return false; }
 
 	std::string target = lines[index];
 	const char* s = target.c_str();
 	std::string modelPath;
-	float ox=0, oy=0, oz=0;
-	float ax=0, ay=0, az=0;
-	const char* modelKey = "\"model\"";
-	const char* originKey = "\"position\"";
-	const char* anglesKey = "\"angles\"";
-	const char* m = strstr(s, modelKey);
-	if (m) { m = strchr(m, ':'); if (m) m++; while (m && *m && isspace((unsigned char)*m)) m++; if (m && *m == '"') { m++; const char* me = strchr(m, '"'); if (me && me > m) modelPath.assign(m, me - m); } }
-	const char* o = strstr(s, originKey);
-	if (o) { o = strchr(o, '['); if (o) { o++; sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz); } }
-	const char* a = strstr(s, anglesKey);
-	if (a) { a = strchr(a, '['); if (a) { a++; sscanf(a, "%f %*[, ] %f %*[, ] %f", &ax, &ay, &az); } }
+	float ox = 0.0f, oy = 0.0f, oz = 0.0f;
+	float ax = 0.0f, ay = 0.0f, az = 0.0f;
 
-	// Free any runtime entity referenced in this saved entry to avoid duplicates
-	int idToFree = NXRP_ExtractIntField(target, "\"id\"", -1);
-	if (idToFree >= 0 && idToFree < sv.num_entities) {
-		sharedEntity_t* oldEnt = SV_GentityNum(idToFree);
-		if (oldEnt) {
-			NXRP_FreeEntity((void*)oldEnt);
-			NXRP_RegisterSpawn(-1);
-			NXRP_PrintConsoleToPlayer(cl, va("Freed old saved runtime entity %d", idToFree));
-		}
-	}
+	const char* m = strstr(s, "\"model\"");
+	if (m) { m = strchr(m, ':'); if (m) m++; while (m && *m && isspace((unsigned char)*m)) m++; if (m && *m == '"') { m++; const char* me = strchr(m, '"'); if (me && me > m) modelPath.assign(m, me - m); } }
+	const char* o = strstr(s, "\"position\"");
+	if (o) { o = strchr(o, '['); if (o) { o++; sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz); } }
+	const char* a = strstr(s, "\"angles\"");
+	if (a) { a = strchr(a, '['); if (a) { a++; sscanf(a, "%f %*[, ] %f %*[, ] %f", &ax, &ay, &az); } }
 
 	if (modelPath.empty()) { NXRP_PrintConsoleToPlayer(cl, "Saved entry missing model path"); return false; }
 
-	// compute delta vector based on direction
-	float dx=0, dy=0, dz=0;
+	float dx = 0.0f, dy = 0.0f, dz = 0.0f;
 	if (!Q_stricmp(dirTok, "up")) dz = amount;
 	else if (!Q_stricmp(dirTok, "down")) dz = -amount;
 	else if (!Q_stricmp(dirTok, "left")) dx = -amount;
@@ -226,23 +211,41 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 	else if (!Q_stricmp(dirTok, "back")) dy = -amount;
 	else { NXRP_PrintConsoleToPlayer(cl, "Unknown direction; use up/down/left/right/forward/back"); return false; }
 
+	int idToFree = NXRP_ExtractIntField(target, "\"id\"", -1);
+	if (idToFree >= 0 && idToFree < sv.num_entities) {
+		sharedEntity_t* oldEnt = SV_GentityNum(idToFree);
+		if (oldEnt) {
+			NXRP_FreeEntity((void*)oldEnt);
+			NXRP_RegisterSpawn(-1);
+		}
+	}
+
 	vec3_t newFloor = { ox + dx, oy + dy, oz + dz };
-	newFloor[0] = roundf(newFloor[0]); newFloor[1] = roundf(newFloor[1]); newFloor[2] = roundf(newFloor[2]);
+	newFloor[0] = roundf(newFloor[0]);
+	newFloor[1] = roundf(newFloor[1]);
+	newFloor[2] = roundf(newFloor[2]);
 
 	float yaw = ay;
 	int newEnt = NXRP_PlaceModel(modelPath.c_str(), newFloor, yaw);
-	if (newEnt >= 0) {
-		NXRP_RegisterSpawn(newEnt);
-		// update saved entry
-		char buf[1024];
-		snprintf(buf, sizeof(buf), "{ \"id\": %d, \"index\": %d, \"model\": \"%s\", \"position\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f] }",
-			newEnt, index, modelPath.c_str(), newFloor[0], newFloor[1], newFloor[2], ax, yaw, az);
-		lines[index] = std::string(buf);
-		FILE* f = fopen(filename.c_str(), "w");
-		if (f) {
-			for (const auto &ll : lines) { fputs(ll.c_str(), f); fputc('\n', f); }
-			fclose(f);
-		}
+	if (newEnt < 0) {
+		NXRP_PrintConsoleToPlayer(cl, "Failed to respawn model at new location");
+		return false;
+	}
+
+	NXRP_RegisterSpawn(newEnt);
+	char buf[1024];
+	snprintf(buf, sizeof(buf), "{ \"id\": %d, \"index\": %d, \"model\": \"%s\", \"position\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f] }",
+		newEnt, index, modelPath.c_str(), newFloor[0], newFloor[1], newFloor[2], ax, yaw, az);
+	lines[index] = std::string(buf);
+
+	FILE* f = fopen(filename.c_str(), "w");
+	if (!f) return false;
+	for (const auto& ll : lines) { fputs(ll.c_str(), f); fputc('\n', f); }
+	fclose(f);
+
+	NXRP_PrintConsoleToPlayer(cl, va("Moved saved spawn %d by %s %.1f", index, dirTok, amount));
+	return true;
+}
 
 bool NXRP_RotateSavedSpawnByIndex(client_t* cl, int index, float deltaYaw) {
 	std::string filename;
@@ -253,8 +256,8 @@ bool NXRP_RotateSavedSpawnByIndex(client_t* cl, int index, float deltaYaw) {
 	std::string target = lines[index];
 	const char* s = target.c_str();
 	std::string modelPath;
-	float ox=0, oy=0, oz=0;
-	float ax=0, ay=0, az=0;
+	float ox = 0.0f, oy = 0.0f, oz = 0.0f;
+	float ax = 0.0f, ay = 0.0f, az = 0.0f;
 
 	const char* m = strstr(s, "\"model\"");
 	if (m) { m = strchr(m, ':'); if (m) m++; while (m && *m && isspace((unsigned char)*m)) m++; if (m && *m == '"') { m++; const char* me = strchr(m, '"'); if (me && me > m) modelPath.assign(m, me - m); } }
@@ -290,15 +293,11 @@ bool NXRP_RotateSavedSpawnByIndex(client_t* cl, int index, float deltaYaw) {
 
 	FILE* f = fopen(filename.c_str(), "w");
 	if (!f) return false;
-	for (const auto &ll : lines) { fputs(ll.c_str(), f); fputc('\n', f); }
+	for (const auto& ll : lines) { fputs(ll.c_str(), f); fputc('\n', f); }
 	fclose(f);
+
+	NXRP_PrintConsoleToPlayer(cl, va("Rotated saved spawn %d by %.1f (new yaw %.1f)", index, deltaYaw, newYaw));
 	return true;
-}
-		NXRP_PrintConsoleToPlayer(cl, va("Moved saved spawn %d by %s %.1f", index, dirTok, amount));
-		return true;
-	}
-	NXRP_PrintConsoleToPlayer(cl, "Failed to respawn model at new location");
-	return false;
 }
 
 bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor) {
