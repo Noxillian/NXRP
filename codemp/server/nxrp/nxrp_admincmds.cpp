@@ -362,10 +362,9 @@ qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {
 }
 
 // Handler: !giveall
-
+// Optional numeric argument: target client slot index (as shown by rcon status)
+// Usage: !giveall [clientIndex]
 qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
-	// Optional numeric argument: target client slot index (as shown by rcon status)
-	// Usage: !giveall [clientIndex]
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
 	// Some give commands are gated behind sv_cheats. Temporarily enable
@@ -408,7 +407,7 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 			}
 		}
 	}
-	NXRP_PrintConsoleToPlayer(target, "You have been given a Lightsaber");
+	//NXRP_PrintConsoleToPlayer(target, "You have been given a Lightsaber");
 
 	if (target && target->gentity && target->gentity->playerState) {
 		playerState_t* ps = target->gentity->playerState;
@@ -416,20 +415,24 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->stats[STAT_WEAPONS] |= (1 << WP_SABER);
 		ps->weapon = WP_SABER;
 		ps->weaponstate = WEAPON_READY;
-		ps->fd.saberAnimLevel = MB_SS_YELLOW;
-		ps->fd.forcePowerLevel[MB_FORCE_SABER_DEFENCE] = 1;
-		ps->fd.forcePowerLevel[MB_FORCE_SABER_OFFENCE] = 1;
-		ps->fd.forcePowerLevel[MB_FORCE_SABER_THROW]   = 1;
+		ps->fd.saberAnimLevel = MB_SS_RED;
+		ps->fd.forcePowerLevel[MB_FORCE_SABER_DEFENCE] = 3;
+		ps->fd.forcePowerLevel[MB_FORCE_SABER_OFFENCE] = 3;
+		ps->fd.forcePowerLevel[MB_FORCE_SABER_THROW]   = 3;
+
 		ps->fd.forcePowersKnown |= (1 << FP_PUSH);
 		ps->fd.forcePowerLevel[MB_FORCE_PUSH] = 2;
+		ps->fd.forcePowersActive&(MB_FORCE_PUSH) == 1;
+
 		ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = 2;
 		ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
-		ps->fd.forcePowerLevel[FP_LIGHTNING] = 2;
+		ps->fd.forcePowersActive& (1 << FP_LIGHTNING) == 0;
+		//ps->fd.forcePowerLevel[FP_LIGHTNING] = 2;
 		// Grant force-levitation (force jump) same as lightning: mark known and set level
 		ps->fd.forcePowersKnown |= (1 << FP_LEVITATION);
 		ps->fd.forcePowerLevel[FP_LEVITATION] = 3;
-		ps->fd.forcePowerMax = 150;
-		ps->fd.forcePower = 100;
+		ps->fd.forcePowerMax = 300;
+		ps->fd.forcePower = 200;
 		ps->fd.forcePowersActive |= (1 << FP_LIGHTNING);
 
 		SV_WannaGiveWeapon(target, WP_CLONE_PISTOL);

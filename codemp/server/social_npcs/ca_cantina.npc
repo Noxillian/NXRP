@@ -493,3 +493,25 @@ CA_212ARC
 	walkSpeed	60
 	runSpeed	230
 }
+
+NX_Trando
+{
+	playerModel	trandoshan
+	customSkin	default
+	weapon		WP_SABER
+	health		500
+	armor		100
+	reactions	3
+	aim		2
+	move		3
+	aggression	5
+	evasion		2
+	intelligence	3
+	rank		crewman
+	playerTeam	TEAM_FREE
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_STORMTROOPER
+	yawspeed	70
+	walkSpeed	100
+	runSpeed	400
+}
