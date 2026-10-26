@@ -130,7 +130,7 @@ bool NXRP_GetPerMapFilePath(const char* folder, std::string& outPath) {
 	std::string dir = (home && home[0]) ? std::string(home) + std::string("/") + folder : std::string(folder);
 #if defined(_WIN32)
 	// Ensure directory exists
-	CreateDirectoryA(dir.c_str(), NULL);
+	//CreateDirectoryA(dir.c_str(), NULL);
 #else
 	mkdir(dir.c_str(), 0755);
 #endif
@@ -145,7 +145,7 @@ bool NXRP_GetFolderPath(const char* folder, std::string& outDir) {
 	const char* home = Cvar_VariableString("fs_homepath");
 	std::string dir = (home && home[0]) ? std::string(home) + std::string("/") + folder : std::string(folder);
 #if defined(_WIN32)
-	CreateDirectoryA(dir.c_str(), NULL);
+	//CreateDirectoryA(dir.c_str(), NULL);
 #else
 	mkdir(dir.c_str(), 0755);
 #endif
