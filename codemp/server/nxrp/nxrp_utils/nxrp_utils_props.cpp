@@ -28,8 +28,8 @@ int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
 
 	if (propMins[0] == 0.0f && propMins[1] == 0.0f && propMins[2] == 0.0f
 		&& propMaxs[0] == 0.0f && propMaxs[1] == 0.0f && propMaxs[2] == 0.0f) {
-		VectorSet(propMins, -24.0f, -24.0f, -8.0f);
-		VectorSet(propMaxs, 24.0f, 24.0f, 24.0f);
+		VectorSet(propMins, -0.0f, 0.0f, 0.0f);
+		VectorSet(propMaxs, 0.0f, 0.0f, 0.0f);
 		NXRP_PrintConsoleToPlayer(NULL, "NXRP: collider extents were zero; applied default collider");
 	}
 

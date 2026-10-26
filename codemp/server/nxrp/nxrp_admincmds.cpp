@@ -150,7 +150,7 @@ qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor ) {
 	NXRP_PrintConsoleToPlayer(cl, "Loading saved spawns...");
 	// Uses the shared utils loader for per-map saved spawns.
 	int count = NXRP_LoadSavedSpawnsForMap(cl);
-	NXRP_PrintConsoleToPlayer(cl, va("Loaded %d saved spawns for this map", count));
+	//NXRP_PrintConsoleToPlayer(cl, va("Loaded %d saved spawns for this map", count));
 	return qtrue;
 }
 
