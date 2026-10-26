@@ -69,6 +69,11 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl);
 // Spawn prop helper: handles catalog lookup, placement and persistence.
 bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor);
 
+bool NXRP_uJson_CreateAccountFile(
+	const std::string& filepath,
+	const std::string& username,
+	const std::string& passwordHash);
+
 // Move a saved spawn (by index) by a cardinal direction and amount.
 // args: "<dir> <amount>"
 bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args);

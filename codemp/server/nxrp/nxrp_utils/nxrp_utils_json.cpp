@@ -10,6 +10,32 @@
 
 // Minimal JSON parsing for the simple skills schema used by NXRP. Lightweight
 // and tolerant parser; replace with a proper JSON library if needed.
+bool NXRP_uJson_CreateAccountFile(
+	const std::string& filepath,
+	const std::string& username,
+	const std::string& passwordHash)
+{
+	std::ofstream ofs(filepath.c_str(), std::ios::trunc);
+
+	if (!ofs.is_open())
+		return false;
+
+	ofs << "{\n";
+	ofs << "  \"username\": \"" << NXRP_EscapeString(username) << "\",\n";
+	ofs << "  \"password\": \"" << NXRP_EscapeString(passwordHash) << "\",\n";
+	ofs << "  \"level\": 1,\n";
+	ofs << "  \"exp\": 0,\n";
+	ofs << "  \"credits\": 0,\n";
+	ofs << "  \"skillpoints\": 0,\n";
+	ofs << "  \"isAdmin\": false\n";
+	ofs << "}\n";
+
+	ofs.close();
+
+	return !ofs.fail();
+}
+
+
 
 bool NXRP_ParseSkillsJson(const std::string &content, std::vector<NXRP_SimpleSkill> &out) {
 	out.clear();
