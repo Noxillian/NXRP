@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "b_local.h"
 #include "bg_saga.h"
+#include "server/nxrp/nxrp_utils/nxrp_utils.h"
 
 extern int G_ShipSurfaceForSurfName( const char *surfaceName );
 extern qboolean G_FlyVehicleDestroySurface( gentity_t *veh, int surface );
@@ -2472,9 +2473,14 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 	// log the victim and attacker's names with the method of death
 	Com_sprintf( buf, sizeof( buf ), "Kill: %i %i %i: %s killed ", killer, self->s.number, meansOfDeath, killerName );
 	if ( self->s.eType == ET_NPC ) {
+		const char *npcName = (self->targetname && self->targetname[0]) ? self->targetname :
+			((self->NPC_type && self->NPC_type[0]) ? self->NPC_type : "Unknown");
+		NXRP_PrintConsoleToPlayer(NULL, va("%s killed npc %s", killerName, npcName));
+
 		// check for named NPCs
 		if ( self->targetname )
 			Q_strcat( buf, sizeof( buf ), va( "%s (%s) by %s\n", self->NPC_type, self->targetname, obit ) );
+			
 		else
 			Q_strcat( buf, sizeof( buf ), va( "%s by %s\n", self->NPC_type, obit ) );
 	}
