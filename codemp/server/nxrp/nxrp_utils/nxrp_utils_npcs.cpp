@@ -14,6 +14,7 @@
 #include <string>
 #include <deque>
 #include <map>
+#include <set>
 
 // Pending NPC names queued until NXRP_RegisterSpawn associates them with entnums
 static std::deque<std::string> nxrp_pending_npc_names;
@@ -23,7 +24,16 @@ struct nxrp_pending_npc_spawn_t {
 	float yaw;
 };
 static std::deque<nxrp_pending_npc_spawn_t> nxrp_pending_npc_spawns;
-static std::map<int, std::string> nxrp_tracked_npcs;
+
+struct nxrp_tracked_npc_t {
+	std::string name;
+	int lastHealth;
+	qboolean deadSeen;
+	qboolean fromSpawnCmd;
+};
+
+static std::map<int, nxrp_tracked_npc_t> nxrp_tracked_npcs;
+static std::set<int> nxrp_known_npc_ents;
 static int nxrp_last_tracked_npc_ent = -1;
 
 void NXRP_PushPendingNPCName(const char* name) {
@@ -129,8 +139,18 @@ void NXRP_HandlePendingNPCSpawn(int entnum) {
 
 void NXRP_TrackNPC(int entnum, const char* name) {
 	if (entnum < 0 || !name || !name[0]) return;
-	nxrp_tracked_npcs[entnum] = name;
+	nxrp_tracked_npc_t data;
+	data.name = name;
+	data.lastHealth = 0;
+	data.deadSeen = qfalse;
+	data.fromSpawnCmd = qtrue;
+	sharedEntity_t* ent = (entnum >= 0 && entnum < sv.num_entities) ? SV_GentityNum(entnum) : NULL;
+	if (ent && ent->s.number == entnum) {
+		data.lastHealth = ent->health;
+	}
+	nxrp_tracked_npcs[entnum] = data;
 	nxrp_last_tracked_npc_ent = entnum;
+	nxrp_known_npc_ents.insert(entnum);
 	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP: tracking npc ent=%d name=%s", entnum, name);
 }
 
@@ -141,18 +161,111 @@ void NXRP_UntrackNPC(int entnum) {
 		NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP: untracking npc ent=%d name=%s", entnum, tracked);
 	}
 	nxrp_tracked_npcs.erase(entnum);
+	nxrp_known_npc_ents.erase(entnum);
 	if (nxrp_last_tracked_npc_ent == entnum) nxrp_last_tracked_npc_ent = -1;
 }
 
 const char* NXRP_GetTrackedNPCName(int entnum) {
 	if (entnum < 0) return NULL;
-	std::map<int, std::string>::iterator it = nxrp_tracked_npcs.find(entnum);
+	std::map<int, nxrp_tracked_npc_t>::iterator it = nxrp_tracked_npcs.find(entnum);
 	if (it == nxrp_tracked_npcs.end()) return NULL;
-	return it->second.c_str();
+	return it->second.name.c_str();
 }
 
 int NXRP_GetLastTrackedNPCEnt(void) {
 	return nxrp_last_tracked_npc_ent;
+}
+
+static qboolean NXRP_IsLiveNpcEnt(int entnum, sharedEntity_t** outEnt) {
+	if (outEnt) *outEnt = NULL;
+	if (entnum < 0 || entnum >= sv.num_entities) return qfalse;
+	sharedEntity_t* ent = SV_GentityNum(entnum);
+	if (!ent) return qfalse;
+	if (ent->s.number != entnum) return qfalse;
+	if (ent->s.eType != ET_NPC) return qfalse;
+	if (outEnt) *outEnt = ent;
+	return qtrue;
+}
+
+void NXRP_NPCTickTracking(void) {
+	std::set<int> currentNpcEnts;
+
+	for (int i = 0; i < sv.num_entities; ++i) {
+		sharedEntity_t* ent = NULL;
+		if (!NXRP_IsLiveNpcEnt(i, &ent)) continue;
+		currentNpcEnts.insert(i);
+
+		if (nxrp_known_npc_ents.find(i) == nxrp_known_npc_ents.end()) {
+			nxrp_known_npc_ents.insert(i);
+			if (!nxrp_pending_npc_names.empty()) {
+				std::string name = nxrp_pending_npc_names.front();
+				nxrp_pending_npc_names.pop_front();
+				NXRP_TrackNPC(i, name.c_str());
+				NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP: bound pending !spawn NPC ent=%d name=%s", i, name.c_str());
+			}
+		}
+	}
+
+	for (std::set<int>::iterator it = nxrp_known_npc_ents.begin(); it != nxrp_known_npc_ents.end(); ) {
+		if (currentNpcEnts.find(*it) == currentNpcEnts.end()) it = nxrp_known_npc_ents.erase(it);
+		else ++it;
+	}
+
+	std::vector<int> toUntrack;
+	for (std::map<int, nxrp_tracked_npc_t>::iterator it = nxrp_tracked_npcs.begin(); it != nxrp_tracked_npcs.end(); ++it) {
+		const int entnum = it->first;
+		nxrp_tracked_npc_t& tracked = it->second;
+		sharedEntity_t* ent = NULL;
+		if (!NXRP_IsLiveNpcEnt(entnum, &ent)) {
+			if (!tracked.deadSeen) {
+				NXRP_PrintConsoleToPlayerFmt(NULL, "%s killed npc %s", "Unknown", tracked.name.c_str());
+				tracked.deadSeen = qtrue;
+			}
+			toUntrack.push_back(entnum);
+			continue;
+		}
+
+		const int health = ent->health;
+		if (tracked.lastHealth > 0 && health <= 0 && !tracked.deadSeen) {
+			NXRP_PrintConsoleToPlayerFmt(NULL, "npc killed: %s (ent=%d)", tracked.name.c_str(), entnum);
+			tracked.deadSeen = qtrue;
+		}
+		if (health > 0) {
+			tracked.deadSeen = qfalse;
+		}
+		tracked.lastHealth = health;
+	}
+
+	for (size_t i = 0; i < toUntrack.size(); ++i) {
+		NXRP_UntrackNPC(toUntrack[i]);
+	}
+}
+
+void NXRP_ResetNPCTracking(void) {
+	nxrp_pending_npc_names.clear();
+	nxrp_pending_npc_spawns.clear();
+	nxrp_tracked_npcs.clear();
+	nxrp_known_npc_ents.clear();
+	nxrp_last_tracked_npc_ent = -1;
+	NXRP_PrintConsoleToPlayer(NULL, "NXRP: reset NPC tracking for new round");
+}
+
+void NXRP_ListTrackedSpawnNPCs(client_t* cl) {
+	int count = 0;
+	for (std::map<int, nxrp_tracked_npc_t>::iterator it = nxrp_tracked_npcs.begin(); it != nxrp_tracked_npcs.end(); ++it) {
+		const int entnum = it->first;
+		nxrp_tracked_npc_t& tracked = it->second;
+		if (!tracked.fromSpawnCmd) continue;
+		sharedEntity_t* ent = NULL;
+		const qboolean alive = NXRP_IsLiveNpcEnt(entnum, &ent);
+		NXRP_PrintConsoleToPlayerFmt(cl, "%d: npc=%s alive=%s health=%d",
+			entnum,
+			tracked.name.c_str(),
+			alive ? "yes" : "no",
+			alive && ent ? ent->health : tracked.lastHealth);
+		count++;
+	}
+	if (!count) NXRP_PrintConsoleToPlayer(cl, "No tracked !spawn NPCs");
 }
 
 // Wrapper for freeing entities: if the entity being freed is a tracked NPC,

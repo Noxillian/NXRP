@@ -134,6 +134,12 @@ void NXRP_OnNPCUsed(client_t* user, int entnum);
 // The returned pointer is owned by NXRP and valid until the NPC is untracked.
 const char* NXRP_GetTrackedNPCName(int entnum);
 int NXRP_GetLastTrackedNPCEnt(void);
+// Frame-level discovery/update pass for NPCs spawned through !spawn tracking.
+void NXRP_NPCTickTracking(void);
+// Clear all runtime NPC tracking state (used on round reset/start).
+void NXRP_ResetNPCTracking(void);
+// List currently tracked !spawn NPCs.
+void NXRP_ListTrackedSpawnNPCs(client_t* cl);
 
 // Print a standardized NXRP console message to a specific player. If cl is
 // NULL the message will be broadcast to all clients by passing NULL to

@@ -252,9 +252,19 @@ qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor ) {
 	char arg[MAX_TOKEN_CHARS] = {0};
 	if (sscanf(chatCursor, "%31s %31s", sub, arg) < 1) return qtrue;
 
-	// expect: !nx list e
-	if (arg[0] == '\0' || (arg[0] != 'e' && arg[0] != 'E')) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !list e   -- list entities on the map");
+	if (arg[0] == '\0') {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !list e | !list npc");
+		return qtrue;
+	}
+
+	if (!Q_stricmp(arg, "npc")) {
+		NXRP_ListTrackedSpawnNPCs(cl);
+		return qtrue;
+	}
+
+	// expect: !list e
+	if (arg[0] != 'e' && arg[0] != 'E') {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !list e | !list npc");
 		return qtrue;
 	}
 
