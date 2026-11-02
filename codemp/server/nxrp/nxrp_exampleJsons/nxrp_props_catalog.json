@@ -70,7 +70,7 @@
     "colliderangle": 0.0
   },
   "models/map_objects/imperial/cargo_big.md3": {
-    "collidersize": [ 15.0, 27.0, 70.0 ],
+    "collidersize": [ 15.0, 27.0, 60.0 ],
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0
   },
