@@ -61,7 +61,7 @@ void SV_NXRP_ScoreFrame(void) {
 
 					NXRP_ResetNPCTracking();
 					NXRP_LoadSavedSpawnsForMap(NULL);
-					NXRP_PrintConsoleToPlayer(NULL, "Round Start: First active player | Loaded Props");
+					NXRP_PrintConsoleToPlayer(NULL, "----- New Round Started -----");
 
 					break;
 				}

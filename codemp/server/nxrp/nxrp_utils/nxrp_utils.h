@@ -133,7 +133,6 @@ void NXRP_OnNPCUsed(client_t* user, int entnum);
 // Return the tracked NPC name for an entity number, or NULL if not tracked.
 // The returned pointer is owned by NXRP and valid until the NPC is untracked.
 const char* NXRP_GetTrackedNPCName(int entnum);
-int NXRP_GetLastTrackedNPCEnt(void);
 // Frame-level discovery/update pass for NPCs spawned through !spawn tracking.
 void NXRP_NPCTickTracking(void);
 // Clear all runtime NPC tracking state (used on round reset/start).
@@ -172,9 +171,9 @@ inline void NXRP_PrintConsoleToPlayerFmt(client_t* cl, const char* fmt, ...) {
 				else esc.push_back(c);
 			}
 			if (cl)
-				SV_SendServerCommand(cl, "print \"^0[^6N^7X^0]^8 %s\n\"", esc.c_str());
+				SV_SendServerCommand(cl, "print \"^0[^6N^7xrp^0]^8 %s\n\"", esc.c_str());
 			else
-				SV_SendServerCommand(NULL, "print \"^0[^6N^7X^0]^8 %s\n\"", esc.c_str());
+				SV_SendServerCommand(NULL, "print \"^0[^6N^7xrp^0]^8 %s\n\"", esc.c_str());
 	}
 }
 
