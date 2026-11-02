@@ -225,12 +225,15 @@ void NXRP_NPCTickTracking(void) {
 			continue;
 		}
 
-		const int health = ent->health;
-		if (tracked.lastHealth > 0 && health <= 0 && !tracked.deadSeen) {
+		const int health = (ent->playerState) ? ent->playerState->stats[STAT_HEALTH] : ent->health;
+		const qboolean deadByPmType = (ent->playerState && ent->playerState->pm_type == MB2_PM_DEAD) ? qtrue : qfalse;
+		const qboolean deadNow = (deadByPmType || health <= 0) ? qtrue : qfalse;
+
+		if (tracked.lastHealth > 0 && deadNow && !tracked.deadSeen) {
 			NXRP_PrintConsoleToPlayerFmt(NULL, "npc killed: %s (ent=%d)", tracked.name.c_str(), entnum);
 			tracked.deadSeen = qtrue;
 		}
-		if (health > 0) {
+		if (!deadNow) {
 			tracked.deadSeen = qfalse;
 		}
 		tracked.lastHealth = health;
