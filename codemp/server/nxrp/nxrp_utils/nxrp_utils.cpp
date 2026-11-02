@@ -127,7 +127,7 @@ void NXRP_RegisterSpawn(int entnum) {
 	// Notify NPC subsystem so it can associate any pending name with this entnum
 	extern void NXRP_HandlePendingNPCSpawn(int entnum);
 	// Debug: announce register spawn invocation
-	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_RegisterSpawn called ent=%d", entnum);
+	//NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_RegisterSpawn called ent=%d", entnum);
 	NXRP_HandlePendingNPCSpawn(entnum);
 }
 

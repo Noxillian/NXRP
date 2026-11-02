@@ -110,8 +110,10 @@ qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor ) {
 }
 
 // Handler for: !register <user> <pass>
-qboolean NXRP_cmd_register( client_t *cl, const char *chatCursor ) {
+qboolean NXRP_cmd_register(client_t* cl, const char* chatCursor)
+{
 	std::string user, pass;
+
 	if (!parse_user_pass(chatCursor, user, pass)) {
 		NXRP_PrintConsoleToPlayer(cl, "Usage: !register <user> <pass>");
 		return qtrue;
@@ -119,9 +121,12 @@ qboolean NXRP_cmd_register( client_t *cl, const char *chatCursor ) {
 
 	std::string safe;
 	safe.reserve(user.size());
+
 	for (char c : user) {
-		if (std::isalnum((unsigned char)c) || c == '_') safe.push_back((char)std::tolower((unsigned char)c));
+		if (std::isalnum((unsigned char)c) || c == '_')
+			safe.push_back((char)std::tolower((unsigned char)c));
 	}
+
 	if (safe.empty()) {
 		NXRP_PrintConsoleToPlayer(cl, "Invalid username");
 		return qtrue;
@@ -129,45 +134,50 @@ qboolean NXRP_cmd_register( client_t *cl, const char *chatCursor ) {
 
 	std::string dir;
 	NXRP_GetFolderPath("nxrp_accounts", dir);
+
 	std::string filepath = dir + "/" + safe + ".json";
-	std::ifstream ifs(filepath);
+
+	std::ifstream ifs(filepath.c_str());
+
 	if (ifs.good()) {
 		NXRP_PrintConsoleToPlayer(cl, "Username already exists");
 		return qtrue;
 	}
 
-	// use shared escape helper
-	// auto escape = [](const std::string &s){ ... };
-
-	std::ofstream ofs(filepath, std::ios::trunc);
-	if (!ofs.is_open()) {
-		NXRP_PrintConsoleToPlayer(cl, "Registration failed: cannot create account file");
-		return qtrue;
-	}
-	ofs << "{\n";
-	ofs << "  \"username\": \"" << NXRP_EscapeString(user) << "\",\n";
-	// store password as HMAC-MD5 with a per-user random salt
+	// Generate a random salt
 	unsigned char salt[8];
+
 	if (!Sys_RandomBytes(salt, sizeof(salt))) {
-		// fallback to rand() if secure RNG unavailable
-		for (int i = 0; i < (int)sizeof(salt); ++i) salt[i] = (unsigned char)(rand() & 0xFF);
+		for (int i = 0; i < (int)sizeof(salt); ++i)
+			salt[i] = (unsigned char)(rand() & 0xFF);
 	}
+
+	// Hash the password with the salt
 	unsigned char digest[MD5_DIGEST_SIZE];
+
 	hmacMD5Context_t ctx;
+
 	HMAC_MD5_Init(&ctx, salt, sizeof(salt));
-	HMAC_MD5_Update(&ctx, (const unsigned char*)pass.c_str(), (unsigned int)pass.size());
+	HMAC_MD5_Update(
+		&ctx,
+		(const unsigned char*)pass.c_str(),
+		(unsigned int)pass.size()
+	);
 	HMAC_MD5_Final(&ctx, digest);
+
 	std::string saltHex = NXRP_HexEncode(salt, sizeof(salt));
 	std::string digestHex = NXRP_HexEncode(digest, MD5_DIGEST_SIZE);
-	ofs << "  \"password\": \"" << saltHex << ":" << digestHex << "\",\n";
-	ofs << "  \"level\": 1,\n";
-	ofs << "  \"exp\": 0,\n";
-	ofs << "  \"credits\": 0,\n";
-	ofs << "  \"skillpoints\": 0,\n";
-	ofs << "  \"isAdmin\": false\n";
-	ofs << "}\n";
 
-	ofs.close();
+	std::string passwordHash = saltHex + ":" + digestHex;
+
+	// Create the account file
+	if (!NXRP_uJson_CreateAccountFile(filepath, user, passwordHash)) {
+		NXRP_PrintConsoleToPlayer(
+			cl,
+			"Registration failed: cannot create account file"
+		);
+		return qtrue;
+	}
 
 	NXRP_PrintConsoleToPlayer(cl, "Registration successful");
 	return qtrue;

@@ -27,7 +27,6 @@ void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 // Forward declarations for command handlers used across the module
 qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor );
-static qboolean NXRP_HandleNpcSpawn( client_t *cl, const char *chatCursor );
 int SV_SpawnModelAtClient(client_t* cl, const char* modelPath);
 
 enum NXRP_SubCmd {
@@ -149,7 +148,6 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 	}
 
 	char subcmd[MAX_TOKEN_CHARS] = {0};
-	char arg[MAX_TOKEN_CHARS] = {0};
 	char normalizedCursor[1024] = {0};
 	const char *dispatchCursor = chatCursor ? chatCursor : "";
 
@@ -312,22 +310,3 @@ extern "C" qboolean NXRP_HandleChat( client_t *cl, const char *commandName, cons
 	return NXRP_HandleChatCommands(cl, commandName, chatCursor);
 }
 
-static qboolean NXRP_HandleNpcSpawn( client_t *cl, const char *chatCursor ) {
-	char subcmd[MAX_TOKEN_CHARS] = {0};
-	char arg[MAX_TOKEN_CHARS] = {0};
-
-	if ( sscanf( chatCursor, "%31s %31s", subcmd, arg ) < 1 ) {
-		return qtrue;
-	}
-
-	if ( arg[0] == '\0' ) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !spawn <npc_type>");
-		return qtrue;
-	}
-
-	char cmdBuf[128];
-	Com_sprintf( cmdBuf, sizeof(cmdBuf), "npc spawn %s", arg );
-	NXRP_PrintConsoleToPlayer(cl, "^3Spawning NPC");
-	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
-	return qtrue;
-}

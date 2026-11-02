@@ -149,7 +149,7 @@ qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 	NXRP_PrintConsoleToPlayer(cl, "Loading saved spawns...");
 	// Uses the shared utils loader for per-map saved spawns.
-	int count = NXRP_LoadSavedSpawnsForMap(cl);
+	NXRP_LoadSavedSpawnsForMap(cl);
 	//NXRP_PrintConsoleToPlayer(cl, va("Loaded %d saved spawns for this map", count));
 	return qtrue;
 }
@@ -252,9 +252,19 @@ qboolean NXRP_cmdAdmin_list( client_t *cl, const char *chatCursor ) {
 	char arg[MAX_TOKEN_CHARS] = {0};
 	if (sscanf(chatCursor, "%31s %31s", sub, arg) < 1) return qtrue;
 
-	// expect: !nx list e
-	if (arg[0] == '\0' || (arg[0] != 'e' && arg[0] != 'E')) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !list e   -- list entities on the map");
+	if (arg[0] == '\0') {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !list e | !list npc");
+		return qtrue;
+	}
+
+	if (!Q_stricmp(arg, "npc")) {
+		NXRP_ListTrackedSpawnNPCs(cl);
+		return qtrue;
+	}
+
+	// expect: !list e
+	if (arg[0] != 'e' && arg[0] != 'E') {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !list e | !list npc");
 		return qtrue;
 	}
 
@@ -297,6 +307,7 @@ qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor ) {
 
 	char cmdBuf[128];
 	Com_sprintf( cmdBuf, sizeof(cmdBuf), "npc spawn %s", arg );
+	NXRP_PushPendingNPCName(arg);
 	NXRP_PrintConsoleToPlayer(cl, "^3Spawning NPC");
 	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
 	return qtrue;

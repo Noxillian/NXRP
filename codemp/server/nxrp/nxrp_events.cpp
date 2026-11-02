@@ -16,24 +16,21 @@ static int* nxrp_rebelCountdown = NULL;
 static int* nxrp_imperialCountdown = NULL;
 static int nxrp_prevRebelCountdown = 0;
 static int nxrp_prevImperialCountdown = 0;
-static qboolean nxrp_npcDeadSeen[MAX_GENTITIES];
-static qboolean nxrp_npcEverAlive[MAX_GENTITIES];
 
 void SV_NXRP_ScoreInit(void) {
 	for (int i = 0; i < MAX_CLIENTS; i++) {
 		nxrp_lastScore[i] = 0;
 		nxrp_lastKills[i] = 0;
 	}
-	for (int i = 0; i < MAX_GENTITIES; i++) {
-		nxrp_npcDeadSeen[i] = qfalse;
-		nxrp_npcEverAlive[i] = qfalse;
-	}
+	NXRP_ResetNPCTracking();
 	NXRP_FFA_Frame();
 }
 
 void SV_NXRP_ScoreFrame(void) {
 
 	if (!svs.clients) return;
+
+	NXRP_NPCTickTracking();
 	// If intermission is active, reset round start state so we trigger again
 	if (sv.configstrings[CS_INTERMISSION] && atoi(sv.configstrings[CS_INTERMISSION]) == 1) {
 		//NXRP_PrintConsoleToPlayer(NULL, "Round Start: Intermission");
@@ -62,8 +59,9 @@ void SV_NXRP_ScoreFrame(void) {
 						}
 					}
 
+					NXRP_ResetNPCTracking();
 					NXRP_LoadSavedSpawnsForMap(NULL);
-					NXRP_PrintConsoleToPlayer(NULL, "Round Start: First active player | Loaded Props");
+					NXRP_PrintConsoleToPlayer(NULL, "----- New Round Started -----");
 
 					break;
 				}
@@ -105,7 +103,7 @@ void SV_NXRP_ScoreFrame(void) {
 		int newKills = cl->gentity->playerState->persistant[PERS_KILLED];
 		int oldKills = nxrp_lastKills[i];
 		if (newKills != oldKills) {
-			NXRP_PrintConsoleToPlayer(NULL, "Kill detected");
+			//NXRP_PrintConsoleToPlayer(NULL, "Kill detected");
 			//NXRP_OnKillsChanged(cl, oldKills, newKills);
 			nxrp_lastKills[i] = newKills;
 		}
