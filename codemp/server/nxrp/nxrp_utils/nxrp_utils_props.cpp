@@ -21,16 +21,14 @@ int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
 	vec3_t propMaxs = { 24.0f, 24.0f, 24.0f };
 	vec3_t colliderOrigin = { 0.0f, 0.0f, 0.0f };
 	float catalogYaw = 0.0f;
-	bool foundInCatalog = NXRP_GetPropFromCatalog(modelPath, resolvedModel, propMins, propMaxs, colliderOrigin, catalogYaw);
-	if (foundInCatalog && !resolvedModel.empty()) {
+	if (NXRP_GetPropFromCatalog(modelPath, resolvedModel, propMins, propMaxs, colliderOrigin, catalogYaw) && !resolvedModel.empty()) {
 		modelPath = resolvedModel.c_str();
 	}
 
-	if (propMins[0] == 0.0f && propMins[1] == 0.0f && propMins[2] == 0.0f
-		&& propMaxs[0] == 0.0f && propMaxs[1] == 0.0f && propMaxs[2] == 0.0f) {
-		VectorSet(propMins, -0.0f, 0.0f, 0.0f);
-		VectorSet(propMaxs, 0.0f, 0.0f, 0.0f);
-		NXRP_PrintConsoleToPlayer(NULL, "NXRP: collider extents were zero; applied default collider");
+	if (propMins[0] == 0.0f && propMins[1] == 0.0f && propMins[2] == 0.0f &&
+		propMaxs[0] == 0.0f && propMaxs[1] == 0.0f && propMaxs[2] == 0.0f) {
+		VectorSet(propMins, -24.0f, -24.0f, -8.0f);
+		VectorSet(propMaxs, 24.0f, 24.0f, 24.0f);
 	}
 
 	for (int i = 0; i < 3; ++i) {
@@ -53,13 +51,13 @@ int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
 	sharedEntity_t* e = (sharedEntity_t*)gGSpawn();
 	const int model = e ? gModelIndex_f(modelPath) : 0;
 	GVM_EndNative(old);
-	if (!e || model <= 0) {
-		NXRP_PrintConsoleToPlayer(NULL, va("NXRP: failed to resolve model index for %s", modelPath));
-		return -1;
-	}
+	if (!e || model <= 0) return -1;
 
 	vec3_t org = { position[0], position[1], position[2] - propMins[2] };
-	org[0] = roundf(org[0]); org[1] = roundf(org[1]); org[2] = roundf(org[2]);
+	org[0] = roundf(org[0]);
+	org[1] = roundf(org[1]);
+	org[2] = roundf(org[2]);
+
 	e->s.eType = ET_GENERAL;
 	e->s.modelindex = model;
 	VectorCopy(org, e->s.pos.trBase);
@@ -71,40 +69,29 @@ int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
 	VectorCopy(e->s.apos.trBase, e->r.currentAngles);
 	e->s.apos.trType = TR_STATIONARY;
 
-	bool noCollider = (propMins[0] == 0.0f && propMins[1] == 0.0f && propMins[2] == 0.0f
-		&& propMaxs[0] == 0.0f && propMaxs[1] == 0.0f && propMaxs[2] == 0.0f);
-
-	if (noCollider) {
-		NXRP_PrintConsoleToPlayer(NULL, va("NXRP: no collider for %s", modelPath));
-		VectorSet(e->r.mins, 0.0f, 0.0f, 0.0f);
-		VectorSet(e->r.maxs, 0.0f, 0.0f, 0.0f);
-		VectorCopy(e->s.pos.trBase, e->r.absmin);
-		VectorCopy(e->s.pos.trBase, e->r.absmax);
-		e->r.svFlags = 0;
-		SV_LinkEntity(e);
-	} else {
-		const float c = cosf(DEG2RAD(angle)), sn = sinf(DEG2RAD(angle));
-		vec3_t mins = { 99999.0f, 99999.0f, propMins[2] }, maxs = { -99999.0f, -99999.0f, propMaxs[2] };
-		for (int k = 0; k < 4; k++) {
-			const float x = (k & 1) ? propMaxs[0] : propMins[0];
-			const float y = (k & 2) ? propMaxs[1] : propMins[1];
-			const float rx = x * c - y * sn, ry = x * sn + y * c;
-			mins[0] = Q_min(mins[0], rx); maxs[0] = Q_max(maxs[0], rx);
-			mins[1] = Q_min(mins[1], ry); maxs[1] = Q_max(maxs[1], ry);
-		}
-		VectorCopy(mins, e->r.mins);
-		VectorCopy(maxs, e->r.maxs);
-		//NXRP_PrintConsoleToPlayer(NULL, va("NXRP: applied collider mins=[%.2f %.2f %.2f] maxs=[%.2f %.2f %.2f] at origin=[%.2f %.2f %.2f]",
-			e->r.mins[0], e->r.mins[1], e->r.mins[2],
-			e->r.maxs[0], e->r.maxs[1], e->r.maxs[2],
-			e->s.pos.trBase[0], e->s.pos.trBase[1], e->s.pos.trBase[2]));
-		VectorAdd(e->s.pos.trBase, e->r.mins, e->r.absmin);
-		VectorAdd(e->s.pos.trBase, e->r.maxs, e->r.absmax);
-
-		e->r.contents = CONTENTS_SOLID;
-		e->r.svFlags = 0;
-		SV_LinkEntity(e);
+	const float c = cosf(DEG2RAD(angle));
+	const float sn = sinf(DEG2RAD(angle));
+	vec3_t mins = { 99999.0f, 99999.0f, propMins[2] };
+	vec3_t maxs = { -99999.0f, -99999.0f, propMaxs[2] };
+	for (int k = 0; k < 4; k++) {
+		const float x = (k & 1) ? propMaxs[0] : propMins[0];
+		const float y = (k & 2) ? propMaxs[1] : propMins[1];
+		const float rx = x * c - y * sn;
+		const float ry = x * sn + y * c;
+		mins[0] = Q_min(mins[0], rx);
+		maxs[0] = Q_max(maxs[0], rx);
+		mins[1] = Q_min(mins[1], ry);
+		maxs[1] = Q_max(maxs[1], ry);
 	}
+
+	VectorCopy(mins, e->r.mins);
+	VectorCopy(maxs, e->r.maxs);
+	VectorAdd(e->s.pos.trBase, e->r.mins, e->r.absmin);
+	VectorAdd(e->s.pos.trBase, e->r.maxs, e->r.absmax);
+	e->r.contents = CONTENTS_SOLID;
+	e->r.svFlags = 0;
+	SV_LinkEntity(e);
+
 	NXRP_PrintConsoleToPlayer(NULL, va("Placed model %s", modelPath));
 	return e->s.number;
 }
@@ -126,8 +113,6 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 		// Expected format: { "id": <n>, "index": <n>, "model": "<path>", "position": [x, y, z], "angles": [ax, ay, az] }
 		std::string s = line;
 		if (s.size() > maxLen) s = s.substr(0, maxLen - 3) + "...";
-
-		int idv = NXRP_ExtractIntField(s, "\"id\"", -1);
 
 		// extract model path
 		std::string model;
