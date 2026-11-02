@@ -103,7 +103,7 @@ void SV_NXRP_ScoreFrame(void) {
 		int newKills = cl->gentity->playerState->persistant[PERS_KILLED];
 		int oldKills = nxrp_lastKills[i];
 		if (newKills != oldKills) {
-			NXRP_PrintConsoleToPlayer(NULL, "Kill detected");
+			//NXRP_PrintConsoleToPlayer(NULL, "Kill detected");
 			//NXRP_OnKillsChanged(cl, oldKills, newKills);
 			nxrp_lastKills[i] = newKills;
 		}
