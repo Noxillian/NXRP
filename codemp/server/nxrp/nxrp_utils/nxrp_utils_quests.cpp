@@ -8,6 +8,9 @@
 #include <sstream>
 #include <cctype>
 
+// Forward declaration from spin.cpp
+void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
+
 struct nxrp_quest_npc_t {
 	std::string name;
 	vec3_t pos;
