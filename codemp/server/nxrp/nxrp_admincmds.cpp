@@ -8,6 +8,7 @@
 #include <vector>
 #include <fstream>
 #include <cctype>
+#include "server/spin.h"
 
 // Forward-declare delayed executor used elsewhere (defined in spin.cpp)
 void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
