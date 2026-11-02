@@ -338,13 +338,22 @@ bool NXRP_QuestAdd(client_t* cl, const char* questName) {
 	nxrp_quest_t q;
 	q.questName = questName;
 	q.hasSpawn = qfalse;
-	VectorSet(q.questPos, 0,0,0);
+	if (cl && cl->gentity) {
+		q.hasSpawn = qtrue;
+		VectorCopy(cl->gentity->r.currentOrigin, q.questPos);
+	} else {
+		VectorSet(q.questPos, 0,0,0);
+	}
 	q.rewardExp = 0;
 	q.rewardCredits = 0;
 	q.questTime = 0;
 	quests.push_back(q);
 	if (!NXRP_QuestSaveAll(quests)) return false;
-	NXRP_PrintConsoleToPlayerFmt(cl, "Quest added: %s", questName);
+	if (q.hasSpawn) {
+		NXRP_PrintConsoleToPlayerFmt(cl, "Quest added: %s (spawn %.0f %.0f %.0f)", questName, q.questPos[0], q.questPos[1], q.questPos[2]);
+	} else {
+		NXRP_PrintConsoleToPlayerFmt(cl, "Quest added: %s", questName);
+	}
 	return true;
 }
 
@@ -466,6 +475,7 @@ bool NXRP_QuestStartForPlayer(client_t* cl, const char* questName) {
 	for (size_t i = 0; i < q.npcs.size(); ++i) {
 		const nxrp_quest_npc_t& npc = q.npcs[i];
 		NXRP_PushPendingNPCSpawnAt(npc.name.c_str(), npc.pos, yaw);
+		NXRP_PushPendingNPCName(npc.name.c_str());
 		char cmdBuf[128];
 		Com_sprintf(cmdBuf, sizeof(cmdBuf), "npc spawn %s", npc.name.c_str());
 		SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), (int)i + 1);
