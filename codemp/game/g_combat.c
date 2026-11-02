@@ -2480,9 +2480,11 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 		// check for named NPCs
 		if ( self->targetname )
 			Q_strcat( buf, sizeof( buf ), va( "%s (%s) by %s\n", self->NPC_type, self->targetname, obit ) );
+		NXRP_PrintConsoleToPlayer(NULL, "NPC Death 1");
 			
 		else
 			Q_strcat( buf, sizeof( buf ), va( "%s by %s\n", self->NPC_type, obit ) );
+		NXRP_PrintConsoleToPlayer(NULL, "NPC Death 2");
 	}
 	else
 		Q_strcat( buf, sizeof( buf ), va( "%s by %s\n", self->client->pers.netname, obit ) );

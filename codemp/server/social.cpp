@@ -74,6 +74,7 @@ install and says so, rather than patching blind.
 */
 
 #include "server.h"
+#include "server/nxrp/nxrp_utils/nxrp_utils.h"
 #include <sys/stat.h>
 #include "social.h"
 #include "sv_gameapi.h"
@@ -5390,6 +5391,7 @@ static void Holo_CheckCond(htTrigger_t* t, htCond_t* c, const htCheck_t* k, qboo
 		break;
 	case HT_WHEN_NPC_KILLED:
 		go = k->downs ? qtrue : qfalse;
+		NXRP_PrintConsoleToPlayer(NULL, "NXRP: HT_WHEN_NPC_KILLED triggered");
 		break;
 	case HT_WHEN_PROP_DESTROYED:
 		if (c->ref < 0) {
