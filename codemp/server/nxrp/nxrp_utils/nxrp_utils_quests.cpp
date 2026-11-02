@@ -174,7 +174,7 @@ static bool NXRP_QuestParseOne(const std::string& s, size_t& p, nxrp_quest_t& q)
 
 	while (p < s.size()) {
 		NXRP_QuestSkipWs(s, p);
-		if (p < s.size() && s[p] == '}') { ++p; return !q.questName.empty(); }
+		if (p < s.size() && s[p] == '}') { ++p; return true; }
 		std::string key;
 		if (!NXRP_QuestParseQuoted(s, p, key)) return false;
 		NXRP_QuestSkipWs(s, p); if (p >= s.size() || s[p] != ':') return false; ++p;
@@ -182,8 +182,20 @@ static bool NXRP_QuestParseOne(const std::string& s, size_t& p, nxrp_quest_t& q)
 		if (key == "questName") {
 			if (!NXRP_QuestParseQuoted(s, p, q.questName)) return false;
 		} else if (key == "questPos") {
-			if (!NXRP_QuestParseVec3(s, p, q.questPos)) return false;
-			q.hasSpawn = qtrue;
+			NXRP_QuestSkipWs(s, p);
+			if (p < s.size() && s[p] == '[') {
+				size_t peek = p + 1;
+				NXRP_QuestSkipWs(s, peek);
+				if (peek < s.size() && s[peek] == ']') {
+					p = peek + 1;
+					q.hasSpawn = qfalse;
+				} else {
+					if (!NXRP_QuestParseVec3(s, p, q.questPos)) return false;
+					q.hasSpawn = qtrue;
+				}
+			} else {
+				return false;
+			}
 		} else if (key == "questNpcs") {
 			if (!NXRP_QuestParseNpcArray(s, p, q.npcs)) return false;
 		} else if (key == "questRewardExp") {
@@ -217,17 +229,59 @@ static bool NXRP_QuestLoadAll(std::vector<nxrp_quest_t>& out) {
 	std::string s = NXRP_QuestReadFileOrEmpty(path);
 	if (s.empty()) return true;
 
-	size_t qpos = s.find("\"quests\"");
-	if (qpos == std::string::npos) return true;
-	size_t p = s.find('[', qpos);
+	size_t p = s.find('{');
 	if (p == std::string::npos) return true;
 	++p;
 	while (p < s.size()) {
 		NXRP_QuestSkipWs(s, p);
-		if (p < s.size() && s[p] == ']') break;
-		nxrp_quest_t q;
-		if (!NXRP_QuestParseOne(s, p, q)) break;
-		if (!q.questName.empty()) out.push_back(q);
+		if (p < s.size() && s[p] == '}') break;
+
+		std::string key;
+		if (!NXRP_QuestParseQuoted(s, p, key)) break;
+		NXRP_QuestSkipWs(s, p);
+		if (p >= s.size() || s[p] != ':') break;
+		++p;
+		NXRP_QuestSkipWs(s, p);
+
+		if (!Q_stricmp(key.c_str(), "quests")) {
+			// Backward compatibility with legacy wrapper object.
+			if (p < s.size() && s[p] == '[') {
+				++p;
+				while (p < s.size()) {
+					NXRP_QuestSkipWs(s, p);
+					if (p < s.size() && s[p] == ']') break;
+					nxrp_quest_t q;
+					if (!NXRP_QuestParseOne(s, p, q)) break;
+					if (!q.questName.empty()) out.push_back(q);
+					NXRP_QuestSkipWs(s, p);
+					if (p < s.size() && s[p] == ',') ++p;
+				}
+			} else if (p < s.size() && s[p] == '{') {
+				++p;
+				while (p < s.size()) {
+					NXRP_QuestSkipWs(s, p);
+					if (p < s.size() && s[p] == '}') break;
+					std::string questKey;
+					if (!NXRP_QuestParseQuoted(s, p, questKey)) break;
+					NXRP_QuestSkipWs(s, p);
+					if (p >= s.size() || s[p] != ':') break;
+					++p;
+					nxrp_quest_t q;
+					if (!NXRP_QuestParseOne(s, p, q)) break;
+					if (q.questName.empty()) q.questName = questKey;
+					out.push_back(q);
+					NXRP_QuestSkipWs(s, p);
+					if (p < s.size() && s[p] == ',') ++p;
+				}
+			}
+		} else {
+			// Preferred format: top-level key is quest name.
+			nxrp_quest_t q;
+			if (!NXRP_QuestParseOne(s, p, q)) break;
+			if (q.questName.empty()) q.questName = key;
+			out.push_back(q);
+		}
+
 		NXRP_QuestSkipWs(s, p);
 		if (p < s.size() && s[p] == ',') ++p;
 	}
@@ -236,10 +290,10 @@ static bool NXRP_QuestLoadAll(std::vector<nxrp_quest_t>& out) {
 
 static std::string NXRP_QuestSerialize(const std::vector<nxrp_quest_t>& quests) {
 	std::ostringstream os;
-	os << "{\n  \"quests\": [\n";
+	os << "{\n";
 	for (size_t i = 0; i < quests.size(); ++i) {
 		const nxrp_quest_t& q = quests[i];
-		os << "    { \"questName\": \"" << NXRP_QuestEscape(q.questName) << "\", ";
+		os << "  \"" << NXRP_QuestEscape(q.questName) << "\": { ";
 		if (q.hasSpawn) os << "\"questPos\": [" << (int)q.questPos[0] << ", " << (int)q.questPos[1] << ", " << (int)q.questPos[2] << "], ";
 		else os << "\"questPos\": [], ";
 		os << "\"questNpcs\": [";
@@ -255,7 +309,7 @@ static std::string NXRP_QuestSerialize(const std::vector<nxrp_quest_t>& quests) 
 		if (i + 1 < quests.size()) os << ",";
 		os << "\n";
 	}
-	os << "  ]\n}\n";
+	os << "}\n";
 	return os.str();
 }
 
