@@ -38,6 +38,7 @@ enum NXRP_SubCmd {
 	NXRP_SUB_MMOVE,
 	NXRP_SUB_TP,
 	NXRP_SUB_VEHICLE,
+	NXRP_SUB_QUEST,
 	NXRP_SUB_INFO,
 
 	NXRP_SUB_ACCOUNT,
@@ -70,6 +71,7 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "npc" ) )		return NXRP_SUB_NPC;
 	if ( !Q_stricmp( s, "boss" ) )		return NXRP_SUB_BOSS;
 	if ( !Q_stricmp( s, "vehicle" ) )	return NXRP_SUB_VEHICLE;
+	if ( !Q_stricmp( s, "quest" ) )	return NXRP_SUB_QUEST;
 	if ( !Q_stricmp( s, "list" ) )	return NXRP_SUB_LIST;
 	return NXRP_SUB_UNKNOWN;
 }
@@ -245,6 +247,9 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 
 	case NXRP_SUB_NPC:
 		return NXRP_cmdAdmin_npc(cl, dispatchCursor);
+
+	case NXRP_SUB_QUEST:
+		return NXRP_cmdAdmin_quest(cl, dispatchCursor);
 
 	case NXRP_SUB_MODEL:
 		// Keep MODEL routing on prop_s.

@@ -690,6 +690,7 @@ if(BuildMPDed)
 		"${MPDir}/server/nxrp/nxrp_ffa.cpp"
 		"${MPDir}/server/nxrp/nxrp_skills/nxrp_skills.cpp"
 		"${MPDir}/server/nxrp/nxrp_utils/nxrp_utils_json.cpp"
+		"${MPDir}/server/nxrp/nxrp_utils/nxrp_utils_quests.cpp"
 		)
 	source_group("server/nxrp" FILES ${MPDedNxrpFiles})
 	set(MPDedFiles ${MPDedFiles} ${MPDedNxrpFiles})

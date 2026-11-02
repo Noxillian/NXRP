@@ -140,6 +140,18 @@ void NXRP_ResetNPCTracking(void);
 // List currently tracked !spawn NPCs.
 void NXRP_ListTrackedSpawnNPCs(client_t* cl);
 
+// Quest helpers (per-map quest array in nxrp_quests/<map>.json)
+bool NXRP_QuestAdd(client_t* cl, const char* questName);
+void NXRP_QuestList(client_t* cl);
+bool NXRP_QuestRemoveByName(client_t* cl, const char* questName);
+bool NXRP_QuestSetSpawn(client_t* cl, const char* questName, const vec3_t spawnPos);
+bool NXRP_QuestAddNpcAt(client_t* cl, const char* questName, const char* npcName, const vec3_t npcPos);
+bool NXRP_QuestSetRewardExp(client_t* cl, const char* questName, int exp);
+bool NXRP_QuestSetRewardCredits(client_t* cl, const char* questName, int credits);
+bool NXRP_QuestHasSpawn(const char* questName);
+bool NXRP_QuestHasNpcs(const char* questName);
+bool NXRP_QuestStartForPlayer(client_t* cl, const char* questName);
+
 // Print a standardized NXRP console message to a specific player. If cl is
 // NULL the message will be broadcast to all clients by passing NULL to
 // SV_SendServerCommand.

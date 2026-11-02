@@ -15,6 +15,85 @@ void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 // Forward-declare weapon give helper from sv_ccmds.cpp
 extern void SV_WannaGiveWeapon(client_t* cl, int wnum);
 
+qboolean NXRP_cmdAdmin_quest( client_t *cl, const char *chatCursor ) {
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!chatCursor || !*chatCursor) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !quest add <name> | !quest list | !quest r <name> | !quest <name> spawn | !quest <name> <npcname> | !quest <name> rewardExp <n> | !quest <name> rewardCredits <n> | !quest <name>");
+		return qtrue;
+	}
+
+	char t0[MAX_TOKEN_CHARS] = {0};
+	char t1[MAX_TOKEN_CHARS] = {0};
+	char t2[MAX_TOKEN_CHARS] = {0};
+	char t3[MAX_TOKEN_CHARS] = {0};
+	sscanf(chatCursor, "%31s %31s %31s %31s", t0, t1, t2, t3);
+
+	const bool startsWithQuest = !Q_stricmp(t0, "quest");
+	const char* cmd = startsWithQuest ? t1 : t0;
+	const char* a1  = startsWithQuest ? t2 : t1;
+	const char* a2  = startsWithQuest ? t3 : t2;
+
+	if (!cmd[0]) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !quest ...");
+		return qtrue;
+	}
+
+	if (!Q_stricmp(cmd, "list")) {
+		NXRP_QuestList(cl);
+		return qtrue;
+	}
+
+	if (!Q_stricmp(cmd, "add")) {
+		if (!NXRP_IsClientAdmin(cl)) return qtrue;
+		if (!a1[0]) { NXRP_PrintConsoleToPlayer(cl, "Usage: !quest add <questname>"); return qtrue; }
+		if (!NXRP_QuestAdd(cl, a1)) NXRP_PrintConsoleToPlayer(cl, "Failed to add quest");
+		return qtrue;
+	}
+
+	if (!Q_stricmp(cmd, "r")) {
+		if (!NXRP_IsClientAdmin(cl)) return qtrue;
+		if (!a1[0]) { NXRP_PrintConsoleToPlayer(cl, "Usage: !quest r <questname>"); return qtrue; }
+		if (!NXRP_QuestRemoveByName(cl, a1)) NXRP_PrintConsoleToPlayer(cl, "Failed to remove quest");
+		return qtrue;
+	}
+
+	const char* questName = cmd;
+	if (!a1[0]) {
+		if (!NXRP_QuestStartForPlayer(cl, questName)) NXRP_PrintConsoleToPlayer(cl, "Failed to start quest");
+		return qtrue;
+	}
+
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	if (!Q_stricmp(a1, "spawn")) {
+		vec3_t pos = {0,0,0};
+		if (cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, pos);
+		if (!NXRP_QuestSetSpawn(cl, questName, pos)) NXRP_PrintConsoleToPlayer(cl, "Failed to set quest spawn");
+		return qtrue;
+	}
+
+	if (!Q_stricmp(a1, "rewardExp")) {
+		if (!a2[0]) { NXRP_PrintConsoleToPlayer(cl, "Usage: !quest <questname> rewardExp <number>"); return qtrue; }
+		int exp = atoi(a2);
+		if (!NXRP_QuestSetRewardExp(cl, questName, exp)) NXRP_PrintConsoleToPlayer(cl, "Failed to set rewardExp");
+		return qtrue;
+	}
+
+	if (!Q_stricmp(a1, "rewardCredits")) {
+		if (!a2[0]) { NXRP_PrintConsoleToPlayer(cl, "Usage: !quest <questname> rewardCredits <number>"); return qtrue; }
+		int credits = atoi(a2);
+		if (!NXRP_QuestSetRewardCredits(cl, questName, credits)) NXRP_PrintConsoleToPlayer(cl, "Failed to set rewardCredits");
+		return qtrue;
+	}
+
+	vec3_t npcPos = {0,0,0};
+	if (cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, npcPos);
+	if (!NXRP_QuestAddNpcAt(cl, questName, a1, npcPos)) {
+		NXRP_PrintConsoleToPlayer(cl, "Failed to add quest NPC");
+	}
+	return qtrue;
+}
+
 // Handler: !noclip
 qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
