@@ -94,10 +94,6 @@ int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
 		}
 		VectorCopy(mins, e->r.mins);
 		VectorCopy(maxs, e->r.maxs);
-		//NXRP_PrintConsoleToPlayer(NULL, va("NXRP: applied collider mins=[%.2f %.2f %.2f] maxs=[%.2f %.2f %.2f] at origin=[%.2f %.2f %.2f]",
-			e->r.mins[0], e->r.mins[1], e->r.mins[2],
-			e->r.maxs[0], e->r.maxs[1], e->r.maxs[2],
-			e->s.pos.trBase[0], e->s.pos.trBase[1], e->s.pos.trBase[2]));
 		VectorAdd(e->s.pos.trBase, e->r.mins, e->r.absmin);
 		VectorAdd(e->s.pos.trBase, e->r.maxs, e->r.absmax);
 
@@ -126,8 +122,6 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 		// Expected format: { "id": <n>, "index": <n>, "model": "<path>", "position": [x, y, z], "angles": [ax, ay, az] }
 		std::string s = line;
 		if (s.size() > maxLen) s = s.substr(0, maxLen - 3) + "...";
-
-		int idv = NXRP_ExtractIntField(s, "\"id\"", -1);
 
 		// extract model path
 		std::string model;

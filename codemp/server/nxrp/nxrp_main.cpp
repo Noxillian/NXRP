@@ -27,7 +27,6 @@ void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 // Forward declarations for command handlers used across the module
 qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor );
-static qboolean NXRP_HandleNpcSpawn( client_t *cl, const char *chatCursor );
 int SV_SpawnModelAtClient(client_t* cl, const char* modelPath);
 
 enum NXRP_SubCmd {
