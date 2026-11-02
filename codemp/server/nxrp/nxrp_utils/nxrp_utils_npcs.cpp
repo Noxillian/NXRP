@@ -22,6 +22,8 @@ struct nxrp_pending_npc_spawn_t {
 	float yaw;
 };
 static std::deque<nxrp_pending_npc_spawn_t> nxrp_pending_npc_spawns;
+static std::map<int, std::string> nxrp_tracked_npcs;
+static int nxrp_last_tracked_npc_ent = -1;
 
 void NXRP_PushPendingNPCName(const char* name) {
 	if (!name) return;
@@ -125,17 +127,26 @@ void NXRP_HandlePendingNPCSpawn(int entnum) {
 }
 
 void NXRP_TrackNPC(int entnum, const char* name) {
-	(void)entnum;
-	(void)name;
+	if (entnum < 0 || !name || !name[0]) return;
+	nxrp_tracked_npcs[entnum] = name;
+	nxrp_last_tracked_npc_ent = entnum;
 }
 
 void NXRP_UntrackNPC(int entnum) {
-	(void)entnum;
+	if (entnum < 0) return;
+	nxrp_tracked_npcs.erase(entnum);
+	if (nxrp_last_tracked_npc_ent == entnum) nxrp_last_tracked_npc_ent = -1;
 }
 
 const char* NXRP_GetTrackedNPCName(int entnum) {
-	(void)entnum;
-	return NULL;
+	if (entnum < 0) return NULL;
+	std::map<int, std::string>::iterator it = nxrp_tracked_npcs.find(entnum);
+	if (it == nxrp_tracked_npcs.end()) return NULL;
+	return it->second.c_str();
+}
+
+int NXRP_GetLastTrackedNPCEnt(void) {
+	return nxrp_last_tracked_npc_ent;
 }
 
 // Wrapper for freeing entities: if the entity being freed is a tracked NPC,

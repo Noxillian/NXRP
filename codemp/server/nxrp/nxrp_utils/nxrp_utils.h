@@ -133,6 +133,7 @@ void NXRP_OnNPCUsed(client_t* user, int entnum);
 // Return the tracked NPC name for an entity number, or NULL if not tracked.
 // The returned pointer is owned by NXRP and valid until the NPC is untracked.
 const char* NXRP_GetTrackedNPCName(int entnum);
+int NXRP_GetLastTrackedNPCEnt(void);
 
 // Print a standardized NXRP console message to a specific player. If cl is
 // NULL the message will be broadcast to all clients by passing NULL to

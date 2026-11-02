@@ -297,6 +297,7 @@ qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor ) {
 
 	char cmdBuf[128];
 	Com_sprintf( cmdBuf, sizeof(cmdBuf), "npc spawn %s", arg );
+	NXRP_PushPendingNPCName(arg);
 	NXRP_PrintConsoleToPlayer(cl, "^3Spawning NPC");
 	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
 	return qtrue;

@@ -18,6 +18,7 @@ static int nxrp_prevRebelCountdown = 0;
 static int nxrp_prevImperialCountdown = 0;
 static qboolean nxrp_npcDeadSeen[MAX_GENTITIES];
 static qboolean nxrp_npcEverAlive[MAX_GENTITIES];
+static int nxrp_lastSpawnTrackedNpcEnt = -1;
 
 void SV_NXRP_ScoreInit(void) {
 	for (int i = 0; i < MAX_CLIENTS; i++) {
@@ -34,6 +35,19 @@ void SV_NXRP_ScoreInit(void) {
 void SV_NXRP_ScoreFrame(void) {
 
 	if (!svs.clients) return;
+
+	const int trackedNpcEnt = NXRP_GetLastTrackedNPCEnt();
+	if (trackedNpcEnt >= 0 && trackedNpcEnt < sv.num_entities) {
+		sharedEntity_t* trackedNpc = SV_GentityNum(trackedNpcEnt);
+		if (trackedNpc && trackedNpc->s.number == trackedNpcEnt) {
+			nxrp_lastSpawnTrackedNpcEnt = trackedNpcEnt;
+		} else if (nxrp_lastSpawnTrackedNpcEnt == trackedNpcEnt) {
+			NXRP_PrintConsoleToPlayer(NULL, "npc killed");
+			nxrp_lastSpawnTrackedNpcEnt = -1;
+		}
+	} else if (trackedNpcEnt < 0 && nxrp_lastSpawnTrackedNpcEnt >= 0) {
+		nxrp_lastSpawnTrackedNpcEnt = -1;
+	}
 	// If intermission is active, reset round start state so we trigger again
 	if (sv.configstrings[CS_INTERMISSION] && atoi(sv.configstrings[CS_INTERMISSION]) == 1) {
 		//NXRP_PrintConsoleToPlayer(NULL, "Round Start: Intermission");
