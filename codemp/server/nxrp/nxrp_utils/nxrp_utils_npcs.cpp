@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <string>
 #include <deque>
+#include <map>
 
 // Pending NPC names queued until NXRP_RegisterSpawn associates them with entnums
 static std::deque<std::string> nxrp_pending_npc_names;
@@ -130,10 +131,15 @@ void NXRP_TrackNPC(int entnum, const char* name) {
 	if (entnum < 0 || !name || !name[0]) return;
 	nxrp_tracked_npcs[entnum] = name;
 	nxrp_last_tracked_npc_ent = entnum;
+	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP: tracking npc ent=%d name=%s", entnum, name);
 }
 
 void NXRP_UntrackNPC(int entnum) {
 	if (entnum < 0) return;
+	const char* tracked = NXRP_GetTrackedNPCName(entnum);
+	if (tracked) {
+		NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP: untracking npc ent=%d name=%s", entnum, tracked);
+	}
 	nxrp_tracked_npcs.erase(entnum);
 	if (nxrp_last_tracked_npc_ent == entnum) nxrp_last_tracked_npc_ent = -1;
 }
@@ -153,6 +159,12 @@ int NXRP_GetLastTrackedNPCEnt(void) {
 // call NXRP_OnNPCKilled before forwarding to the real G_FreeEntity in the VM.
 void NXRP_FreeEntity(void* entPtr) {
 	if (!entPtr) return;
+	sharedEntity_t* ent = (sharedEntity_t*)entPtr;
+	int entnum = ent->s.number;
+	const char* trackedName = NXRP_GetTrackedNPCName(entnum);
+	if (trackedName) {
+		NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP: G_FreeEntity called for tracked npc ent=%d name=%s health=%d", entnum, trackedName, ent->health);
+	}
 
 	// Forward to the real VM G_FreeEntity function
 	void* dll = GVM_GetDllHandle();
@@ -162,6 +174,10 @@ void NXRP_FreeEntity(void* entPtr) {
 	void* old = GVM_BeginNative();
 	G_FreeEntity_f(entPtr);
 	GVM_EndNative(old);
+	if (trackedName) {
+		NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP: tracked npc entity freed ent=%d name=%s", entnum, trackedName);
+		NXRP_UntrackNPC(entnum);
+	}
 }
 
 // Persist a spawned NPC to a per-map JSON file

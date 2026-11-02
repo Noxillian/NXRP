@@ -94,7 +94,7 @@ int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
 		}
 		VectorCopy(mins, e->r.mins);
 		VectorCopy(maxs, e->r.maxs);
-		NXRP_PrintConsoleToPlayer(NULL, va("NXRP: applied collider mins=[%.2f %.2f %.2f] maxs=[%.2f %.2f %.2f] at origin=[%.2f %.2f %.2f]",
+		//NXRP_PrintConsoleToPlayer(NULL, va("NXRP: applied collider mins=[%.2f %.2f %.2f] maxs=[%.2f %.2f %.2f] at origin=[%.2f %.2f %.2f]",
 			e->r.mins[0], e->r.mins[1], e->r.mins[2],
 			e->r.maxs[0], e->r.maxs[1], e->r.maxs[2],
 			e->s.pos.trBase[0], e->s.pos.trBase[1], e->s.pos.trBase[2]));
@@ -162,7 +162,7 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 		}
 
 		if (model.empty()) model = "<unknown>";
-		NXRP_PrintConsoleToPlayerFmt(cl, "%d: id=%d model=%s position=%.0f,%.0f,%.0f angles=%.0f,%.0f,%.0f", idx, idv, model.c_str(), ox, oy, oz, ax, ay, az);
+		//NXRP_PrintConsoleToPlayerFmt(cl, "%d: id=%d model=%s position=%.0f,%.0f,%.0f angles=%.0f,%.0f,%.0f", idx, idv, model.c_str(), ox, oy, oz, ax, ay, az);
 		idx++;
 	}
 	if (!any) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");

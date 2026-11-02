@@ -372,6 +372,26 @@ static qboolean Holo_OppositeSides(void* a, void* b)
 static qboolean Holo_PropHit(void* targ, void* attacker, const float* point, int damage);
 static void Social_GDamageHook(void* targ, void* inflictor, void* attacker, float* dir, float* point, int damage, int dflags, int mod)
 {
+	if (targ && Social_IsNPCEntity(targ) && damage > 0) {
+		sharedEntity_t* npc = (sharedEntity_t*)targ;
+		const sharedEntity_t* atk = (const sharedEntity_t*)attacker;
+		const int predicted = npc->health - damage;
+		Com_Printf("NXRP-Debug: G_Damage NPC hit ent=%d cls=%s health=%d dmg=%d mod=%d attacker=%d predicted=%d\n",
+			npc->s.number,
+			npc->classname ? npc->classname : "<none>",
+			npc->health,
+			damage,
+			mod,
+			atk ? atk->s.number : -1,
+			predicted);
+		if (npc->health > 0 && predicted <= 0) {
+			Com_Printf("NXRP-Debug: G_Damage predicts NPC death ent=%d cls=%s mod=%d\n",
+				npc->s.number,
+				npc->classname ? npc->classname : "<none>",
+				mod);
+		}
+	}
+
 	if (Holo_PropHit(targ, attacker, point, damage)) {
 		return; // a scenario's breakable prop: its health is the scenario's to keep
 	}
@@ -1611,8 +1631,12 @@ static void Social_NpcFrame(void)
 			// spawns in its place.
 			if (body->stats[STAT_HEALTH] <= 0 || body->pm_type == MB2_PM_DEAD) {
 				if (!n->deadAt) {
+					Com_Printf("NXRP-Debug: Social_NpcFrame death detected ent=%d type=%s health=%d pm_type=%d\n",
+						n->ent, n->type ? n->type : "<unknown>", body->stats[STAT_HEALTH], body->pm_type);
 					n->deadAt = svs.time;
 				} else if (svs.time - n->deadAt > 3000 && gFreeEntity) {
+					Com_Printf("NXRP-Debug: Social_NpcFrame freeing dead NPC ent=%d type=%s after %dms\n",
+						n->ent, n->type ? n->type : "<unknown>", svs.time - n->deadAt);
 					void* old = GVM_BeginNative();
 					gFreeEntity(SV_GentityNum(n->ent));
 					GVM_EndNative(old);

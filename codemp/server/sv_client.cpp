@@ -3696,6 +3696,8 @@ void SV_EconomyFrame( void ) {
 
 		if ( victim->economyLastHealth > 0 && health <= 0 && vps->pm_type == MB2_PM_DEAD ) {
 			const int attackerNum = vps->persistant[PERS_ATTACKER];
+			Com_Printf("NXRP-Debug: SV_EconomyFrame player death detected victim=%d attacker=%d health=%d pm_type=%d\n",
+				i, attackerNum, health, vps->pm_type);
 
 			if ( attackerNum >= 0 && attackerNum < sv_maxclients->integer && attackerNum != i ) {
 				client_t *attacker = &svs.clients[attackerNum];

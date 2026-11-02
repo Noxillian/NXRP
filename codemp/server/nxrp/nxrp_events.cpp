@@ -19,6 +19,7 @@ static int nxrp_prevImperialCountdown = 0;
 static qboolean nxrp_npcDeadSeen[MAX_GENTITIES];
 static qboolean nxrp_npcEverAlive[MAX_GENTITIES];
 static int nxrp_lastSpawnTrackedNpcEnt = -1;
+static int nxrp_lastSpawnTrackedNpcHealth = 0;
 
 void SV_NXRP_ScoreInit(void) {
 	for (int i = 0; i < MAX_CLIENTS; i++) {
@@ -29,6 +30,8 @@ void SV_NXRP_ScoreInit(void) {
 		nxrp_npcDeadSeen[i] = qfalse;
 		nxrp_npcEverAlive[i] = qfalse;
 	}
+	nxrp_lastSpawnTrackedNpcEnt = -1;
+	nxrp_lastSpawnTrackedNpcHealth = 0;
 	NXRP_FFA_Frame();
 }
 
@@ -40,13 +43,39 @@ void SV_NXRP_ScoreFrame(void) {
 	if (trackedNpcEnt >= 0 && trackedNpcEnt < sv.num_entities) {
 		sharedEntity_t* trackedNpc = SV_GentityNum(trackedNpcEnt);
 		if (trackedNpc && trackedNpc->s.number == trackedNpcEnt) {
-			nxrp_lastSpawnTrackedNpcEnt = trackedNpcEnt;
+			if (nxrp_lastSpawnTrackedNpcEnt != trackedNpcEnt) {
+				nxrp_lastSpawnTrackedNpcEnt = trackedNpcEnt;
+				nxrp_lastSpawnTrackedNpcHealth = trackedNpc->health;
+				NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP: watching npc ent=%d cls=%s health=%d",
+					trackedNpcEnt,
+					trackedNpc->classname ? trackedNpc->classname : "<none>",
+					trackedNpc->health);
+			}
+			if (nxrp_lastSpawnTrackedNpcHealth > 0 && trackedNpc->health <= 0) {
+				NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP: npc health transition ent=%d %d -> %d",
+					trackedNpcEnt, nxrp_lastSpawnTrackedNpcHealth, trackedNpc->health);
+			}
+			if (trackedNpc->health <= 0) {
+				if (!nxrp_npcDeadSeen[trackedNpcEnt]) {
+					NXRP_PrintConsoleToPlayer(NULL, "npc killed");
+					nxrp_npcDeadSeen[trackedNpcEnt] = qtrue;
+				}
+			} else {
+				nxrp_npcDeadSeen[trackedNpcEnt] = qfalse;
+				nxrp_lastSpawnTrackedNpcHealth = trackedNpc->health;
+			}
 		} else if (nxrp_lastSpawnTrackedNpcEnt == trackedNpcEnt) {
-			NXRP_PrintConsoleToPlayer(NULL, "npc killed");
+			NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP: tracked npc entity handle invalid ent=%d", trackedNpcEnt);
+			if (!nxrp_npcDeadSeen[trackedNpcEnt]) {
+				NXRP_PrintConsoleToPlayer(NULL, "npc killed");
+				nxrp_npcDeadSeen[trackedNpcEnt] = qtrue;
+			}
 			nxrp_lastSpawnTrackedNpcEnt = -1;
+			nxrp_lastSpawnTrackedNpcHealth = 0;
 		}
 	} else if (trackedNpcEnt < 0 && nxrp_lastSpawnTrackedNpcEnt >= 0) {
 		nxrp_lastSpawnTrackedNpcEnt = -1;
+		nxrp_lastSpawnTrackedNpcHealth = 0;
 	}
 	// If intermission is active, reset round start state so we trigger again
 	if (sv.configstrings[CS_INTERMISSION] && atoi(sv.configstrings[CS_INTERMISSION]) == 1) {
