@@ -545,12 +545,27 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 
 		ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
 		ps->fd.forcePowerLevel[FP_LIGHTNING] = 2;
+		ps->fd.forcePowerBaseLevel[FP_LIGHTNING] = 1;
 
-		ps->fd.forcePowersKnown |= (1 << MB_FP_PUSH);
-		ps->fd.forcePowerLevel[MB_FP_PUSH] = 2;
+		ps->fd.forcePowersKnown |= (1 << FP_LEVITATION);
+		ps->fd.forcePowerLevel[FP_LEVITATION] = 3;
+
+		//ps->fd.forcePowersKnown |= (1 << MB_FP_PUSH);
+		//ps->fd.forcePowerLevel[MB_FP_PUSH] = 2;
 
 		ps->fd.forcePowersKnown |= (1 << MB_FORCE_PULL);
 		ps->fd.forcePowerLevel[MB_FORCE_PULL] = 2;
+
+		ps->fd.forcePowersKnown = (1 << MB_FORCE_LIGHTNING);
+		ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = 1;
+		ps->fd.forcePowerBaseLevel[MB_FORCE_LIGHTNING] = 1;
+
+
+		ps->fd.forcePowersKnown& (1 << FP_DRAIN);
+		ps->fd.forcePowersActive& (1 << FP_DRAIN);
+
+
+
 
 		/*
 		ps->fd.forcePowersKnown |= (1 << MB_FORCE_PUSH);
@@ -570,11 +585,9 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 
 		//ps->fd.forcePowerLevel[FP_LIGHTNING] = 2;
 		// Grant force-levitation (force jump) same as lightning: mark known and set level
-		ps->fd.forcePowersKnown |= (1 << FP_LEVITATION);
-		ps->fd.forcePowerLevel[FP_LEVITATION] = 3;
 		ps->fd.forcePowerMax = 300;
 		ps->fd.forcePower = 200;
-		ps->fd.forcePowersActive = (1 << FP_LIGHTNING);
+		//ps->fd.forcePowersActive = (1 << FP_LIGHTNING);
 
 		SV_WannaGiveWeapon(target, WP_CLONE_PISTOL);
 		SV_WannaGiveWeapon(target, WP_SABER);
