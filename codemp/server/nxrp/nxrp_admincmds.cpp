@@ -18,7 +18,7 @@ extern void SV_WannaGiveWeapon(client_t* cl, int wnum);
 qboolean NXRP_cmdAdmin_quest( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!chatCursor || !*chatCursor) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !quest add <name> | !quest list | !quest r <name> | !quest <name> spawn | !quest <name> <npcname> | !quest <name> rewardExp <n> | !quest <name> rewardCredits <n> | !quest <name>");
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !quest add <name> | !quest list | !quest r <name> | !quest <name> spawn | !quest <name> addNpc <npcname> | !quest <name> rewardExp <n> | !quest <name> rewardCredits <n> | !quest <name>");
 		return qtrue;
 	}
 
@@ -72,6 +72,16 @@ qboolean NXRP_cmdAdmin_quest( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
+	if (!Q_stricmp(a1, "addNpc")) {
+		if (!a2[0]) { NXRP_PrintConsoleToPlayer(cl, "Usage: !quest <questname> addNpc <npcname>"); return qtrue; }
+		vec3_t npcPos = {0,0,0};
+		if (cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, npcPos);
+		if (!NXRP_QuestAddNpcAt(cl, questName, a2, npcPos)) {
+			NXRP_PrintConsoleToPlayer(cl, "Failed to add quest NPC");
+		}
+		return qtrue;
+	}
+
 	if (!Q_stricmp(a1, "rewardExp")) {
 		if (!a2[0]) { NXRP_PrintConsoleToPlayer(cl, "Usage: !quest <questname> rewardExp <number>"); return qtrue; }
 		int exp = atoi(a2);
@@ -86,11 +96,7 @@ qboolean NXRP_cmdAdmin_quest( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	vec3_t npcPos = {0,0,0};
-	if (cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, npcPos);
-	if (!NXRP_QuestAddNpcAt(cl, questName, a1, npcPos)) {
-		NXRP_PrintConsoleToPlayer(cl, "Failed to add quest NPC");
-	}
+	NXRP_PrintConsoleToPlayer(cl, "Usage: !quest <questname> spawn | !quest <questname> addNpc <npcname> | !quest <questname> rewardExp <n> | !quest <questname> rewardCredits <n> | !quest <questname>");
 	return qtrue;
 }
 
@@ -539,6 +545,12 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 
 		ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
 		ps->fd.forcePowerLevel[FP_LIGHTNING] = 2;
+
+		ps->fd.forcePowersKnown |= (1 << MB_FP_PUSH);
+		ps->fd.forcePowerLevel[MB_FP_PUSH] = 2;
+
+		ps->fd.forcePowersKnown |= (1 << MB_FORCE_PULL);
+		ps->fd.forcePowerLevel[MB_FORCE_PULL] = 2;
 
 		/*
 		ps->fd.forcePowersKnown |= (1 << MB_FORCE_PUSH);

@@ -249,7 +249,7 @@ void NXRP_ResetNPCTracking(void) {
 	nxrp_pending_npc_spawns.clear();
 	nxrp_tracked_npcs.clear();
 	nxrp_known_npc_ents.clear();
-	NXRP_PrintConsoleToPlayer(NULL, "NXRP: reset NPC tracking for new round");
+	NXRP_PrintConsoleToPlayer(NULL, "Reset NPCs");
 }
 
 void NXRP_ListTrackedSpawnNPCs(client_t* cl) {
