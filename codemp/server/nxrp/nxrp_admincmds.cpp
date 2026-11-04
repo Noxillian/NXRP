@@ -644,9 +644,6 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		Spin_GiveWeaponAmmo(target, WP_MINIGUN);
 		Spin_GiveWeaponAmmo(target, WP_ROCKET_LAUNCHER);
 
-		SV_WannaGiveForce(target, FP_LIGHTNING);
-		SV_WannaGiveForce(target, MB_FP_SPEED);
-
 		ps->fd.forcePowerLevel[FP_LIGHTNING] = FORCE_LEVEL_2;
 
 		ps->fd.forcePowerLevel[FP_SEE] = 2;
@@ -684,6 +681,7 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = FORCE_LEVEL_2;
 
 
+
 		char userinfo[MAX_INFO_STRING];
 		SV_GetUserinfo(targetIdx, userinfo, sizeof(userinfo));
 			Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
@@ -691,11 +689,15 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		SV_SetUserinfo(targetIdx, userinfo);
 		GVM_ClientUserinfoChanged(targetIdx);
 
+		cl->gentity->playerState->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
+		SV_WannaGiveForce(target, FP_LIGHTNING);
+		SV_WannaGiveForce(target, MB_FP_SPEED);
+
 		// Give the player an immediate force jump boost
-		SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force jump 3"), 1);
-		SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force lightning 2"), 1);
-		SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force pull"), 1);
-		SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force destruct"), 1);
+		//SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force jump 3"), 1);
+		//SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force lightning 2"), 1);
+		//SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force pull"), 1);
+		//SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force destruct"), 1);
 	}
 
 	if (!cheats) {
