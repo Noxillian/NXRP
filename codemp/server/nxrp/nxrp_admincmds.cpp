@@ -678,6 +678,11 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePowerLevel[FP_SABER_OFFENSE] = FORCE_LEVEL_3;
 		ps->fd.forcePowerLevel[FP_GRIP] = FORCE_LEVEL_2;
 
+		ps->fd.forcePowersKnown |= (1 << MB_FP_LIGHTNING);
+		ps->fd.forcePowersKnown |= (1 << MB_FORCE_LIGHTNING);
+		ps->fd.forcePowerLevel[MB_FP_LIGHTNING] = FORCE_LEVEL_2;
+		ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = FORCE_LEVEL_2;
+
 
 		char userinfo[MAX_INFO_STRING];
 		SV_GetUserinfo(targetIdx, userinfo, sizeof(userinfo));
