@@ -550,6 +550,11 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePowersKnown |= (1 << FP_LEVITATION);
 		ps->fd.forcePowerLevel[FP_LEVITATION] = 3;
 
+		cl->gentity->playerState->fd.forcePowerLevel[MB_FORCE_SABER_DEFENCE] = 1;
+		cl->gentity->playerState->fd.forcePowerLevel[MB_FORCE_SABER_OFFENCE] = 1;
+		cl->gentity->playerState->fd.forcePowerLevel[MB_FORCE_SABER_THROW] = 1;
+		cl->gentity->playerState->fd.forcePowerLevel[MB_FORCE_PROTECT] = 1;
+
 		//ps->fd.forcePowersKnown |= (1 << MB_FP_PUSH);
 		//ps->fd.forcePowerLevel[MB_FP_PUSH] = 2;
 
@@ -559,6 +564,14 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 
 		ps->fd.forcePowersKnown |= (1 << MB_FORCE_PULL);
 		ps->fd.forcePowerLevel[MB_FORCE_PULL] = 2;
+
+		ps->fd.forcePowersKnown |= (1 << FP_DRAIN);
+		ps->fd.forcePowerLevel[FP_DRAIN] = 3;
+		ps->fd.forcePowersActive = (1 << FP_DRAIN);
+
+		ps->stats[STAT_WEAPONS] |= (1 << WP_SABER);
+
+
 
 
 		//ps->fd.forcePowersKnown& (1 << FP_DRAIN);
