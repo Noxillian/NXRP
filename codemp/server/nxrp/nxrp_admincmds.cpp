@@ -496,7 +496,6 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 	const qboolean cheats = Cvar_VariableIntegerValue("sv_cheats") ? qtrue : qfalse;
 	if (!cheats) {
 		Cvar_Set("sv_cheats", "1");
-		giveforce
 		GVM_RunFrame(sv.time);
 	}
 
