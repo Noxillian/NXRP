@@ -563,6 +563,7 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		SV_WannaGiveForce(target, MB_FORCE_LIGHTNING);
 		ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = 2;
 		ps->fd.forcePowerBaseLevel[MB_FORCE_LIGHTNING] = 2;
+		ps->fd.forcePowersActive = (1 << MB_FORCE_LIGHTNING);
 
 		ps->fd.forcePowersKnown |= (1 << MB_FORCE_PULL);
 		ps->fd.forcePowerLevel[MB_FORCE_PULL] = 2;
@@ -642,6 +643,18 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		Spin_GiveWeaponAmmo(target, WP_SHOTGUN);
 		Spin_GiveWeaponAmmo(target, WP_MINIGUN);
 		Spin_GiveWeaponAmmo(target, WP_ROCKET_LAUNCHER);
+
+		SV_WannaGiveForce(target, FP_LIGHTNING);
+		SV_WannaGiveForce(target, MB_FP_SPEED);
+
+		ps->fd.forcePowerLevel[FP_LIGHTNING] = FORCE_LEVEL_2;
+
+		ps->fd.forcePowerLevel[FP_SEE] = 2;
+		ps->fd.forcePowerLevel[FP_LIGHTNING] = 2;
+		ps->fd.forcePowerLevel[FP_ABSORB];
+		SV_ExecuteClientCommandDelayed_h(target, std::string("setForceLightning 3"), 1);
+
+		ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
 
 		char userinfo[MAX_INFO_STRING];
 		SV_GetUserinfo(targetIdx, userinfo, sizeof(userinfo));
