@@ -496,6 +496,7 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 	const qboolean cheats = Cvar_VariableIntegerValue("sv_cheats") ? qtrue : qfalse;
 	if (!cheats) {
 		Cvar_Set("sv_cheats", "1");
+		giveforce
 		GVM_RunFrame(sv.time);
 	}
 
@@ -600,8 +601,13 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 
 		//ps->fd.forcePowerLevel[FP_LIGHTNING] = 2;
 		// Grant force-levitation (force jump) same as lightning: mark known and set level
-		ps->fd.forcePowerMax = 300;
-		ps->fd.forcePower = 200;
+		ps->fd.forcePowerMax = 150;
+		ps->fd.forcePower = 150;
+
+		ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
+		ps->fd.forcePowerLevel[FP_LIGHTNING] = 2;
+		ps->fd.forcePower = 100;
+		ps->fd.forcePowerMax = 100;
 		//ps->fd.forcePowersActive = (1 << FP_LIGHTNING);
 
 		SV_WannaGiveWeapon(target, WP_CLONE_PISTOL);
@@ -646,9 +652,10 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		GVM_ClientUserinfoChanged(targetIdx);
 
 		// Give the player an immediate force jump boost
-		SV_ExecuteClientCommandDelayed_h(target, std::string("force jump 3"), 1);
-		SV_ExecuteClientCommandDelayed_h(target, std::string("force lightning 2"), 1);
-		SV_ExecuteClientCommandDelayed_h(target, std::string("force push 2"), 1);
+		SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force jump 3"), 1);
+		SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force lightning 2"), 1);
+		SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force pull"), 1);
+		SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force destruct"), 1);
 	}
 
 	if (!cheats) {
