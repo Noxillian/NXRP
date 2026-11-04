@@ -544,11 +544,8 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePowerLevel[MB_FORCE_SABER_OFFENCE] = 2;
 		ps->fd.forcePowerLevel[MB_FORCE_SABER_THROW]   = 2;
 
-		//ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
-		//ps->fd.forcePowerLevel[FP_LIGHTNING] = 2;
-		//ps->fd.forcePowerBaseLevel[FP_LIGHTNING] = 1;
 
-		ps->fd.forcePowersKnown |= (1 << FP_LEVITATION);
+		//ps->fd.forcePowersKnown |= (1 << FP_LEVITATION);
 		ps->fd.forcePowerLevel[FP_LEVITATION] = 3;
 
 		ps->fd.forcePowerLevel[MB_FORCE_SABER_DEFENCE] = 1;
@@ -556,59 +553,8 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePowerLevel[MB_FORCE_SABER_THROW] = 1;
 		ps->fd.forcePowerLevel[MB_FORCE_PROTECT] = 1;
 
-		//ps->fd.forcePowersKnown |= (1 << MB_FP_PUSH);
-		//ps->fd.forcePowerLevel[MB_FP_PUSH] = 2;
-
-		// Use sv_ccmds force helper for lightning grant
 		SV_WannaGiveForce(target, MB_FORCE_LIGHTNING);
 		ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = 2;
-		ps->fd.forcePowerBaseLevel[MB_FORCE_LIGHTNING] = 2;
-		ps->fd.forcePowersActive = (1 << MB_FORCE_LIGHTNING);
-
-		ps->fd.forcePowersKnown |= (1 << MB_FORCE_PULL);
-		ps->fd.forcePowerLevel[MB_FORCE_PULL] = 2;
-
-		ps->fd.forcePowersKnown |= (1 << FP_DRAIN);
-		ps->fd.forcePowerLevel[FP_DRAIN] = 3;
-		ps->fd.forcePowersActive = (1 << FP_DRAIN);
-
-		ps->stats[STAT_WEAPONS] |= (1 << WP_SABER);
-
-
-
-
-		//ps->fd.forcePowersKnown& (1 << FP_DRAIN);
-		//ps->fd.forcePowersActive& (1 << FP_DRAIN);
-
-
-
-
-		/*
-		ps->fd.forcePowersKnown |= (1 << MB_FORCE_PUSH);
-		ps->fd.forcePowerLevel[MB_FORCE_PUSH] = 2;
-		ps->fd.forcePowersActive&(MB_FORCE_PUSH) == 1;
-		ps->fd.forcePowerLevel[FP_PUSH] = 2;
-		ps->fd.forcePowersActive& (FP_PUSH) == 1;
-
-		ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
-		ps->fd.forcePowerLevel[FP_LIGHTNING] = 2;
-		ps->fd.forcePowersActive& (1 << FP_LIGHTNING) == 0;
-
-		ps->fd.forcePowersKnown |= (1 << FP_HEAL);
-		ps->fd.forcePowersKnown |= (1 << FP_PUSH);
-		ps->fd.forcePowerLevel[FP_HEAL] = 1;
-		*/
-
-		//ps->fd.forcePowerLevel[FP_LIGHTNING] = 2;
-		// Grant force-levitation (force jump) same as lightning: mark known and set level
-		ps->fd.forcePowerMax = 150;
-		ps->fd.forcePower = 150;
-
-		ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
-		ps->fd.forcePowerLevel[FP_LIGHTNING] = 2;
-		ps->fd.forcePower = 100;
-		ps->fd.forcePowerMax = 100;
-		//ps->fd.forcePowersActive = (1 << FP_LIGHTNING);
 
 		SV_WannaGiveWeapon(target, WP_CLONE_PISTOL);
 		SV_WannaGiveWeapon(target, WP_SABER);
@@ -644,44 +590,6 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		Spin_GiveWeaponAmmo(target, WP_MINIGUN);
 		Spin_GiveWeaponAmmo(target, WP_ROCKET_LAUNCHER);
 
-		ps->fd.forcePowerLevel[FP_LIGHTNING] = FORCE_LEVEL_2;
-
-		ps->fd.forcePowerLevel[FP_SEE] = 2;
-		ps->fd.forcePowerLevel[FP_LIGHTNING] = 2;
-		ps->fd.forcePowerLevel[FP_ABSORB];
-		SV_ExecuteClientCommandDelayed_h(target, std::string("setForceLightning 3"), 1);
-
-		ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
-
-			
-
-		ps->fd.forcePowersKnown = (1 << FP_HEAL) | (1 << FP_LEVITATION) | (1 << FP_SPEED) | (1 << FP_PUSH) | (1 << FP_PULL) | (1 << FP_TELEPATHY) | (1 << FP_GRIP) | (1 << FP_LIGHTNING) | (1 << FP_SABERTHROW) | (1 << FP_SABER_DEFENSE) | (1 << FP_SABER_OFFENSE) | (1 << FP_RAGE) | (1 << FP_DRAIN) | (1 << FP_PROTECT) | (1 << FP_ABSORB) | (1 << FP_SEE);
-		ps->fd.forcePowerLevel[FP_HEAL] = FORCE_LEVEL_2;
-		ps->fd.forcePowerLevel[FP_LEVITATION] = FORCE_LEVEL_2;
-		ps->fd.forcePowerLevel[FP_PUSH] = FORCE_LEVEL_1;
-		ps->fd.forcePowerLevel[FP_PULL] = FORCE_LEVEL_1;
-		ps->fd.forcePowerLevel[FP_SABERTHROW] = FORCE_LEVEL_2;
-		ps->fd.forcePowerLevel[FP_SPEED] = FORCE_LEVEL_2;
-		ps->fd.forcePowerLevel[FP_LIGHTNING] = FORCE_LEVEL_1;
-		ps->fd.forcePowerLevel[FP_TELEPATHY] = FORCE_LEVEL_2;
-
-		ps->fd.forcePowerLevel[FP_RAGE] = FORCE_LEVEL_1;
-		ps->fd.forcePowerLevel[FP_PROTECT] = FORCE_LEVEL_1;
-		ps->fd.forcePowerLevel[FP_ABSORB] = FORCE_LEVEL_1;
-		ps->fd.forcePowerLevel[FP_DRAIN] = FORCE_LEVEL_1;
-		ps->fd.forcePowerLevel[FP_SEE] = FORCE_LEVEL_1;
-
-		ps->fd.forcePowerLevel[FP_SABER_DEFENSE] = FORCE_LEVEL_3;
-		ps->fd.forcePowerLevel[FP_SABER_OFFENSE] = FORCE_LEVEL_3;
-		ps->fd.forcePowerLevel[FP_GRIP] = FORCE_LEVEL_2;
-
-		ps->fd.forcePowersKnown |= (1 << MB_FP_LIGHTNING);
-		ps->fd.forcePowersKnown |= (1 << MB_FORCE_LIGHTNING);
-		ps->fd.forcePowerLevel[MB_FP_LIGHTNING] = FORCE_LEVEL_2;
-		ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = FORCE_LEVEL_2;
-
-
-
 		char userinfo[MAX_INFO_STRING];
 		SV_GetUserinfo(targetIdx, userinfo, sizeof(userinfo));
 			Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
@@ -689,7 +597,6 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		SV_SetUserinfo(targetIdx, userinfo);
 		GVM_ClientUserinfoChanged(targetIdx);
 
-		cl->gentity->playerState->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
 		SV_WannaGiveForce(target, FP_LIGHTNING);
 		SV_WannaGiveForce(target, MB_FP_SPEED);
 
