@@ -2569,6 +2569,10 @@ static void SV_WannaForce(client_t* cl, int fpwr) {
 
 }
 
+void SV_WannaGiveForce(client_t* cl, int fpwr) {
+	SV_WannaForce(cl, fpwr);
+}
+
 /*
 ==================
 Give a client a force power

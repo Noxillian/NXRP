@@ -14,6 +14,7 @@
 void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 // Forward-declare weapon give helper from sv_ccmds.cpp
 extern void SV_WannaGiveWeapon(client_t* cl, int wnum);
+extern void SV_WannaGiveForce(client_t* cl, int fpwr);
 
 qboolean NXRP_cmdAdmin_quest( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
@@ -550,17 +551,18 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePowersKnown |= (1 << FP_LEVITATION);
 		ps->fd.forcePowerLevel[FP_LEVITATION] = 3;
 
-		cl->gentity->playerState->fd.forcePowerLevel[MB_FORCE_SABER_DEFENCE] = 1;
-		cl->gentity->playerState->fd.forcePowerLevel[MB_FORCE_SABER_OFFENCE] = 1;
-		cl->gentity->playerState->fd.forcePowerLevel[MB_FORCE_SABER_THROW] = 1;
-		cl->gentity->playerState->fd.forcePowerLevel[MB_FORCE_PROTECT] = 1;
+		ps->fd.forcePowerLevel[MB_FORCE_SABER_DEFENCE] = 1;
+		ps->fd.forcePowerLevel[MB_FORCE_SABER_OFFENCE] = 1;
+		ps->fd.forcePowerLevel[MB_FORCE_SABER_THROW] = 1;
+		ps->fd.forcePowerLevel[MB_FORCE_PROTECT] = 1;
 
 		//ps->fd.forcePowersKnown |= (1 << MB_FP_PUSH);
 		//ps->fd.forcePowerLevel[MB_FP_PUSH] = 2;
 
-		ps->fd.forcePowersKnown = (1 << MB_FORCE_LIGHTNING);
-		ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = 1;
-		ps->fd.forcePowerBaseLevel[MB_FORCE_LIGHTNING] = 1;
+		// Use sv_ccmds force helper for lightning grant
+		SV_WannaGiveForce(target, MB_FORCE_LIGHTNING);
+		ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = 2;
+		ps->fd.forcePowerBaseLevel[MB_FORCE_LIGHTNING] = 2;
 
 		ps->fd.forcePowersKnown |= (1 << MB_FORCE_PULL);
 		ps->fd.forcePowerLevel[MB_FORCE_PULL] = 2;
