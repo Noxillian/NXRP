@@ -553,7 +553,8 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePowerLevel[MB_FORCE_SABER_THROW] = 1;
 		ps->fd.forcePowerLevel[FP_PROTECT] = 1;
 
-
+		ps->fd.forcePowerBaseLevel[MB_FORCE_LIGHTNING] = 2;
+		ps->fd.forcePowerBaseLevel[FP_PROTECT] = 1;
 		ps->fd.forcePowersKnown = (1 << FP_LIGHTNING);
 		SV_WannaGiveForce(target, MB_FORCE_LIGHTNING);
 		ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = 2;
