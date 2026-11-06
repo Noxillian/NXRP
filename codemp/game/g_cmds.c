@@ -541,6 +541,8 @@ Let everyone know about a team change
 void BroadcastTeamChange( gclient_t *client, int oldTeam )
 {
 	client->ps.fd.forceDoInit = 1; //every time we change teams make sure our force powers are set right
+	Com_Printf("[NXRP][ForceDebug] forceDoInit=1 (team change) client=%s oldTeam=%d newTeam=%d\n",
+		client->pers.netname, oldTeam, client->sess.sessionTeam);
 
 	if (level.gametype == GT_SIEGE)
 	{ //don't announce these things in siege
@@ -1255,6 +1257,8 @@ void Cmd_ForceChanged_f( gentity_t *ent )
 	trap->SendServerCommand( ent-g_entities, va("print \"%s%s\n\"", S_COLOR_GREEN, fpChStr) );
 
 	ent->client->ps.fd.forceDoInit = 1;
+	Com_Printf("[NXRP][ForceDebug] forceDoInit=1 (Cmd_ForceChanged) clientNum=%d name=%s\n",
+		ent->s.number, ent->client->pers.netname);
 argCheck:
 	if (level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL)
 	{ //If this is duel, don't even bother changing team in relation to this.

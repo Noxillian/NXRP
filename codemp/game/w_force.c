@@ -202,6 +202,8 @@ void WP_InitForcePowers( gentity_t *ent ) {
 
 	// if in siege, then use the powers for this class, and skip all this nonsense.
 	if ( level.gametype == GT_SIEGE && ent->client->siegeClass != -1 ) {
+		Com_Printf("[NXRP][ForceDebug] Siege force overwrite (early) clientNum=%d name=%s siegeClass=%d\n",
+			ent->s.number, ent->client->pers.netname, ent->client->siegeClass);
 		for ( i=0; i<NUM_FORCE_POWERS; i++ ) {
 			ent->client->ps.fd.forcePowerLevel[i] = bgSiegeClasses[ent->client->siegeClass].forcePowerLevels[i];
 			if ( !ent->client->ps.fd.forcePowerLevel[i] )
@@ -519,6 +521,8 @@ void WP_SpawnInitForcePowers( gentity_t *ent )
 	if (level.gametype == GT_SIEGE &&
 		ent->client->siegeClass != -1)
 	{ //Then use the powers for this class.
+		Com_Printf("[NXRP][ForceDebug] Siege force overwrite (late) clientNum=%d name=%s siegeClass=%d\n",
+			ent->s.number, ent->client->pers.netname, ent->client->siegeClass);
 		i = 0;
 
 		while (i < NUM_FORCE_POWERS)
