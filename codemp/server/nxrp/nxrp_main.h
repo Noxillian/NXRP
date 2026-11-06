@@ -47,6 +47,7 @@ void NXRP_ListSavedSpawnsForPlayer(client_t* cl);
 
 qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_skill( client_t *cl, const char *chatCursor );
+qboolean NXRP_cmd_check( client_t *cl, const char *chatCursor );
 
 
 // Public info/help/skills commands (usable by logged-in players)

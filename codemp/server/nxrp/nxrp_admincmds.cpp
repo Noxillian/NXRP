@@ -540,26 +540,34 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->weapon = WP_SABER;
 		ps->weaponstate = WEAPON_READY;
 		ps->fd.saberAnimLevel = MB_SS_RED;
-		ps->fd.forcePowerLevel[MB_FORCE_SABER_DEFENCE] = 2;
-		ps->fd.forcePowerLevel[MB_FORCE_SABER_OFFENCE] = 2;
-		ps->fd.forcePowerLevel[MB_FORCE_SABER_THROW]   = 2;
 		ps->forceRestricted = qfalse;
 
+		ps->fd.forcePowersActive = 0;
+		ps->fd.forceDeactivateAll = 0;
+		for (int i = 0; i < NUM_FORCE_POWERS; ++i) {
+			ps->fd.forcePowerDebounce[i] = 0;
+			ps->fd.forcePowerDuration[i] = 0;
+		}
 
-		//ps->fd.forcePowersKnown |= (1 << FP_LEVITATION);
-		ps->fd.forcePowerLevel[FP_LEVITATION] = 3;
+		ps->fd.forcePowerMax = 300;
+		ps->fd.forcePower = 300;
+		ps->fd.forcePowerRegenDebounceTime = sv.time;
 
-		ps->fd.forcePowerLevel[MB_FORCE_SABER_DEFENCE] = 1;
-		ps->fd.forcePowerLevel[MB_FORCE_SABER_OFFENCE] = 1;
-		ps->fd.forcePowerLevel[MB_FORCE_SABER_THROW] = 1;
-		ps->fd.forcePowerLevel[MB_FORCE_PROTECT] = 1;
+		auto grantForceLevel = [&](int fp, int lvl) {
+			ps->fd.forcePowersKnown |= (1 << fp);
+			ps->fd.forcePowerLevel[fp] = lvl;
+			ps->fd.forcePowerBaseLevel[fp] = lvl;
+		};
 
-		ps->fd.forcePowerBaseLevel[MB_FORCE_LIGHTNING] = 1;
-		ps->fd.forcePowerBaseLevel[FP_PROTECT] = 1;
-		ps->fd.forcePowersKnown = (1 << FP_LIGHTNING);
-		SV_WannaGiveForce(target, MB_FORCE_LIGHTNING);
-		ps->fd.forcePowerLevel[MB_FORCE_LIGHTNING] = 1;
-		ps->fd.forcePowersKnown = (1 << FP_LIGHTNING);
+		grantForceLevel(FP_SABER_OFFENSE, 2);
+		grantForceLevel(FP_SABER_DEFENSE, 2);
+		grantForceLevel(FP_SABERTHROW, 2);
+		grantForceLevel(FP_LEVITATION, 3);
+		grantForceLevel(FP_LIGHTNING, 3);
+		grantForceLevel(FP_PULL, 2);
+		grantForceLevel(FP_SPEED, 2);
+		grantForceLevel(FP_PROTECT, 1);
+		ps->fd.forcePowerSelected = FP_LIGHTNING;
 
 		SV_WannaGiveWeapon(target, WP_CLONE_PISTOL);
 		SV_WannaGiveWeapon(target, WP_SABER);
@@ -601,9 +609,6 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 			Info_SetValueForKey(userinfo, "color1", "red");
 		SV_SetUserinfo(targetIdx, userinfo);
 		GVM_ClientUserinfoChanged(targetIdx);
-
-		SV_WannaGiveForce(target, FP_LIGHTNING);
-		SV_WannaGiveForce(target, MB_FP_SPEED);
 
 		// Give the player an immediate force jump boost
 		//SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force jump 3"), 1);

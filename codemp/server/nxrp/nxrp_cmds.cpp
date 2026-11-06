@@ -28,6 +28,45 @@ qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
+qboolean NXRP_cmd_check( client_t *cl, const char *chatCursor ) {
+	(void)chatCursor;
+	if (!cl || cl->state != CS_ACTIVE || !cl->gentity || !cl->gentity->playerState) {
+		NXRP_PrintConsoleToPlayer(cl, "You must be an active player to use this command");
+		return qtrue;
+	}
+
+	playerState_t* ps = cl->gentity->playerState;
+	static const char* kForceNames[NUM_FORCE_POWERS] = {
+		"heal",
+		"levitation",
+		"speed",
+		"push",
+		"pull",
+		"telepathy",
+		"grip",
+		"lightning",
+		"rage",
+		"protect",
+		"absorb",
+		"team_heal",
+		"team_force",
+		"drain",
+		"see",
+		"saber_offense",
+		"saber_defense",
+		"saber_throw"
+	};
+
+	NXRP_PrintConsoleToPlayer(cl, "Known force powers:");
+	for (int i = 0; i < NUM_FORCE_POWERS; ++i) {
+		if (ps->fd.forcePowersKnown & (1 << i)) {
+			NXRP_PrintConsoleToPlayerFmt(cl, "  %s: level %d", kForceNames[i], ps->fd.forcePowerLevel[i]);
+		}
+	}
+
+	return qtrue;
+}
+
 // Handler for: !skill <skillname>
 qboolean NXRP_cmd_skill( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;

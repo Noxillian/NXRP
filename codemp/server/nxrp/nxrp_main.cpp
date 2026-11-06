@@ -35,6 +35,7 @@ enum NXRP_SubCmd {
 	NXRP_SUB_SPAWN,
 	NXRP_SUB_SKILLS,
 	NXRP_SUB_SKILL,
+	NXRP_SUB_CHECK,
 	NXRP_SUB_MMOVE,
 	NXRP_SUB_TP,
 	NXRP_SUB_VEHICLE,
@@ -65,6 +66,7 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "register" ) )	return NXRP_SUB_REGISTER;
 	if ( !Q_stricmp( s, "login" ) )		return NXRP_SUB_LOGIN;
 	if ( !Q_stricmp( s, "skill" ) )		return NXRP_SUB_SKILL;
+	if ( !Q_stricmp( s, "check" ) )		return NXRP_SUB_CHECK;
 	if ( !Q_stricmp( s, "pos" ) )		return NXRP_SUB_POS;
 	if ( !Q_stricmp( s, "tp" ) )		return NXRP_SUB_TP;
 	if ( !Q_stricmp( s, "prop" ) )		return NXRP_SUB_MODEL;
@@ -290,6 +292,8 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 		return NXRP_cmd_skills(cl, dispatchCursor);
 	case NXRP_SUB_SKILL:
 		return NXRP_cmd_skill(cl, dispatchCursor);
+	case NXRP_SUB_CHECK:
+		return NXRP_cmd_check(cl, dispatchCursor);
 	case NXRP_SUB_INFO:
 		return NXRP_cmd_info( cl, dispatchCursor );
 	case NXRP_SUB_ACCOUNT:
