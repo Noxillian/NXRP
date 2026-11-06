@@ -535,11 +535,11 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 
 	if (target && target->gentity && target->gentity->playerState) {
 		playerState_t* ps = target->gentity->playerState;
-
+		ps->fd.forceUsingAdded = 0;
 		ps->stats[STAT_WEAPONS] |= (1 << WP_SABER);
 		ps->weapon = WP_SABER;
 		ps->weaponstate = WEAPON_READY;
-		ps->fd.saberAnimLevel = MB_SS_RED;
+		ps->fd.saberAnimLevel = MB_SS_STAFF;
 		ps->forceRestricted = qfalse;
 
 		ps->fd.forcePowersActive = 0;
@@ -567,6 +567,8 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		grantForceLevel(FP_PULL, 2);
 		grantForceLevel(FP_SPEED, 2);
 		grantForceLevel(FP_PROTECT, 1);
+		grantForceLevel(MB_FP_DRAIN, 3);
+		grantForceLevel(MB_FORCE_HEAL, 1);
 		ps->fd.forcePowerSelected = FP_LIGHTNING;
 
 		SV_WannaGiveWeapon(target, WP_CLONE_PISTOL);
