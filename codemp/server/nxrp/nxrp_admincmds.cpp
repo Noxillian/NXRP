@@ -609,6 +609,8 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		SV_GetUserinfo(targetIdx, userinfo, sizeof(userinfo));
 			Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
 			Info_SetValueForKey(userinfo, "color1", "red");
+			// Persist a dark-side force profile so force re-init paths keep usable powers.
+			Info_SetValueForKey(userinfo, "forcepowers", "7-1-333003000313003120");
 		SV_SetUserinfo(targetIdx, userinfo);
 		GVM_ClientUserinfoChanged(targetIdx);
 
