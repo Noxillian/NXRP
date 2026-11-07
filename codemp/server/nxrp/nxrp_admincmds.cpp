@@ -560,6 +560,10 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 			ps->fd.forcePowerLevel[fp] = lvl;
 			ps->fd.forcePowerBaseLevel[fp] = lvl;
 
+			cl->gentity->playerState->fd.forcePowersKnown |= (1 << fp);
+			cl->gentity->playerState->fd.forcePowerLevel[fp] = lvl;
+			cl->gentity->playerState->fd.forcePowerBaseLevel[fp] = lvl;
+
 			cl->gentity->client->ps.fd.forcePowersKnown |= (1 << fp);
 			cl->gentity->client->ps.fd.forcePowerLevel[fp] = lvl;
 			cl->gentity->client->ps.fd.forcePowerBaseLevel[fp] = lvl;
