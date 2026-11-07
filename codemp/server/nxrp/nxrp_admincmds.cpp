@@ -291,6 +291,7 @@ qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 		cl->gentity->playerState->stats[STAT_ARMOR] = 500;
 		cl->gentity->playerState->stats[STAT_HEALTH] = 500;
 		cl->gentity->playerState->iModelScale = 150;
+		cl->gentity->client->ps.fd.forcePowerLevel[FP_LIGHTNING] = 3;
 
 		SV_WannaGiveWeapon(cl, WP_SABER);
 
@@ -558,6 +559,10 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 			ps->fd.forcePowersKnown |= (1 << fp);
 			ps->fd.forcePowerLevel[fp] = lvl;
 			ps->fd.forcePowerBaseLevel[fp] = lvl;
+
+			cl->gentity->client->ps.fd.forcePowersKnown |= (1 << fp);
+			cl->gentity->client->ps.fd.forcePowerLevel[fp] = lvl;
+			cl->gentity->client->ps.fd.forcePowerBaseLevel[fp] = lvl;
 		};
 
 		grantForceLevel(FP_SABER_OFFENSE, 2);
@@ -571,6 +576,8 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		grantForceLevel(MB_FP_DRAIN, 3);
 		grantForceLevel(MB_FORCE_HEAL, 1);
 		ps->fd.forcePowerSelected = FP_LIGHTNING;
+
+		//cl->gentity->client->sess.saberLevel;
 
 		void (*setClientSessionForGiveAll)(int, int, int) =
 			(void (*)(int, int, int))Sys_LoadFunction(GVM_GetDllHandle(), "NXRP_SetClientSessionForGiveAll");

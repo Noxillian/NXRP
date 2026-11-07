@@ -36,7 +36,6 @@ qboolean NXRP_cmd_check( client_t *cl, const char *chatCursor ) {
 	}
 
 	playerState_t* ps = cl->gentity->playerState;
-	const char* forcePowers = Info_ValueForKey(cl->userinfo, "forcepowers");
 	static const char* kForceNames[NUM_FORCE_POWERS] = {
 		"heal",
 		"levitation",
@@ -64,14 +63,6 @@ qboolean NXRP_cmd_check( client_t *cl, const char *chatCursor ) {
 			NXRP_PrintConsoleToPlayerFmt(cl, "  %s: level %d", kForceNames[i], ps->fd.forcePowerLevel[i]);
 		}
 	}
-
-	NXRP_PrintConsoleToPlayer(cl, "Force configuration:");
-	NXRP_PrintConsoleToPlayerFmt(cl, "  forcepowers: %s", forcePowers && forcePowers[0] ? forcePowers : "<none>");
-	NXRP_PrintConsoleToPlayerFmt(cl, "  selectedFP: %d (%s)", ps->fd.forcePowerSelected,
-		(ps->fd.forcePowerSelected >= 0 && ps->fd.forcePowerSelected < NUM_FORCE_POWERS) ? kForceNames[ps->fd.forcePowerSelected] : "unknown");
-	NXRP_PrintConsoleToPlayerFmt(cl, "  forceRank: %d", ps->fd.forceRank);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  forceSide: %d", ps->fd.forceSide);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  saberLevel: %d", ps->fd.saberAnimLevel);
 
 	return qtrue;
 }
