@@ -39,6 +39,7 @@ int NXRP_SpawnPropAtClientWithExtents(client_t* cl, const char* modelPath, const
 // Generic file helpers
 bool NXRP_ReadFileToString(const char* path, std::string& out);
 bool NXRP_WriteStringToFile(const char* path, const std::string& content);
+bool NXRP_EnsureDirectoryTree(const std::string& path);
 
 // Per-map file helpers (nxrp_props, nxrp_npcs directories)
 // Build the per-map filename for a given subdirectory (e.g. "nxrp_props" or "nxrp_npcs").

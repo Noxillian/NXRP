@@ -533,6 +533,7 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 	}
 	//NXRP_PrintConsoleToPlayer(target, "You have been given a Lightsaber");
 
+
 	if (target && target->gentity && target->gentity->playerState) {
 		playerState_t* ps = target->gentity->playerState;
 		ps->fd.forceUsingAdded = 0;
@@ -563,13 +564,19 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		grantForceLevel(FP_SABER_DEFENSE, 2);
 		grantForceLevel(FP_SABERTHROW, 2);
 		grantForceLevel(FP_LEVITATION, 3);
-		grantForceLevel(FP_LIGHTNING, 3);
+		grantForceLevel(FP_LIGHTNING, 0);
 		grantForceLevel(FP_PULL, 2);
 		grantForceLevel(FP_SPEED, 2);
 		grantForceLevel(FP_PROTECT, 1);
 		grantForceLevel(MB_FP_DRAIN, 3);
 		grantForceLevel(MB_FORCE_HEAL, 1);
 		ps->fd.forcePowerSelected = FP_LIGHTNING;
+
+		// clientSession_t starts after playerState_t in the game VM's gclient_t.
+		// Keep selectedFP synchronized so the game does not overwrite the value.
+		static const int CLIENT_SESSION_OFFSET = 0x7b0;
+		static const int SESSION_SELECTED_FP_OFFSET = CLIENT_SESSION_OFFSET + 0x20;
+		*(int*)((byte*)ps + SESSION_SELECTED_FP_OFFSET) = FP_LIGHTNING;
 
 		SV_WannaGiveWeapon(target, WP_CLONE_PISTOL);
 		SV_WannaGiveWeapon(target, WP_SABER);

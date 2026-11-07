@@ -7,6 +7,32 @@
 #include <sstream>
 #include <vector>
 #include <sys/stat.h>
+#if defined(_WIN32)
+	#include <direct.h>
+#endif
+
+bool NXRP_EnsureDirectoryTree(const std::string& path) {
+	if (path.empty()) return false;
+
+	for (size_t i = 0; i < path.size(); ++i) {
+		if (path[i] != '/' && path[i] != '\\') continue;
+		if (i == 0 || (i == 2 && path[1] == ':')) continue;
+
+		const std::string part = path.substr(0, i);
+#if defined(_WIN32)
+		_mkdir(part.c_str());
+#else
+		mkdir(part.c_str(), 0755);
+#endif
+	}
+
+#if defined(_WIN32)
+	_mkdir(path.c_str());
+#else
+	mkdir(path.c_str(), 0755);
+#endif
+	return true;
+}
 
 // Minimal JSON parsing for the simple skills schema used by NXRP. Lightweight
 // and tolerant parser; replace with a proper JSON library if needed.
@@ -128,15 +154,15 @@ bool NXRP_GetPerMapFilePath(const char* folder, std::string& outPath) {
 	if (!folder) return false;
 	const char* home = Cvar_VariableString("fs_homepath");
 	std::string dir = (home && home[0]) ? std::string(home) + std::string("/") + folder : std::string(folder);
-#if defined(_WIN32)
-	// Ensure directory exists
-	//CreateDirectoryA(dir.c_str(), NULL);
-#else
-	mkdir(dir.c_str(), 0755);
-#endif
+	NXRP_EnsureDirectoryTree(dir);
 	const char* map = Cvar_VariableString("mapname");
 	if (!map || !map[0]) map = "nomap";
-	outPath = dir + "/" + std::string(map) + ".json";
+	const std::string mapPath = dir + "/" + std::string(map);
+	const size_t slash = mapPath.find_last_of("/\\");
+	if (slash != std::string::npos) {
+		NXRP_EnsureDirectoryTree(mapPath.substr(0, slash));
+	}
+	outPath = mapPath + ".json";
 	return true;
 }
 
@@ -144,11 +170,7 @@ bool NXRP_GetFolderPath(const char* folder, std::string& outDir) {
 	if (!folder) return false;
 	const char* home = Cvar_VariableString("fs_homepath");
 	std::string dir = (home && home[0]) ? std::string(home) + std::string("/") + folder : std::string(folder);
-#if defined(_WIN32)
-	//CreateDirectoryA(dir.c_str(), NULL);
-#else
-	mkdir(dir.c_str(), 0755);
-#endif
+	NXRP_EnsureDirectoryTree(dir);
 	outDir = dir;
 	return true;
 }

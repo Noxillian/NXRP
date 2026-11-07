@@ -78,5 +78,25 @@
     "collidersize": [ 125.0, 115.0, 125.0 ],
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0
+  },
+  "models/map_objects/korriban/coffin_slab.md3": {
+    "collidersize": [ 45.0, 8.0, 12.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/korriban/pillar_base.md3": {
+    "collidersize": [ 10.0, 10.0, 15.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/korriban/statue_guard.md3": {
+    "collidersize": [ 50.0, 50.0, 100.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/korriban/torch_top.md3": {
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
   }
 }

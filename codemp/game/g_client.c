@@ -3173,8 +3173,6 @@ void ClientSpawn(gentity_t *ent) {
 
 	if (client->ps.fd.forceDoInit)
 	{ //force a reread of force powers
-		Com_Printf("[NXRP][ForceDebug] WP_InitForcePowers trigger (forceDoInit) clientNum=%d name=%s siegeClass=%d team=%d\n",
-			ent->s.number, client->pers.netname, client->siegeClass, client->sess.sessionTeam);
 		WP_InitForcePowers( ent );
 		client->ps.fd.forceDoInit = 0;
 	}
