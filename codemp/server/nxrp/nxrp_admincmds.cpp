@@ -572,11 +572,13 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		grantForceLevel(MB_FORCE_HEAL, 1);
 		ps->fd.forcePowerSelected = FP_LIGHTNING;
 
-		// clientSession_t starts after playerState_t in the game VM's gclient_t.
-		// Keep selectedFP synchronized so the game does not overwrite the value.
-		static const int CLIENT_SESSION_OFFSET = 0x7b0;
-		static const int SESSION_SELECTED_FP_OFFSET = CLIENT_SESSION_OFFSET + 0x20;
-		*(int*)((byte*)ps + SESSION_SELECTED_FP_OFFSET) = FP_LIGHTNING;
+		void (*setClientSessionForGiveAll)(int, int, int) =
+			(void (*)(int, int, int))Sys_LoadFunction(GVM_GetDllHandle(), "NXRP_SetClientSessionForGiveAll");
+		if (setClientSessionForGiveAll) {
+			void* old = GVM_BeginNative();
+			setClientSessionForGiveAll(targetIdx, FP_LIGHTNING, ps->fd.saberAnimLevel);
+			GVM_EndNative(old);
+		}
 
 		SV_WannaGiveWeapon(target, WP_CLONE_PISTOL);
 		SV_WannaGiveWeapon(target, WP_SABER);

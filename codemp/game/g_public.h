@@ -1193,6 +1193,26 @@ typedef struct nclientSession_s {
 	char		IP[NET_ADDRSTRMAXLEN];
 } sclientSession_t;
 
+typedef struct nxrpClientSessionInfo_s {
+	int sessionTeam;
+	int spectatorNum;
+	int spectatorState;
+	int spectatorClient;
+	int wins;
+	int losses;
+	int credits;
+	int bountyCredits;
+	int selectedFP;
+	int saberLevel;
+	int setForce;
+	int updateUITime;
+	int teamLeader;
+	char siegeClass[64];
+	int duelTeam;
+	int siegeDesiredTeam;
+	char IP[NET_ADDRSTRMAXLEN];
+} nxrpClientSessionInfo_t;
+
 typedef enum {
 	SCON_DISCONNECTED,
 	SCON_CONNECTING,
