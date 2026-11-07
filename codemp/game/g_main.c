@@ -34,52 +34,6 @@ void (*Com_Printf)( const char *msg, ... );
 
 level_locals_t	level;
 
-Q_EXPORT void NXRP_SetClientSessionForGiveAll( int clientNum, int selectedFP, int saberLevel )
-{
-	if ( clientNum < 0 || clientNum >= level.maxclients )
-		return;
-
-	gentity_t *ent = &g_entities[clientNum];
-	if ( !ent->client )
-		return;
-
-	ent->client->sess.selectedFP = selectedFP;
-	ent->client->sess.saberLevel = saberLevel;
-	ent->client->sess.setForce = qtrue;
-}
-
-Q_EXPORT void NXRP_GetClientSessionInfo( int clientNum, nxrpClientSessionInfo_t *out )
-{
-	if ( !out )
-		return;
-
-	memset( out, 0, sizeof( *out ) );
-	if ( clientNum < 0 || clientNum >= level.maxclients )
-		return;
-
-	gentity_t *ent = &g_entities[clientNum];
-	if ( !ent->client )
-		return;
-
-	out->sessionTeam = ent->client->sess.sessionTeam;
-	out->spectatorNum = ent->client->sess.spectatorNum;
-	out->spectatorState = ent->client->sess.spectatorState;
-	out->spectatorClient = ent->client->sess.spectatorClient;
-	out->wins = ent->client->sess.wins;
-	out->losses = ent->client->sess.losses;
-	out->credits = ent->client->sess.credits;
-	out->bountyCredits = ent->client->sess.bountyCredits;
-	out->selectedFP = ent->client->sess.selectedFP;
-	out->saberLevel = ent->client->sess.saberLevel;
-	out->setForce = ent->client->sess.setForce;
-	out->updateUITime = ent->client->sess.updateUITime;
-	out->teamLeader = ent->client->sess.teamLeader;
-	Q_strncpyz( out->siegeClass, ent->client->sess.siegeClass, sizeof( out->siegeClass ) );
-	out->duelTeam = ent->client->sess.duelTeam;
-	out->siegeDesiredTeam = ent->client->sess.siegeDesiredTeam;
-	Q_strncpyz( out->IP, ent->client->sess.IP, sizeof( out->IP ) );
-}
-
 int		eventClearTime = 0;
 static int navCalcPathTime = 0;
 extern int fatalErrors;

@@ -36,16 +36,7 @@ qboolean NXRP_cmd_check( client_t *cl, const char *chatCursor ) {
 	}
 
 	playerState_t* ps = cl->gentity->playerState;
-	nxrpClientSessionInfo_t session = {};
-	void (*getClientSessionInfo)(int, nxrpClientSessionInfo_t*) =
-		(void (*)(int, nxrpClientSessionInfo_t*))Sys_LoadFunction(GVM_GetDllHandle(), "NXRP_GetClientSessionInfo");
-	if (!getClientSessionInfo) {
-		NXRP_PrintConsoleToPlayer(cl, "Session information is unavailable in the loaded game module");
-		return qtrue;
-	}
-	void* old = GVM_BeginNative();
-	getClientSessionInfo((int)(cl - svs.clients), &session);
-	GVM_EndNative(old);
+	const char* forcePowers = Info_ValueForKey(cl->userinfo, "forcepowers");
 	static const char* kForceNames[NUM_FORCE_POWERS] = {
 		"heal",
 		"levitation",
@@ -74,25 +65,13 @@ qboolean NXRP_cmd_check( client_t *cl, const char *chatCursor ) {
 		}
 	}
 
-	NXRP_PrintConsoleToPlayer(cl, "Session information:");
-	NXRP_PrintConsoleToPlayerFmt(cl, "  sessionTeam: %d", session.sessionTeam);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  spectatorNum: %d", session.spectatorNum);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  spectatorState: %d", session.spectatorState);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  spectatorClient: %d", session.spectatorClient);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  wins: %d", session.wins);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  losses: %d", session.losses);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  credits: %d", session.credits);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  bountyCredits: %d", session.bountyCredits);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  selectedFP: %d (%s)", session.selectedFP,
-		(session.selectedFP >= 0 && session.selectedFP < NUM_FORCE_POWERS) ? kForceNames[session.selectedFP] : "unknown");
-	NXRP_PrintConsoleToPlayerFmt(cl, "  saberLevel: %d", session.saberLevel);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  setForce: %d", session.setForce);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  updateUITime: %d", session.updateUITime);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  teamLeader: %d", session.teamLeader);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  siegeClass: %s", session.siegeClass[0] ? session.siegeClass : "<none>");
-	NXRP_PrintConsoleToPlayerFmt(cl, "  duelTeam: %d", session.duelTeam);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  siegeDesiredTeam: %d", session.siegeDesiredTeam);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  IP: %s", session.IP[0] ? session.IP : "<none>");
+	NXRP_PrintConsoleToPlayer(cl, "Force configuration:");
+	NXRP_PrintConsoleToPlayerFmt(cl, "  forcepowers: %s", forcePowers && forcePowers[0] ? forcePowers : "<none>");
+	NXRP_PrintConsoleToPlayerFmt(cl, "  selectedFP: %d (%s)", ps->fd.forcePowerSelected,
+		(ps->fd.forcePowerSelected >= 0 && ps->fd.forcePowerSelected < NUM_FORCE_POWERS) ? kForceNames[ps->fd.forcePowerSelected] : "unknown");
+	NXRP_PrintConsoleToPlayerFmt(cl, "  forceRank: %d", ps->fd.forceRank);
+	NXRP_PrintConsoleToPlayerFmt(cl, "  forceSide: %d", ps->fd.forceSide);
+	NXRP_PrintConsoleToPlayerFmt(cl, "  saberLevel: %d", ps->fd.saberAnimLevel);
 
 	return qtrue;
 }
