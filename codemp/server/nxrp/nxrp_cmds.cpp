@@ -31,7 +31,7 @@ qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
 qboolean NXRP_cmd_check( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!cl || cl->state != CS_ACTIVE || !cl->gentity || !cl->gentity->playerState) {
-		NXRP_PrintConsoleToPlayer(cl, "You must be an active player to use this command");
+		NXRP_PrintConsole(cl, "You must be an active player to use this command");
 		return qtrue;
 	}
 
@@ -57,10 +57,10 @@ qboolean NXRP_cmd_check( client_t *cl, const char *chatCursor ) {
 		"saber_throw",
 	};
 
-	NXRP_PrintConsoleToPlayer(cl, "Known force powers:");
+	NXRP_PrintConsole(cl, "Known force powers:");
 	for (int i = 0; i < NUM_FORCE_POWERS; ++i) {
 		if (ps->fd.forcePowersKnown & (1 << i)) {
-			NXRP_PrintConsoleToPlayer(cl, "  %s: level %d", kForceNames[i], ps->fd.forcePowerLevel[i]);
+			NXRP_PrintConsole(cl, "  %s: level %d", kForceNames[i], ps->fd.forcePowerLevel[i]);
 		}
 	}
 
@@ -71,13 +71,13 @@ qboolean NXRP_cmd_check( client_t *cl, const char *chatCursor ) {
 qboolean NXRP_cmd_skill( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!chatCursor || !*chatCursor) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !skill <skillid>");
+		NXRP_PrintConsole(cl, "Usage: !skill <skillid>");
 		return qtrue;
 	}
 
 	// parse first token as skill id/token
 	char tok[MAX_TOKEN_CHARS] = {0};
-	if (sscanf(chatCursor, "%31s", tok) < 1) { NXRP_PrintConsoleToPlayer(cl, "Usage: !skill <skillid>"); return qtrue; }
+	if (sscanf(chatCursor, "%31s", tok) < 1) { NXRP_PrintConsole(cl, "Usage: !skill <skillid>"); return qtrue; }
 
 	std::string dir;
 	NXRP_GetFolderPath("nxrp", dir);
@@ -117,33 +117,33 @@ qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor ) {
 		// Trim leading spaces
 		while (*s == ' ' || *s == '\t') ++s;
 		if (!Q_stricmp(s, "cmds") || !Q_stricmp(s, "commands")) {
-			NXRP_PrintConsoleToPlayer(cl, "General commands:");
-			NXRP_PrintConsoleToPlayer(cl, "  !info | !nxrp | /info - show info/help");
-			NXRP_PrintConsoleToPlayer(cl, "  !register <user> <pass> - create account");
-			NXRP_PrintConsoleToPlayer(cl, "  !login <user> <pass> - login");
-			NXRP_PrintConsoleToPlayer(cl, "  !pos - show position");
-			NXRP_PrintConsoleToPlayer(cl, "  !skills - list skills");
+			NXRP_PrintConsole(cl, "General commands:");
+			NXRP_PrintConsole(cl, "  !info | !nxrp | /info - show info/help");
+			NXRP_PrintConsole(cl, "  !register <user> <pass> - create account");
+			NXRP_PrintConsole(cl, "  !login <user> <pass> - login");
+			NXRP_PrintConsole(cl, "  !pos - show position");
+			NXRP_PrintConsole(cl, "  !skills - list skills");
 			return qtrue;
 		}
 		if (!Q_stricmp(s, "acmds") || !Q_stricmp(s, "admin")) {
-			NXRP_PrintConsoleToPlayer(cl, "Admin commands:");
-			NXRP_PrintConsoleToPlayer(cl, "  !prop s/t/m - spawn/manage props");
-			NXRP_PrintConsoleToPlayer(cl, "  !tp - teleport");
-			NXRP_PrintConsoleToPlayer(cl, "  !list - list entities");
-			NXRP_PrintConsoleToPlayer(cl, "  (admin only)");
+			NXRP_PrintConsole(cl, "Admin commands:");
+			NXRP_PrintConsole(cl, "  !prop s/t/m - spawn/manage props");
+			NXRP_PrintConsole(cl, "  !tp - teleport");
+			NXRP_PrintConsole(cl, "  !list - list entities");
+			NXRP_PrintConsole(cl, "  (admin only)");
 			return qtrue;
 		}
 	}
 
 	// Default info block
-	NXRP_PrintConsoleToPlayer(cl, "------ NXRP ------");
+	NXRP_PrintConsole(cl, "------ NXRP ------");
 	const char* username = (cl && cl->nxrp_username[0]) ? cl->nxrp_username : "<not logged in>";
-	NXRP_PrintConsoleToPlayer(cl, va("%s %d/50", username, 1));
-	NXRP_PrintConsoleToPlayer(cl, va("%d/100 Credits: %d", 0, 0));
-	NXRP_PrintConsoleToPlayer(cl, "------------------");
-	NXRP_PrintConsoleToPlayer(cl, "1. /info cmds\t- General Commands");
-	NXRP_PrintConsoleToPlayer(cl, "2. /info acmds\t- Admin Commands");
-	NXRP_PrintConsoleToPlayer(cl, "3. /skills\t\t- List Skills");
+	NXRP_PrintConsole(cl, va("%s %d/50", username, 1));
+	NXRP_PrintConsole(cl, va("%d/100 Credits: %d", 0, 0));
+	NXRP_PrintConsole(cl, "------------------");
+	NXRP_PrintConsole(cl, "1. /info cmds\t- General Commands");
+	NXRP_PrintConsole(cl, "2. /info acmds\t- Admin Commands");
+	NXRP_PrintConsole(cl, "3. /skills\t\t- List Skills");
 	return qtrue;
 }
 
@@ -153,7 +153,7 @@ qboolean NXRP_cmd_register(client_t* cl, const char* chatCursor)
 	std::string user, pass;
 
 	if (!parse_user_pass(chatCursor, user, pass)) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !register <user> <pass>");
+		NXRP_PrintConsole(cl, "Usage: !register <user> <pass>");
 		return qtrue;
 	}
 
@@ -166,7 +166,7 @@ qboolean NXRP_cmd_register(client_t* cl, const char* chatCursor)
 	}
 
 	if (safe.empty()) {
-		NXRP_PrintConsoleToPlayer(cl, "Invalid username");
+		NXRP_PrintConsole(cl, "Invalid username");
 		return qtrue;
 	}
 
@@ -178,7 +178,7 @@ qboolean NXRP_cmd_register(client_t* cl, const char* chatCursor)
 	std::ifstream ifs(filepath.c_str());
 
 	if (ifs.good()) {
-		NXRP_PrintConsoleToPlayer(cl, "Username already exists");
+		NXRP_PrintConsole(cl, "Username already exists");
 		return qtrue;
 	}
 
@@ -210,14 +210,14 @@ qboolean NXRP_cmd_register(client_t* cl, const char* chatCursor)
 
 	// Create the account file
 	if (!NXRP_uJson_CreateAccountFile(filepath, user, passwordHash)) {
-		NXRP_PrintConsoleToPlayer(
+		NXRP_PrintConsole(
 			cl,
 			"Registration failed: cannot create account file"
 		);
 		return qtrue;
 	}
 
-	NXRP_PrintConsoleToPlayer(cl, "Registration successful");
+	NXRP_PrintConsole(cl, "Registration successful");
 	return qtrue;
 }
 
@@ -225,7 +225,7 @@ qboolean NXRP_cmd_register(client_t* cl, const char* chatCursor)
 qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor ) {
 	std::string user, pass;
 	if (!parse_user_pass(chatCursor, user, pass)) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !login <user> <pass>");
+		NXRP_PrintConsole(cl, "Usage: !login <user> <pass>");
 		return qtrue;
 	}
 
@@ -235,7 +235,7 @@ qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor ) {
 		if (std::isalnum((unsigned char)c) || c == '_') safe.push_back((char)std::tolower((unsigned char)c));
 	}
 	if (safe.empty()) {
-		NXRP_PrintConsoleToPlayer(cl, "Invalid username");
+		NXRP_PrintConsole(cl, "Invalid username");
 		return qtrue;
 	}
 
@@ -244,7 +244,7 @@ qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor ) {
 	std::string filepath = dir + "/" + safe + ".json";
 	std::ifstream ifs(filepath);
 	if (!ifs.is_open()) {
-		NXRP_PrintConsoleToPlayer(cl, "Login failed: unknown user");
+		NXRP_PrintConsole(cl, "Login failed: unknown user");
 		return qtrue;
 	}
 
@@ -255,15 +255,15 @@ qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor ) {
 	std::string key = "\"password\"";
 	size_t k = content.find(key);
 	if (k == std::string::npos) {
-		NXRP_PrintConsoleToPlayer(cl, "Login failed");
+		NXRP_PrintConsole(cl, "Login failed");
 		return qtrue;
 	}
 	size_t colon = content.find(':', k + key.size());
-	if (colon == std::string::npos) { NXRP_PrintConsoleToPlayer(cl, "Login failed"); return qtrue; }
+	if (colon == std::string::npos) { NXRP_PrintConsole(cl, "Login failed"); return qtrue; }
 	size_t quote = content.find('"', colon);
-	if (quote == std::string::npos) { NXRP_PrintConsoleToPlayer(cl, "Login failed"); return qtrue; }
+	if (quote == std::string::npos) { NXRP_PrintConsole(cl, "Login failed"); return qtrue; }
 	size_t qend = content.find('"', quote + 1);
-	if (qend == std::string::npos) { NXRP_PrintConsoleToPlayer(cl, "Login failed"); return qtrue; }
+	if (qend == std::string::npos) { NXRP_PrintConsole(cl, "Login failed"); return qtrue; }
 	std::string stored = content.substr(quote + 1, qend - (quote + 1));
 
 	// stored format: "<saltHex>:<digestHex>", digest = HMAC-MD5(salt, password)
@@ -279,7 +279,7 @@ qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor ) {
 			HMAC_MD5_Update(&ctx2, (const unsigned char*)pass.c_str(), (unsigned int)pass.size());
 			HMAC_MD5_Final(&ctx2, outdig);
 			if (memcmp(outdig, digBin.data(), MD5_DIGEST_SIZE) == 0) {
-				NXRP_PrintConsoleToPlayer(cl, "Login successful");
+				NXRP_PrintConsole(cl, "Login successful");
 				// mark client as logged in by storing username in their session info
 				if (cl && cl->state == CS_ACTIVE) {
 					Q_strncpyz(cl->nxrp_username, user.c_str(), sizeof(cl->nxrp_username));
@@ -288,7 +288,7 @@ qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor ) {
 			}
 		}
 	}
-	NXRP_PrintConsoleToPlayer(cl, "Login failed: incorrect password");
+	NXRP_PrintConsole(cl, "Login failed: incorrect password");
 	return qtrue;
 }
 
@@ -296,26 +296,26 @@ qboolean NXRP_cmd_login( client_t *cl, const char *chatCursor ) {
 qboolean NXRP_cmd_account( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!cl || cl->state != CS_ACTIVE) {
-		NXRP_PrintConsoleToPlayer(cl, "You must be an active player to use this command");
+		NXRP_PrintConsole(cl, "You must be an active player to use this command");
 		return qtrue;
 	}
 	const char *username = (cl && cl->nxrp_username[0]) ? cl->nxrp_username : nullptr;
 	if (!username) {
-		NXRP_PrintConsoleToPlayer(cl, "You are not logged in");
+		NXRP_PrintConsole(cl, "You are not logged in");
 		return qtrue;
 	}
 
 	std::string user = username;
 	std::string safe;
 	for (char c : user) if (std::isalnum((unsigned char)c) || c == '_') safe.push_back((char)std::tolower((unsigned char)c));
-	if (safe.empty()) { NXRP_PrintConsoleToPlayer(cl, "Invalid stored username"); return qtrue; }
+	if (safe.empty()) { NXRP_PrintConsole(cl, "Invalid stored username"); return qtrue; }
 
 	std::string dir;
 	NXRP_GetFolderPath("nxrp_accounts", dir);
 	std::string filepath = dir + "/" + safe + ".json";
 
 	std::string content;
-	if (!NXRP_ReadFileToString(filepath.c_str(), content)) { NXRP_PrintConsoleToPlayer(cl, "Account file not found"); return qtrue; }
+	if (!NXRP_ReadFileToString(filepath.c_str(), content)) { NXRP_PrintConsole(cl, "Account file not found"); return qtrue; }
 
 	std::string level, exp, credits, skillpoints;
 	std::string tmp;
@@ -324,12 +324,12 @@ qboolean NXRP_cmd_account( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_GetAccountFieldFromFile(filepath.c_str(), "credits", tmp)) credits = "0"; else credits = tmp;
 	if (!NXRP_GetAccountFieldFromFile(filepath.c_str(), "skillpoints", tmp)) skillpoints = "0"; else skillpoints = tmp;
 
-	NXRP_PrintConsoleToPlayer(cl, "Account info for %s:", username);
-	NXRP_PrintConsoleToPlayer(cl, "  Username: %s", username);
-	NXRP_PrintConsoleToPlayer(cl, "  Level: %s", level.c_str());
-	NXRP_PrintConsoleToPlayer(cl, "  Exp: %s", exp.c_str());
-	NXRP_PrintConsoleToPlayer(cl, "  Credits: %s", credits.c_str());
-	NXRP_PrintConsoleToPlayer(cl, "  Skill Points: %s", skillpoints.c_str());
+	NXRP_PrintConsole(cl, "Account info for %s:", username);
+	NXRP_PrintConsole(cl, "  Username: %s", username);
+	NXRP_PrintConsole(cl, "  Level: %s", level.c_str());
+	NXRP_PrintConsole(cl, "  Exp: %s", exp.c_str());
+	NXRP_PrintConsole(cl, "  Credits: %s", credits.c_str());
+	NXRP_PrintConsole(cl, "  Skill Points: %s", skillpoints.c_str());
 	return qtrue;
 }
 
@@ -339,11 +339,11 @@ qboolean NXRP_cmd_account( client_t *cl, const char *chatCursor ) {
 qboolean NXRP_cmd_pos( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
 	if (!cl || cl->state != CS_ACTIVE) {
-		NXRP_PrintConsoleToPlayer(cl, "You must be an active player to use this command");
+		NXRP_PrintConsole(cl, "You must be an active player to use this command");
 		return qtrue;
 	}
 	if (!cl->gentity) {
-		NXRP_PrintConsoleToPlayer(cl, "No game entity available for your client");
+		NXRP_PrintConsole(cl, "No game entity available for your client");
 		return qtrue;
 	}
 
@@ -351,6 +351,6 @@ qboolean NXRP_cmd_pos( client_t *cl, const char *chatCursor ) {
 	vec3_t org;
 	VectorCopy(cl->gentity->r.currentOrigin, org);
 
-	NXRP_PrintConsoleToPlayer(cl, "Position: %.2f, %.2f, %.2f", org[0], org[1], org[2]);
+	NXRP_PrintConsole(cl, "Position: %.2f, %.2f, %.2f", org[0], org[1], org[2]);
 	return qtrue;
 }

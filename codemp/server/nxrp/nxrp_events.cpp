@@ -54,7 +54,7 @@ void SV_NXRP_ScoreFrame(void) {
 
 					NXRP_ResetNPCTracking();
 					NXRP_LoadSavedSpawnsForMap(NULL);
-					NXRP_PrintConsoleToPlayer(NULL, "----- New Round Started -----");
+					NXRP_PrintConsole(NULL, "----- New Round Started -----");
 
 					break;
 				}
@@ -67,7 +67,7 @@ void SV_NXRP_ScoreFrame(void) {
 			// detect transition from non-positive to positive countdown
 			if ((r > 0 && nxrp_prevRebelCountdown <= 0) || (im > 0 && nxrp_prevImperialCountdown <= 0)) {
 				nxrp_roundBegunFlag = qtrue;
-				NXRP_PrintConsoleToPlayer(NULL, "Round Start: Count Down");
+				NXRP_PrintConsole(NULL, "Round Start: Count Down");
 			}
 			nxrp_prevRebelCountdown = r;
 			nxrp_prevImperialCountdown = im;
@@ -77,7 +77,7 @@ void SV_NXRP_ScoreFrame(void) {
 			const qboolean begun = (*nxrp_gSiegeRoundBegun) ? qtrue : qfalse;
 			if (begun && !nxrp_roundBegunFlag) {
 				nxrp_roundBegunFlag = qtrue;
-				NXRP_PrintConsoleToPlayer(NULL, "Round Start: Siege Round");
+				NXRP_PrintConsole(NULL, "Round Start: Siege Round");
 			}
 		}
 	}
@@ -95,7 +95,7 @@ void SV_NXRP_ScoreFrame(void) {
 		int newKills = cl->gentity->playerState->persistant[PERS_KILLED];
 		int oldKills = nxrp_lastKills[i];
 		if (newKills != oldKills) {
-			//NXRP_PrintConsoleToPlayer(NULL, "Kill detected");
+			NXRP_PrintConsole(NULL, "Kill detected");
 			nxrp_lastKills[i] = newKills;
 		}
 	}
@@ -112,7 +112,7 @@ void NXRP_OnPlayerConnect(int clientNum, qboolean firstTime, qboolean isBot) {
 			else if ( cl->name[0] ) name = cl->name;
 		}
 	}
-	NXRP_PrintConsoleToPlayer(NULL, va("Player connected: %s", name));
+	NXRP_PrintConsole(NULL, va("Player connected: %s", name));
 }
 
 void NXRP_OnPlayerUserinfoChanged(int clientNum) {
@@ -124,7 +124,7 @@ void NXRP_OnPlayerUserinfoChanged(int clientNum) {
 			else if ( cl->name[0] ) name = cl->name;
 		}
 	}
-	NXRP_PrintConsoleToPlayer(NULL, va("Player userinfo changed: %s", name));
+	NXRP_PrintConsole(NULL, va("Player userinfo changed: %s", name));
 }
 
 void NXRP_OnPlayerBegin(int clientNum) {
@@ -136,7 +136,7 @@ void NXRP_OnPlayerBegin(int clientNum) {
 			else if ( cl->name[0] ) name = cl->name;
 		}
 	}
-	NXRP_PrintConsoleToPlayer(NULL, va("X Player spawned: %s", name));
+	NXRP_PrintConsole(NULL, va("X Player spawned: %s", name));
 }
 
 void NXRP_OnPlayerDisconnect(int clientNum) {
@@ -148,17 +148,17 @@ void NXRP_OnPlayerDisconnect(int clientNum) {
 			else if ( cl->name[0] ) name = cl->name;
 		}
 	}
-	NXRP_PrintConsoleToPlayer(NULL, va("Player disconnected: %s", name));
+	NXRP_PrintConsole(NULL, va("Player disconnected: %s", name));
 }
 
 void NXRP_OnPlayerKilled(client_t *attacker, client_t *victim, int meansOfDeath) {
 	const char *aName = attacker ? (attacker->nxrp_username[0] ? attacker->nxrp_username : attacker->name) : "World";
 	const char *vName = victim ? (victim->nxrp_username[0] ? victim->nxrp_username : victim->name) : "Unknown";
-	NXRP_PrintConsoleToPlayer(NULL, va("^3[NXRP-PLAYERKILL]^7 %s killed %s (mod %d)", aName, vName, meansOfDeath));
+	NXRP_PrintConsole(NULL, va("^3[NXRP-PLAYERKILL]^7 %s killed %s (mod %d)", aName, vName, meansOfDeath));
 }
 
 void NXRP_OnMapStart(void) {
-	NXRP_PrintConsoleToPlayer(NULL, "Map started");
+	NXRP_PrintConsole(NULL, "Map started");
 	// Attempt to resolve MBII's gSiegeRoundBegun global in the game VM so
 	// we can detect the exact round-begin transition when available.
 	void* dll = GVM_GetDllHandle();
@@ -176,10 +176,11 @@ void NXRP_OnMapStart(void) {
 	// Initialize NXRP FFA hooks for this map and apply immediately
 	NXRP_FFA_Init();
 	NXRP_FFA_Frame();
+	NXRP_PrintConsole(NULL, va("Map Start"));
 }
 
 void NXRP_OnRoundEnd(int winningTeam) {
-	NXRP_PrintConsoleToPlayer(NULL, va("Round ended, winning team %d", winningTeam));
+	NXRP_PrintConsole(NULL, va("Round ended, winning team %d", winningTeam));
 	// Reset round-detection state so subsequent rounds fire correctly
 	nxrp_roundBegunFlag = qfalse;
 	nxrp_roundStartTime = 0;
@@ -188,39 +189,26 @@ void NXRP_OnRoundEnd(int winningTeam) {
 }
 
 void NXRP_OnRoundStart(void) {
-	NXRP_PrintConsoleToPlayer(NULL, "Round started");
+	NXRP_PrintConsole(NULL, "Round started");
 	NXRP_FFA_Init();
 	NXRP_FFA_Frame();
 }
 
 void NXRP_OnRoundRestart(void) {
-	NXRP_PrintConsoleToPlayer(NULL, "Round restart");
-	// Reset round-detection state so the next round start is detected
-
+	//int loadedProps = NXRP_LoadSavedSpawnsForMap(NULL);
+	//NXRP_PrintConsole(NULL, va("Loaded %d saved props for this map", loadedProps));
 	nxrp_roundBegunFlag = qfalse;
 	nxrp_roundStartTime = 0;
 	nxrp_prevRebelCountdown = 0;
 	nxrp_prevImperialCountdown = 0;
-
-	// Ensure FFA helpers reinitialize on round restart
 	NXRP_FFA_Init();
 	NXRP_FFA_Frame();
-
-	// Reload saved props for the current map on round restart (same behavior as !prop load)
-	// NXRP_PrintConsoleToPlayer(NULL, va("Round restart: loaded %d saved props", loadedProps));
-}
-
-void NXRP_OnMatchStart(void) {
-	NXRP_PrintConsoleToPlayer(NULL, "Match start");
-}
-
-void NXRP_OnMatchEnd(void) {
-	NXRP_PrintConsoleToPlayer(NULL, "Match end");
+	NXRP_PrintConsole(NULL, va("OnRoundRestart"));
 }
 
 // Called when a player first enters the game
 void NXRP_OnPlayerSpawned(client_t *cl) {
-	NXRP_PrintConsoleToPlayer(NULL, "Player Spawned");
+	NXRP_PrintConsole(NULL, "Player Spawned");
 	/*const char* pName = "Unknown";
 	if (!cl) {
 		NXRP_PrintConsoleToPlayer(NULL, "Unknown player spawned");

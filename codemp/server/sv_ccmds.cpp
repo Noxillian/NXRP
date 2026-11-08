@@ -694,7 +694,7 @@ static void SV_MapRestart_f( void ) {
 	// had been changed from their default values will generate broadcast updates
 	sv.state = SS_LOADING;
 	sv.restarting = qtrue;
-	//NXRP_OnRoundRestart();
+	NXRP_OnRoundRestart();
 
 	SV_RestartGame();
 

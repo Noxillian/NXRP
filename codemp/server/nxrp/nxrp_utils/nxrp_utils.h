@@ -146,7 +146,7 @@ bool NXRP_QuestStartForPlayer(client_t* cl, const char* questName);
 // Print a standardized NXRP console message to a specific player. If cl is
 // NULL the message will be broadcast to all clients by passing NULL to
 // SV_SendServerCommand.
-inline void NXRP_PrintConsoleToPlayer(client_t* cl, const char* fmt, ...) {
+inline void NXRP_PrintConsole(client_t* cl, const char* fmt, ...) {
 	char buf[1024];
 	va_list ap;
 	va_start(ap, fmt);

@@ -332,7 +332,7 @@ bool NXRP_QuestAdd(client_t* cl, const char* questName) {
 	std::vector<nxrp_quest_t> quests;
 	NXRP_QuestLoadAll(quests);
 	if (NXRP_QuestFindByName(quests, questName) >= 0) {
-		NXRP_PrintConsoleToPlayer(cl, "Quest already exists");
+		NXRP_PrintConsole(cl, "Quest already exists");
 		return false;
 	}
 	nxrp_quest_t q;
@@ -350,9 +350,9 @@ bool NXRP_QuestAdd(client_t* cl, const char* questName) {
 	quests.push_back(q);
 	if (!NXRP_QuestSaveAll(quests)) return false;
 	if (q.hasSpawn) {
-		NXRP_PrintConsoleToPlayer(cl, "Quest added: %s (spawn %.0f %.0f %.0f)", questName, q.questPos[0], q.questPos[1], q.questPos[2]);
+		NXRP_PrintConsole(cl, "Quest added: %s (spawn %.0f %.0f %.0f)", questName, q.questPos[0], q.questPos[1], q.questPos[2]);
 	} else {
-		NXRP_PrintConsoleToPlayer(cl, "Quest added: %s", questName);
+		NXRP_PrintConsole(cl, "Quest added: %s", questName);
 	}
 	return true;
 }
@@ -361,12 +361,12 @@ void NXRP_QuestList(client_t* cl) {
 	std::vector<nxrp_quest_t> quests;
 	NXRP_QuestLoadAll(quests);
 	if (quests.empty()) {
-		NXRP_PrintConsoleToPlayer(cl, "No quests for this map");
+		NXRP_PrintConsole(cl, "No quests for this map");
 		return;
 	}
 	for (size_t i = 0; i < quests.size(); ++i) {
 		const nxrp_quest_t& q = quests[i];
-		NXRP_PrintConsoleToPlayer(cl, "%d: %s spawn=%s npcs=%d exp=%d credits=%d time=%d",
+		NXRP_PrintConsole(cl, "%d: %s spawn=%s npcs=%d exp=%d credits=%d time=%d",
 			(int)i,
 			q.questName.c_str(),
 			q.hasSpawn ? "yes" : "no",
@@ -384,7 +384,7 @@ bool NXRP_QuestRemoveByName(client_t* cl, const char* questName) {
 	if (idx < 0) return false;
 	quests.erase(quests.begin() + idx);
 	if (!NXRP_QuestSaveAll(quests)) return false;
-	NXRP_PrintConsoleToPlayer(cl, "Quest removed: %s", questName);
+	NXRP_PrintConsole(cl, "Quest removed: %s", questName);
 	return true;
 }
 
@@ -396,7 +396,7 @@ bool NXRP_QuestSetSpawn(client_t* cl, const char* questName, const vec3_t spawnP
 	quests[idx].hasSpawn = qtrue;
 	VectorCopy(spawnPos, quests[idx].questPos);
 	if (!NXRP_QuestSaveAll(quests)) return false;
-	NXRP_PrintConsoleToPlayer(cl, "Quest %s spawn set to %.0f %.0f %.0f", questName, spawnPos[0], spawnPos[1], spawnPos[2]);
+	NXRP_PrintConsole(cl, "Quest %s spawn set to %.0f %.0f %.0f", questName, spawnPos[0], spawnPos[1], spawnPos[2]);
 	return true;
 }
 
@@ -411,7 +411,7 @@ bool NXRP_QuestAddNpcAt(client_t* cl, const char* questName, const char* npcName
 	VectorCopy(npcPos, npc.pos);
 	quests[idx].npcs.push_back(npc);
 	if (!NXRP_QuestSaveAll(quests)) return false;
-	NXRP_PrintConsoleToPlayer(cl, "Quest %s NPC added: %s at %.0f %.0f %.0f", questName, npcName, npcPos[0], npcPos[1], npcPos[2]);
+	NXRP_PrintConsole(cl, "Quest %s NPC added: %s at %.0f %.0f %.0f", questName, npcName, npcPos[0], npcPos[1], npcPos[2]);
 	return true;
 }
 
@@ -422,7 +422,7 @@ bool NXRP_QuestSetRewardExp(client_t* cl, const char* questName, int exp) {
 	if (idx < 0) return false;
 	quests[idx].rewardExp = exp;
 	if (!NXRP_QuestSaveAll(quests)) return false;
-	NXRP_PrintConsoleToPlayer(cl, "Quest %s rewardExp set to %d", questName, exp);
+	NXRP_PrintConsole(cl, "Quest %s rewardExp set to %d", questName, exp);
 	return true;
 }
 
@@ -433,7 +433,7 @@ bool NXRP_QuestSetRewardCredits(client_t* cl, const char* questName, int credits
 	if (idx < 0) return false;
 	quests[idx].rewardCredits = credits;
 	if (!NXRP_QuestSaveAll(quests)) return false;
-	NXRP_PrintConsoleToPlayer(cl, "Quest %s rewardCredits set to %d", questName, credits);
+	NXRP_PrintConsole(cl, "Quest %s rewardCredits set to %d", questName, credits);
 	return true;
 }
 
@@ -459,7 +459,7 @@ bool NXRP_QuestStartForPlayer(client_t* cl, const char* questName) {
 	NXRP_QuestLoadAll(quests);
 	const int idx = NXRP_QuestFindByName(quests, questName);
 	if (idx < 0) {
-		NXRP_PrintConsoleToPlayer(cl, "Quest not found");
+		NXRP_PrintConsole(cl, "Quest not found");
 		return false;
 	}
 	nxrp_quest_t& q = quests[idx];
@@ -480,6 +480,6 @@ bool NXRP_QuestStartForPlayer(client_t* cl, const char* questName) {
 		Com_sprintf(cmdBuf, sizeof(cmdBuf), "npc spawn %s", npc.name.c_str());
 		SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), (int)i + 1);
 	}
-	NXRP_PrintConsoleToPlayer(cl, "Quest started: %s", q.questName.c_str());
+	NXRP_PrintConsole(cl, "Quest started: %s", q.questName.c_str());
 	return true;
 }

@@ -871,37 +871,37 @@ qboolean NXRP_Skills_ListImpl( client_t *cl, const char *homepath ) {
 	(void)homepath;
 	if (g_nxrpSimpleSkills.empty()) NXRP_LoadRepoSkills();
 
-	NXRP_PrintConsoleToPlayer(cl, "----- Skills -----");
+	NXRP_PrintConsole(cl, "----- Skills -----");
 	for (int i = 0; i < (int)g_nxrpSimpleSkills.size(); ++i) {
 		const auto &s = g_nxrpSimpleSkills[i];
 		const int firstCost = s.costs.empty() ? 0 : s.costs[0];
-		NXRP_PrintConsoleToPlayer(cl, va("%d. %s [0/%d]\t- Cost: %d (id: %s)", i + 1, s.name.c_str(), s.maxLevel, firstCost, s.id.c_str()));
+		NXRP_PrintConsole(cl, va("%d. %s [0/%d]\t- Cost: %d (id: %s)", i + 1, s.name.c_str(), s.maxLevel, firstCost, s.id.c_str()));
 	}
-	NXRP_PrintConsoleToPlayer(cl, "------------------");
-	NXRP_PrintConsoleToPlayer(cl, "type !skill <skillid> for details");
+	NXRP_PrintConsole(cl, "------------------");
+	NXRP_PrintConsole(cl, "type !skill <skillid> for details");
 	return qtrue;
 }
 
 qboolean NXRP_Skill_PurchaseImpl( client_t *cl, const char *homepath, const char *skillToken ) {
 	(void)homepath;
 	if (!skillToken || !skillToken[0]) {
-		NXRP_PrintConsoleToPlayer(cl, "Usage: !skill <skillid>");
+		NXRP_PrintConsole(cl, "Usage: !skill <skillid>");
 		return qtrue;
 	}
 	if (g_nxrpSimpleSkills.empty()) NXRP_LoadRepoSkills();
 
 	const int idx = NXRP_FindRepoSkillIndexById(skillToken);
 	if (idx < 0) {
-		NXRP_PrintConsoleToPlayer(cl, "Unknown skill id. Use !skills to list available skills.");
+		NXRP_PrintConsole(cl, "Unknown skill id. Use !skills to list available skills.");
 		return qtrue;
 	}
 
 	const auto &s = g_nxrpSimpleSkills[idx];
 	const int firstCost = s.costs.empty() ? 0 : s.costs[0];
-	NXRP_PrintConsoleToPlayer(cl, va("Skill: %s (id: %s)", s.name.c_str(), s.id.c_str()));
-	NXRP_PrintConsoleToPlayer(cl, va("Description: %s", s.description.c_str()));
-	NXRP_PrintConsoleToPlayer(cl, va("Max level: %d", s.maxLevel));
-	NXRP_PrintConsoleToPlayer(cl, va("First level cost: %d", firstCost));
-	NXRP_PrintConsoleToPlayer(cl, "Purchasing is temporarily disabled.");
+	NXRP_PrintConsole(cl, va("Skill: %s (id: %s)", s.name.c_str(), s.id.c_str()));
+	NXRP_PrintConsole(cl, va("Description: %s", s.description.c_str()));
+	NXRP_PrintConsole(cl, va("Max level: %d", s.maxLevel));
+	NXRP_PrintConsole(cl, va("First level cost: %d", firstCost));
+	NXRP_PrintConsole(cl, "Purchasing is temporarily disabled.");
 	return qtrue;
 }

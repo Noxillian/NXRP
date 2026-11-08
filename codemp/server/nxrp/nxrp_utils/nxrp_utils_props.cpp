@@ -30,7 +30,7 @@ int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
 		&& propMaxs[0] == 0.0f && propMaxs[1] == 0.0f && propMaxs[2] == 0.0f) {
 		VectorSet(propMins, -0.0f, 0.0f, 0.0f);
 		VectorSet(propMaxs, 0.0f, 0.0f, 0.0f);
-		NXRP_PrintConsoleToPlayer(NULL, "NXRP: collider extents were zero; applied default collider");
+		NXRP_PrintConsole(NULL, "NXRP: collider extents were zero; applied default collider");
 	}
 
 	for (int i = 0; i < 3; ++i) {
@@ -54,7 +54,7 @@ int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
 	const int model = e ? gModelIndex_f(modelPath) : 0;
 	GVM_EndNative(old);
 	if (!e || model <= 0) {
-		NXRP_PrintConsoleToPlayer(NULL, va("NXRP: failed to resolve model index for %s", modelPath));
+		NXRP_PrintConsole(NULL, va("NXRP: failed to resolve model index for %s", modelPath));
 		return -1;
 	}
 
@@ -75,7 +75,7 @@ int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
 		&& propMaxs[0] == 0.0f && propMaxs[1] == 0.0f && propMaxs[2] == 0.0f);
 
 	if (noCollider) {
-		NXRP_PrintConsoleToPlayer(NULL, va("NXRP: no collider for %s", modelPath));
+		NXRP_PrintConsole(NULL, va("NXRP: no collider for %s", modelPath));
 		VectorSet(e->r.mins, 0.0f, 0.0f, 0.0f);
 		VectorSet(e->r.maxs, 0.0f, 0.0f, 0.0f);
 		VectorCopy(e->s.pos.trBase, e->r.absmin);
@@ -109,7 +109,7 @@ int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
 void NXRP_ListSavedSpawns(client_t* cl) {
 	std::string filename;
 	std::vector<std::string> lines;
-	if (!NXRP_ReadPerMapLines("nxrp_props", lines, filename)) { NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map"); return; }
+	if (!NXRP_ReadPerMapLines("nxrp_props", lines, filename)) { NXRP_PrintConsole(cl, "No saved spawns for this map"); return; }
 
 	// Print a simple indexed list of saved spawn entries for this map.
 	int idx = 0;
@@ -157,11 +157,11 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 
 		if (model.empty()) model = "<unknown>";
 		int idv = NXRP_ExtractIntField(s, "\"id\"", -1);
-		NXRP_PrintConsoleToPlayer(cl, "%d: id=%d model=%s position=%.0f,%.0f,%.0f angles=%.0f,%.0f,%.0f", idx, idv, model.c_str(), ox, oy, oz, ax, ay, az);
+		NXRP_PrintConsole(cl, "%d: id=%d model=%s position=%.0f,%.0f,%.0f angles=%.0f,%.0f,%.0f", idx, idv, model.c_str(), ox, oy, oz, ax, ay, az);
 		idx++;
 	}
-	if (!any) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
-	if (idx == 0) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");
+	if (!any) NXRP_PrintConsole(cl, "No saved spawns for this map");
+	if (idx == 0) NXRP_PrintConsole(cl, "No saved spawns for this map");
 	return;
 }
 
@@ -179,8 +179,8 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 
 	std::string filename;
 	std::vector<std::string> lines;
-	if (!NXRP_ReadPerMapLines("nxrp_props", lines, filename)) { NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map"); return false; }
-	if (index < 0 || index >= (int)lines.size()) { NXRP_PrintConsoleToPlayer(cl, "Invalid saved spawn index"); return false; }
+	if (!NXRP_ReadPerMapLines("nxrp_props", lines, filename)) { NXRP_PrintConsole(cl, "No saved spawns for this map"); return false; }
+	if (index < 0 || index >= (int)lines.size()) { NXRP_PrintConsole(cl, "Invalid saved spawn index"); return false; }
 
 	std::string target = lines[index];
 	const char* s = target.c_str();
@@ -195,7 +195,7 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 	const char* a = strstr(s, "\"angles\"");
 	if (a) { a = strchr(a, '['); if (a) { a++; sscanf(a, "%f %*[, ] %f %*[, ] %f", &ax, &ay, &az); } }
 
-	if (modelPath.empty()) { NXRP_PrintConsoleToPlayer(cl, "Saved entry missing model path"); return false; }
+	if (modelPath.empty()) { NXRP_PrintConsole(cl, "Saved entry missing model path"); return false; }
 
 	float dx = 0.0f, dy = 0.0f, dz = 0.0f;
 	if (!Q_stricmp(dirTok, "up")) dz = amount;
@@ -204,7 +204,7 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 	else if (!Q_stricmp(dirTok, "right")) dx = amount;
 	else if (!Q_stricmp(dirTok, "forward")) dy = amount;
 	else if (!Q_stricmp(dirTok, "back")) dy = -amount;
-	else { NXRP_PrintConsoleToPlayer(cl, "Unknown direction; use up/down/left/right/forward/back"); return false; }
+	else { NXRP_PrintConsole(cl, "Unknown direction; use up/down/left/right/forward/back"); return false; }
 
 	int idToFree = NXRP_ExtractIntField(target, "\"id\"", -1);
 	if (idToFree >= 0 && idToFree < sv.num_entities) {
@@ -223,7 +223,7 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 	float yaw = ay;
 	int newEnt = NXRP_PlaceModel(modelPath.c_str(), newFloor, yaw);
 	if (newEnt < 0) {
-		NXRP_PrintConsoleToPlayer(cl, "Failed to respawn model at new location");
+		NXRP_PrintConsole(cl, "Failed to respawn model at new location");
 		return false;
 	}
 
@@ -238,15 +238,15 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 	for (const auto& ll : lines) { fputs(ll.c_str(), f); fputc('\n', f); }
 	fclose(f);
 
-	NXRP_PrintConsoleToPlayer(cl, va("Moved saved spawn %d by %s %.1f", index, dirTok, amount));
+	NXRP_PrintConsole(cl, va("Moved saved spawn %d by %s %.1f", index, dirTok, amount));
 	return true;
 }
 
 bool NXRP_RotateSavedSpawnByIndex(client_t* cl, int index, float deltaYaw) {
 	std::string filename;
 	std::vector<std::string> lines;
-	if (!NXRP_ReadPerMapLines("nxrp_props", lines, filename)) { NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map"); return false; }
-	if (index < 0 || index >= (int)lines.size()) { NXRP_PrintConsoleToPlayer(cl, "Invalid saved spawn index"); return false; }
+	if (!NXRP_ReadPerMapLines("nxrp_props", lines, filename)) { NXRP_PrintConsole(cl, "No saved spawns for this map"); return false; }
+	if (index < 0 || index >= (int)lines.size()) { NXRP_PrintConsole(cl, "Invalid saved spawn index"); return false; }
 
 	std::string target = lines[index];
 	const char* s = target.c_str();
@@ -261,7 +261,7 @@ bool NXRP_RotateSavedSpawnByIndex(client_t* cl, int index, float deltaYaw) {
 	const char* a = strstr(s, "\"angles\"");
 	if (a) { a = strchr(a, '['); if (a) { a++; sscanf(a, "%f %*[, ] %f %*[, ] %f", &ax, &ay, &az); } }
 
-	if (modelPath.empty()) { NXRP_PrintConsoleToPlayer(cl, "Saved entry missing model path"); return false; }
+	if (modelPath.empty()) { NXRP_PrintConsole(cl, "Saved entry missing model path"); return false; }
 
 	float newYaw = ay + deltaYaw;
 	while (newYaw < 0.0f) newYaw += 360.0f;
@@ -291,7 +291,7 @@ bool NXRP_RotateSavedSpawnByIndex(client_t* cl, int index, float deltaYaw) {
 	for (const auto& ll : lines) { fputs(ll.c_str(), f); fputc('\n', f); }
 	fclose(f);
 
-	NXRP_PrintConsoleToPlayer(cl, va("Rotated saved spawn %d by %.1f (new yaw %.1f)", index, deltaYaw, newYaw));
+	NXRP_PrintConsole(cl, va("Rotated saved spawn %d by %.1f (new yaw %.1f)", index, deltaYaw, newYaw));
 	return true;
 }
 
@@ -328,7 +328,7 @@ bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor) {
 
 	int ent = NXRP_PlaceModel(path, floor, angle);
 	if (ent >= 0) {
-		NXRP_PrintConsoleToPlayer(cl, va("Spawned model %s as entity %d", path, ent));
+		NXRP_PrintConsole(cl, va("Spawned model %s as entity %d", path, ent));
 		NXRP_RegisterSpawn(ent);
 		vec3_t zeroMins = {0.0f, 0.0f, 0.0f};
 		vec3_t zeroMaxs = {0.0f, 0.0f, 0.0f};
@@ -336,7 +336,7 @@ bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor) {
 		NXRP_SaveSpawnToMap(ent, path, zeroMins, zeroMaxs, zeroOffset, angle);
 		return true;
 	}
-	NXRP_PrintConsoleToPlayer(cl, "Failed to spawn model.");
+	NXRP_PrintConsole(cl, "Failed to spawn model.");
 	return false;
 }
 
@@ -462,7 +462,7 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 		vec3_t savedPosition = { ox, oy, oz };
 		float yaw = ay;
 		if (cl) {
-			NXRP_PrintConsoleToPlayer(cl, va("NXRP: loading prop %s; savedPosition=[%.2f %.2f %.2f] yaw=%.2f",
+			NXRP_PrintConsole(cl, va("NXRP: loading prop %s; savedPosition=[%.2f %.2f %.2f] yaw=%.2f",
 				modelPath.c_str(), ox, oy, oz,
 				yaw));
 		}
@@ -470,9 +470,9 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 		if (ent >= 0) {
 			NXRP_RegisterSpawn(ent);
 			spawned++;
-			if (cl) NXRP_PrintConsoleToPlayer(cl, va("NXRP: spawned entity %d for model %s", ent, modelPath.c_str()));
+			if (cl) NXRP_PrintConsole(cl, va("NXRP: spawned entity %d for model %s", ent, modelPath.c_str()));
 		} else {
-			if (cl) NXRP_PrintConsoleToPlayer(cl, va("NXRP: failed to spawn model %s", modelPath.c_str()));
+			if (cl) NXRP_PrintConsole(cl, va("NXRP: failed to spawn model %s", modelPath.c_str()));
 		}
 	}
 	ifs.close();
@@ -528,7 +528,7 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 		}
 	}
 	if (!loadedCatalog) {
-		NXRP_PrintConsoleToPlayer(NULL, "NXRP: props catalog not found");
+		NXRP_PrintConsole(NULL, "NXRP: props catalog not found");
 	}
 	if (loadedCatalog) {
 		// crude JSON parsing: if name is a key, use that entry. If name looks like a path, search for an entry whose model matches the path.
@@ -621,7 +621,7 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 	ifs.open(cat1);
 	if (!ifs.is_open()) ifs.open(cat2);
 	if (!ifs.is_open()) {
-		NXRP_PrintConsoleToPlayer(NULL, va("NXRP: model not found in catalog: %s", sname.c_str()));
+		NXRP_PrintConsole(NULL, va("NXRP: model not found in catalog: %s", sname.c_str()));
 		return false;
 	}
 
@@ -663,7 +663,7 @@ bool NXRP_GetPropFromCatalog(const char* name, std::string& outModel, vec3_t& ou
 		}
 	}
 	ifs.close();
-	NXRP_PrintConsoleToPlayer(NULL, va("NXRP: model not found in catalog: %s", sname.c_str()));
+	NXRP_PrintConsole(NULL, va("NXRP: model not found in catalog: %s", sname.c_str()));
 	return false;
 }
 

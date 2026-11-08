@@ -120,7 +120,7 @@ std::string NXRP_EscapeString(const std::string &in) {
 // Ensure the client is logged in; if not, a message is sent and false is returned.
 bool NXRP_EnsureLoggedIn(client_t* cl) {
 	if (!cl || cl->state != CS_ACTIVE || !cl->nxrp_username[0]) {
-		NXRP_PrintConsoleToPlayer(cl, "You must be logged in to use this command");
+		NXRP_PrintConsole(cl, "You must be logged in to use this command");
 		return false;
 	}
 	return true;
@@ -129,7 +129,7 @@ bool NXRP_EnsureLoggedIn(client_t* cl) {
 // Helper: read raw account JSON content
 bool NXRP_ReadAccountContentForClient(client_t* cl, std::string& outContent, std::string& outSafeUsername) {
 	if (!cl || !cl->nxrp_username[0]) {
-		NXRP_PrintConsoleToPlayer(cl, "You must be logged in to use this command");
+		NXRP_PrintConsole(cl, "You must be logged in to use this command");
 		return false;
 	}
 
@@ -139,7 +139,7 @@ bool NXRP_ReadAccountContentForClient(client_t* cl, std::string& outContent, std
 		if (std::isalnum((unsigned char)c) || c == '_') safe.push_back((char)std::tolower((unsigned char)c));
 	}
 	if (safe.empty()) {
-		NXRP_PrintConsoleToPlayer(cl, "Invalid stored username");
+		NXRP_PrintConsole(cl, "Invalid stored username");
 		return false;
 	}
 
@@ -149,7 +149,7 @@ bool NXRP_ReadAccountContentForClient(client_t* cl, std::string& outContent, std
 
 	// Use shared file helper to read the file content
 	if (!NXRP_ReadFileToString(filepath.c_str(), outContent)) {
-		NXRP_PrintConsoleToPlayer(cl, "Account file not found");
+		NXRP_PrintConsole(cl, "Account file not found");
 		return false;
 	}
 	outSafeUsername = safe;
@@ -159,7 +159,7 @@ bool NXRP_ReadAccountContentForClient(client_t* cl, std::string& outContent, std
 // Check whether the client's account has isAdmin=true;
 bool NXRP_IsClientAdmin(client_t* cl) {
 	if (!cl || !cl->nxrp_username[0]) {
-		NXRP_PrintConsoleToPlayer(cl, "You must be logged in to use this command");
+		NXRP_PrintConsole(cl, "You must be logged in to use this command");
 		return false;
 	}
 
@@ -170,7 +170,7 @@ bool NXRP_IsClientAdmin(client_t* cl) {
 		if (std::isalnum((unsigned char)c) || c == '_') safe.push_back((char)std::tolower((unsigned char)c));
 	}
 	if (safe.empty()) {
-		NXRP_PrintConsoleToPlayer(cl, "Invalid stored username");
+		NXRP_PrintConsole(cl, "Invalid stored username");
 		return false;
 	}
 
@@ -180,7 +180,7 @@ bool NXRP_IsClientAdmin(client_t* cl) {
 
 	std::string sval;
 	if (!NXRP_GetAccountFieldFromFile(filepath.c_str(), "isAdmin", sval)) {
-		NXRP_PrintConsoleToPlayer(cl, "Admin flag missing");
+		NXRP_PrintConsole(cl, "Admin flag missing");
 		return false;
 	}
 
@@ -191,12 +191,12 @@ bool NXRP_IsClientAdmin(client_t* cl) {
 	if (v == "true" || v == "1") isAdmin = true;
 	else if (v == "false" || v == "0") isAdmin = false;
 	else {
-		NXRP_PrintConsoleToPlayer(cl, "Admin flag parse error");
+		NXRP_PrintConsole(cl, "Admin flag parse error");
 		return false;
 	}
 
 	if (!isAdmin) {
-		NXRP_PrintConsoleToPlayer(cl, "You are not an admin");
+		NXRP_PrintConsole(cl, "You are not an admin");
 		return false;
 	}
 	return true;
