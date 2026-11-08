@@ -38,7 +38,7 @@ static std::set<int> nxrp_known_npc_ents;
 void NXRP_PushPendingNPCName(const char* name) {
 	if (!name) return;
 	nxrp_pending_npc_names.push_back(std::string(name));
-	NXRP_PrintConsole(NULL, "NXRP_PushPendingNPCName queued: %s (queue=%zu)", name, nxrp_pending_npc_names.size());
+	//NXRP_PrintConsole(NULL, "NXRP_PushPendingNPCName queued: %s (queue=%zu)", name, nxrp_pending_npc_names.size());
 }
 
 void NXRP_PushPendingNPCSpawnAt(const char* name, const vec3_t position, float yaw) {

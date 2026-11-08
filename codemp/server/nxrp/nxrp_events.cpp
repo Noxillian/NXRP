@@ -54,7 +54,7 @@ void SV_NXRP_ScoreFrame(void) {
 
 					NXRP_ResetNPCTracking();
 					NXRP_LoadSavedSpawnsForMap(NULL);
-					NXRP_PrintConsole(NULL, "----- New Round Started -----");
+					//NXRP_PrintConsole(NULL, "----- New Round Started -----");
 
 					break;
 				}
@@ -195,20 +195,18 @@ void NXRP_OnRoundStart(void) {
 }
 
 void NXRP_OnRoundRestart(void) {
-	//int loadedProps = NXRP_LoadSavedSpawnsForMap(NULL);
-	//NXRP_PrintConsole(NULL, va("Loaded %d saved props for this map", loadedProps));
 	nxrp_roundBegunFlag = qfalse;
 	nxrp_roundStartTime = 0;
 	nxrp_prevRebelCountdown = 0;
 	nxrp_prevImperialCountdown = 0;
+	NXRP_PrintConsole(NULL, "----- New Round Started -----");
 	NXRP_FFA_Init();
 	NXRP_FFA_Frame();
-	NXRP_PrintConsole(NULL, va("OnRoundRestart"));
 }
 
-// Called when a player first enters the game
+// Called when a player enters the game -- Counts as playing or spectator
 void NXRP_OnPlayerSpawned(client_t *cl) {
-	NXRP_PrintConsole(NULL, "Player Spawned");
+	//NXRP_PrintConsole(NULL, "Player Spawned");
 	/*const char* pName = "Unknown";
 	if (!cl) {
 		NXRP_PrintConsoleToPlayer(NULL, "Unknown player spawned");

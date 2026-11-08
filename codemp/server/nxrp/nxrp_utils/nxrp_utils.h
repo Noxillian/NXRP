@@ -172,8 +172,8 @@ inline void NXRP_PrintConsole(client_t* cl, const char* fmt, ...) {
 				else esc.push_back(c);
 			}
 			if (cl)
-				SV_SendServerCommand(cl, "print \"^0[^6N^7xrp^0]^8 %s\n\"", esc.c_str());
+				SV_SendServerCommand(cl, "print \"^0[^6N^7xrp^0]^9 %s\n\"", esc.c_str());
 			else
-				SV_SendServerCommand(NULL, "print \"^0[^6N^7xrp^0]^8 %s\n\"", esc.c_str());
+				SV_SendServerCommand(NULL, "print \"^0[^6N^7xrp^0]^9 %s\n\"", esc.c_str());
 	}
 }

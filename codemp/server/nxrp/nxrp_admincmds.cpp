@@ -441,10 +441,10 @@ qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor ) {
 	}
 
 	char cmdBuf[128];
-	//Com_sprintf( cmdBuf, sizeof(cmdBuf), "npc spawn %s", arg );
+	Com_sprintf( cmdBuf, sizeof(cmdBuf), "npc spawn %s", arg );
 	NXRP_PushPendingNPCName(arg);
 	SV_ExecuteClientCommandDelayed_h(cl, std::string(cmdBuf), 1);
-	NXRP_PrintConsole(NULL, "Spawned NPC %d", arg);
+	NXRP_PrintConsole(cl, va("Spawning NPC %s", arg));
 	return qtrue;
 }
 
