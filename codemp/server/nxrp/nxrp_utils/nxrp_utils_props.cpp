@@ -359,8 +359,8 @@ bool NXRP_SetSavedSpawnScaleByIndex(client_t* cl, int index, float scalePercent)
 	sharedEntity_t* ent = SV_GentityNum(entnum);
 	if (!ent || ent->s.number != entnum) { NXRP_PrintConsole(cl, "Saved prop entity is not available"); return false; }
 
-	const float scale = scalePercent / 100.0f;
-	VectorSet(ent->s.modelScale, scale, scale, scale);
+	if (scalePercent > 1023.0f) scalePercent = 1023.0f;
+	ent->s.iModelScale = (int)scalePercent;
 	SV_LinkEntity(ent);
 	NXRP_PrintConsole(cl, va("Set saved prop %d visual scale to %.2f%%", index, scalePercent));
 	return true;
