@@ -146,14 +146,13 @@ bool NXRP_QuestStartForPlayer(client_t* cl, const char* questName);
 // Print a standardized NXRP console message to a specific player. If cl is
 // NULL the message will be broadcast to all clients by passing NULL to
 // SV_SendServerCommand.
-inline void NXRP_PrintConsoleToPlayerFmt(client_t* cl, const char* fmt, ...) {
+inline void NXRP_PrintConsoleToPlayer(client_t* cl, const char* fmt, ...) {
 	char buf[1024];
 	va_list ap;
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 
-	// Split the formatted buffer on literal newlines and send one server command per line
 	std::string s = buf;
 	size_t start = 0;
 	while (start < s.size()) {
@@ -166,7 +165,6 @@ inline void NXRP_PrintConsoleToPlayerFmt(client_t* cl, const char* fmt, ...) {
 			line = s.substr(start, pos - start);
 			start = pos + 1;
 		}
-			// Escape backslashes and double-quotes so the server command string remains syntactically valid
 			std::string esc;
 			esc.reserve(line.size()*2);
 			for (char c : line) {
@@ -178,8 +176,4 @@ inline void NXRP_PrintConsoleToPlayerFmt(client_t* cl, const char* fmt, ...) {
 			else
 				SV_SendServerCommand(NULL, "print \"^0[^6N^7xrp^0]^8 %s\n\"", esc.c_str());
 	}
-}
-
-inline void NXRP_PrintConsoleToPlayer(client_t* cl, const char* text) {
-	NXRP_PrintConsoleToPlayerFmt(cl, "%s", text);
 }

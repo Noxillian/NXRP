@@ -3,8 +3,6 @@
 #include "server/sv_gameapi.h"
 #include "sys/sys_loadlib.h"
 
-void NXRP_PrintConsoleToPlayer(client_t* cl, const char* text);
-
 static int nxrp_lastScore[MAX_CLIENTS];
 static int nxrp_lastKills[MAX_CLIENTS];
 static int nxrp_roundStartTime = 0;

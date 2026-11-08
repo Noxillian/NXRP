@@ -8,6 +8,7 @@
 #include <vector>
 #include <fstream>
 #include <cctype>
+#include <cstdlib>
 #include "server/spin.h"
 
 // Forward-declare delayed executor used elsewhere (defined in spin.cpp)
@@ -103,11 +104,137 @@ qboolean NXRP_cmdAdmin_quest( client_t *cl, const char *chatCursor ) {
 
 // Handler: !noclip
 qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor ) {
-	(void)chatCursor;
-
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
-	SV_ExecuteClientCommandDelayed_h(cl, std::string("noclip"), 1);
-	NXRP_PrintConsoleToPlayer(cl, "Toggled noclip");
+
+	char command[32] = {0};
+	char indexText[32] = {0};
+	const int parts = chatCursor ? sscanf(chatCursor, "%31s %31s", command, indexText) : 0;
+	if (parts < 1) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !noclip [clientindex]");
+		return qtrue;
+	}
+
+	int index = (int)(cl - svs.clients);
+	if (parts >= 2) {
+		bool allDigits = true;
+		for (size_t i = 0; indexText[i]; ++i) {
+			if (!isdigit((unsigned char)indexText[i])) { allDigits = false; break; }
+		}
+		index = allDigits ? atoi(indexText) : -1;
+	}
+	if (index < 0 || index >= sv_maxclients->integer || svs.clients[index].state < CS_CONNECTED) {
+		NXRP_PrintConsoleToPlayer(cl, "Invalid client index or client not connected");
+		return qtrue;
+	}
+
+	SV_ExecuteClientCommandDelayed_h(&svs.clients[index], std::string("noclip"), 1);
+	NXRP_PrintConsoleToPlayer(cl, va("Toggled noclip for client %d", index));
+	return qtrue;
+}
+
+/*static qboolean NXRP_cmdAdmin_numericStub(client_t* cl, const char* chatCursor, const char* usage) {
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+	char command[32] = {0};
+	char value[32] = {0};
+	if (!chatCursor || sscanf(chatCursor, "%31s %31s", command, value) < 2) {
+		NXRP_PrintConsoleToPlayer(cl, usage);
+		return qtrue;
+	}
+	char *end = NULL;
+	strtol(value, &end, 10);
+	if (end == value || *end != '\0') {
+		NXRP_PrintConsoleToPlayer(cl, usage);
+	}
+	return qtrue;
+}*/
+
+qboolean NXRP_cmdAdmin_speed(client_t *cl, const char *chatCursor) {
+	//return NXRP_cmdAdmin_numericStub(cl, chatCursor, "Usage: !speed <number>");
+
+	return qtrue;
+}
+
+qboolean NXRP_cmdAdmin_armor(client_t *cl, const char *chatCursor) {
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	char command[32] = { 0 };
+	char valueText[32] = { 0 };
+	if (!chatCursor || sscanf(chatCursor, "%31s %31s", command, valueText) < 2) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !setsize <number>");
+		return qtrue;
+	}
+
+	char* end = NULL;
+	const long value = strtol(valueText, &end, 10);
+	if (end == valueText || *end != '\0') {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !setsize <number>");
+		return qtrue;
+	}
+
+	if (!cl || !cl->gentity || !cl->gentity->playerState) {
+		NXRP_PrintConsoleToPlayer(cl, "Unable to set player size");
+		return qtrue;
+	}
+
+	cl->gentity->playerState->stats[STAT_ARMOR] = (int)value;
+	NXRP_PrintConsoleToPlayer(cl, va("Set player armor to %d", (int)value));
+	return qtrue;
+}
+
+qboolean NXRP_cmdAdmin_sabersize(client_t *cl, const char *chatCursor) {
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	char command[32] = { 0 };
+	char valueText[32] = { 0 };
+	if (!chatCursor || sscanf(chatCursor, "%31s %31s", command, valueText) < 2) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !setsize <number>");
+		return qtrue;
+	}
+
+	char* end = NULL;
+	const long value = strtol(valueText, &end, 10);
+	if (end == valueText || *end != '\0') {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !setsize <number>");
+		return qtrue;
+	}
+
+	if (!cl || !cl->gentity || !cl->gentity->playerState) {
+		NXRP_PrintConsoleToPlayer(cl, "Unable to set player size");
+		return qtrue;
+	}
+
+	//cl->gentity->playerState->iModelScale = (int)value;
+
+	//cl->gentity->playerState
+
+	NXRP_PrintConsoleToPlayer(cl, va("Set player size to %d", (int)value));
+	return qtrue;
+}
+
+qboolean NXRP_cmdAdmin_setsize(client_t *cl, const char *chatCursor) {
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	char command[32] = {0};
+	char valueText[32] = {0};
+	if (!chatCursor || sscanf(chatCursor, "%31s %31s", command, valueText) < 2) {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !setsize <number>");
+		return qtrue;
+	}
+
+	char* end = NULL;
+	const long value = strtol(valueText, &end, 10);
+	if (end == valueText || *end != '\0') {
+		NXRP_PrintConsoleToPlayer(cl, "Usage: !setsize <number>");
+		return qtrue;
+	}
+
+	if (!cl || !cl->gentity || !cl->gentity->playerState) {
+		NXRP_PrintConsoleToPlayer(cl, "Unable to set player size");
+		return qtrue;
+	}
+
+	cl->gentity->playerState->iModelScale = (int)value;
+	NXRP_PrintConsoleToPlayer(cl, va("Set player size to %d", (int)value));
 	return qtrue;
 }
 
@@ -191,7 +318,7 @@ qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 	const qboolean cheats = Cvar_VariableIntegerValue("sv_cheats") ? qtrue : qfalse;
 	if (!cheats) {
 		Cvar_Set("sv_cheats", "1");
-		//GVM_RunFrame(sv.time);
+		GVM_RunFrame(sv.time);
 	}
 
 	NXRP_PrintConsoleToPlayer(cl, "You have been promoted to Boss (giveall kit)");
@@ -209,6 +336,7 @@ qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePowersKnown |= (1 << FP_LEVITATION);
 		ps->fd.forcePowerLevel[FP_LEVITATION] = 3;
 		cl->gentity->playerState->stats[STAT_ARMOR] = 500;
+		cl->gentity->playerState->stats[STAT_MAX_HEALTH] = 500;
 		cl->gentity->playerState->stats[STAT_HEALTH] = 500;
 		cl->gentity->playerState->iModelScale = 150;
 		cl->gentity->client->ps.fd.forcePowerLevel[FP_LIGHTNING] = 3;
@@ -243,7 +371,7 @@ qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 
 	if (!cheats) {
 		Cvar_Set("sv_cheats", "0");
-		//GVM_RunFrame(sv.time);
+		GVM_RunFrame(sv.time);
 	}
 
 	return qtrue;
@@ -351,7 +479,7 @@ qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	NXRP_PrintConsoleToPlayerFmt(cl, "Teleported to %.2f %.2f %.2f", x, y, z);
+	NXRP_PrintConsoleToPlayer(cl, "Teleported to %.2f %.2f %.2f", x, y, z);
 	return qtrue;
 }
 
@@ -412,6 +540,18 @@ qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {
 qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
+	char giveallTarget[32] = {0};
+	const int giveallParts = chatCursor ? sscanf(chatCursor, "%*31s %31s", giveallTarget) : 0;
+	if (giveallParts == 1 && !Q_stricmp(giveallTarget, "all")) {
+		for (int i = 0; i < sv_maxclients->integer; ++i) {
+			if (svs.clients[i].state >= CS_CONNECTED) {
+				NXRP_cmdAdmin_giveall(cl, va("giveall %d", i));
+			}
+		}
+		NXRP_PrintConsoleToPlayer(cl, "Applied giveall to all connected clients");
+		return qtrue;
+	}
+
 	// Some give commands are gated behind sv_cheats. Temporarily enable
 	// sv_cheats like other modules do (see social.cpp's Holo_CheatCommand)
 	const qboolean cheats = Cvar_VariableIntegerValue("sv_cheats") ? qtrue : qfalse;
@@ -457,7 +597,7 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 
 	if (target && target->gentity && target->gentity->playerState) {
 		playerState_t* ps = target->gentity->playerState;
-		ps->fd.forceUsingAdded = 0;
+		//ps->fd.forceUsingAdded = 0;
 		ps->stats[STAT_WEAPONS] |= (1 << WP_SABER);
 		ps->weapon = WP_SABER;
 		ps->weaponstate = WEAPON_READY;
@@ -550,7 +690,7 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 			Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
 			Info_SetValueForKey(userinfo, "color1", "red");
 			// Persist a dark-side force profile so force re-init paths keep usable powers.
-			Info_SetValueForKey(userinfo, "forcepowers", "7-1-333003000313003120");
+			//Info_SetValueForKey(userinfo, "forcepowers", "7-1-333003000313003120");
 		SV_SetUserinfo(targetIdx, userinfo);
 		GVM_ClientUserinfoChanged(targetIdx);
 

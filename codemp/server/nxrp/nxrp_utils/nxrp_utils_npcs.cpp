@@ -38,7 +38,7 @@ static std::set<int> nxrp_known_npc_ents;
 void NXRP_PushPendingNPCName(const char* name) {
 	if (!name) return;
 	nxrp_pending_npc_names.push_back(std::string(name));
-	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_PushPendingNPCName queued: %s (queue=%zu)", name, nxrp_pending_npc_names.size());
+	NXRP_PrintConsoleToPlayer(NULL, "NXRP_PushPendingNPCName queued: %s (queue=%zu)", name, nxrp_pending_npc_names.size());
 }
 
 void NXRP_PushPendingNPCSpawnAt(const char* name, const vec3_t position, float yaw) {
@@ -48,7 +48,7 @@ void NXRP_PushPendingNPCSpawnAt(const char* name, const vec3_t position, float y
 	VectorCopy(position, item.position);
 	item.yaw = yaw;
 	nxrp_pending_npc_spawns.push_back(item);
-	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP_PushPendingNPCSpawnAt queued: %s at %.0f %.0f %.0f yaw %.0f (queue=%zu)",
+	NXRP_PrintConsoleToPlayer(NULL, "NXRP_PushPendingNPCSpawnAt queued: %s at %.0f %.0f %.0f yaw %.0f (queue=%zu)",
 		name, position[0], position[1], position[2], yaw, nxrp_pending_npc_spawns.size());
 }
 
@@ -94,14 +94,14 @@ void NXRP_TrackNPC(int entnum, const char* name) {
 	}
 	nxrp_tracked_npcs[entnum] = data;
 	nxrp_known_npc_ents.insert(entnum);
-	NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP: tracking npc ent=%d name=%s", entnum, name);
+	NXRP_PrintConsoleToPlayer(NULL, "NXRP: tracking npc ent=%d name=%s", entnum, name);
 }
 
 void NXRP_UntrackNPC(int entnum) {
 	if (entnum < 0) return;
 	const char* tracked = NXRP_GetTrackedNPCName(entnum);
 	if (tracked) {
-		NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP: untracking npc ent=%d name=%s", entnum, tracked);
+		NXRP_PrintConsoleToPlayer(NULL, "NXRP: untracking npc ent=%d name=%s", entnum, tracked);
 	}
 	nxrp_tracked_npcs.erase(entnum);
 	nxrp_known_npc_ents.erase(entnum);
@@ -139,7 +139,7 @@ void NXRP_NPCTickTracking(void) {
 				std::string name = nxrp_pending_npc_names.front();
 				nxrp_pending_npc_names.pop_front();
 				NXRP_TrackNPC(i, name.c_str());
-				NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP: bound pending !spawn NPC ent=%d name=%s", i, name.c_str());
+				NXRP_PrintConsoleToPlayer(NULL, "NXRP: bound pending !spawn NPC ent=%d name=%s", i, name.c_str());
 			}
 		}
 	}
@@ -157,7 +157,7 @@ void NXRP_NPCTickTracking(void) {
 		sharedEntity_t* ent = NULL;
 		if (!NXRP_IsLiveNpcEnt(entnum, &ent)) {
 			if (!tracked.deadSeen) {
-				NXRP_PrintConsoleToPlayerFmt(NULL, "%s killed %s", killerName, tracked.name.c_str());
+				NXRP_PrintConsoleToPlayer(NULL, "%s killed %s", killerName, tracked.name.c_str());
 				tracked.deadSeen = qtrue;
 			}
 			toUntrack.push_back(entnum);
@@ -180,7 +180,7 @@ void NXRP_NPCTickTracking(void) {
 		const qboolean deadNow = (deadByPmType || health <= 0) ? qtrue : qfalse;
 
 		if (tracked.lastHealth > 0 && deadNow && !tracked.deadSeen) {
-			NXRP_PrintConsoleToPlayerFmt(NULL, "%s killed %s", killerName, tracked.name.c_str());
+			NXRP_PrintConsoleToPlayer(NULL, "%s killed %s", killerName, tracked.name.c_str());
 			tracked.deadSeen = qtrue;
 		}
 		if (!deadNow) {
@@ -210,7 +210,7 @@ void NXRP_ListTrackedSpawnNPCs(client_t* cl) {
 		if (!tracked.fromSpawnCmd) continue;
 		sharedEntity_t* ent = NULL;
 		const qboolean alive = NXRP_IsLiveNpcEnt(entnum, &ent);
-		NXRP_PrintConsoleToPlayerFmt(cl, "%d: npc=%s alive=%s health=%d",
+		NXRP_PrintConsoleToPlayer(cl, "%d: npc=%s alive=%s health=%d",
 			entnum,
 			tracked.name.c_str(),
 			alive ? "yes" : "no",
@@ -228,7 +228,7 @@ void NXRP_FreeEntity(void* entPtr) {
 	int entnum = ent->s.number;
 	const char* trackedName = NXRP_GetTrackedNPCName(entnum);
 	if (trackedName) {
-		NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP: G_FreeEntity called for tracked npc ent=%d name=%s health=%d", entnum, trackedName, ent->health);
+		NXRP_PrintConsoleToPlayer(NULL, "NXRP: G_FreeEntity called for tracked npc ent=%d name=%s health=%d", entnum, trackedName, ent->health);
 	}
 
 	// Forward to the real VM G_FreeEntity function
@@ -240,7 +240,7 @@ void NXRP_FreeEntity(void* entPtr) {
 	G_FreeEntity_f(entPtr);
 	GVM_EndNative(old);
 	if (trackedName) {
-		NXRP_PrintConsoleToPlayerFmt(NULL, "NXRP: tracked npc entity freed ent=%d name=%s", entnum, trackedName);
+		NXRP_PrintConsoleToPlayer(NULL, "NXRP: tracked npc entity freed ent=%d name=%s", entnum, trackedName);
 		NXRP_UntrackNPC(entnum);
 	}
 }

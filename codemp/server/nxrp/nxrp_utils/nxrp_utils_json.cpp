@@ -61,8 +61,6 @@ bool NXRP_uJson_CreateAccountFile(
 	return !ofs.fail();
 }
 
-
-
 bool NXRP_ParseSkillsJson(const std::string &content, std::vector<NXRP_SimpleSkill> &out) {
 	out.clear();
 	size_t skillsPos = content.find("\"skills\"");

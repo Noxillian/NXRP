@@ -60,7 +60,7 @@ qboolean NXRP_cmd_check( client_t *cl, const char *chatCursor ) {
 	NXRP_PrintConsoleToPlayer(cl, "Known force powers:");
 	for (int i = 0; i < NUM_FORCE_POWERS; ++i) {
 		if (ps->fd.forcePowersKnown & (1 << i)) {
-			NXRP_PrintConsoleToPlayerFmt(cl, "  %s: level %d", kForceNames[i], ps->fd.forcePowerLevel[i]);
+			NXRP_PrintConsoleToPlayer(cl, "  %s: level %d", kForceNames[i], ps->fd.forcePowerLevel[i]);
 		}
 	}
 
@@ -324,12 +324,12 @@ qboolean NXRP_cmd_account( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_GetAccountFieldFromFile(filepath.c_str(), "credits", tmp)) credits = "0"; else credits = tmp;
 	if (!NXRP_GetAccountFieldFromFile(filepath.c_str(), "skillpoints", tmp)) skillpoints = "0"; else skillpoints = tmp;
 
-	NXRP_PrintConsoleToPlayerFmt(cl, "Account info for %s:", username);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  Username: %s", username);
-	NXRP_PrintConsoleToPlayerFmt(cl, "  Level: %s", level.c_str());
-	NXRP_PrintConsoleToPlayerFmt(cl, "  Exp: %s", exp.c_str());
-	NXRP_PrintConsoleToPlayerFmt(cl, "  Credits: %s", credits.c_str());
-	NXRP_PrintConsoleToPlayerFmt(cl, "  Skill Points: %s", skillpoints.c_str());
+	NXRP_PrintConsoleToPlayer(cl, "Account info for %s:", username);
+	NXRP_PrintConsoleToPlayer(cl, "  Username: %s", username);
+	NXRP_PrintConsoleToPlayer(cl, "  Level: %s", level.c_str());
+	NXRP_PrintConsoleToPlayer(cl, "  Exp: %s", exp.c_str());
+	NXRP_PrintConsoleToPlayer(cl, "  Credits: %s", credits.c_str());
+	NXRP_PrintConsoleToPlayer(cl, "  Skill Points: %s", skillpoints.c_str());
 	return qtrue;
 }
 
@@ -351,6 +351,6 @@ qboolean NXRP_cmd_pos( client_t *cl, const char *chatCursor ) {
 	vec3_t org;
 	VectorCopy(cl->gentity->r.currentOrigin, org);
 
-	NXRP_PrintConsoleToPlayerFmt(cl, "Position: %.2f, %.2f, %.2f", org[0], org[1], org[2]);
+	NXRP_PrintConsoleToPlayer(cl, "Position: %.2f, %.2f, %.2f", org[0], org[1], org[2]);
 	return qtrue;
 }

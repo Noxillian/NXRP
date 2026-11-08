@@ -157,7 +157,7 @@ void NXRP_ListSavedSpawns(client_t* cl) {
 
 		if (model.empty()) model = "<unknown>";
 		int idv = NXRP_ExtractIntField(s, "\"id\"", -1);
-		NXRP_PrintConsoleToPlayerFmt(cl, "%d: id=%d model=%s position=%.0f,%.0f,%.0f angles=%.0f,%.0f,%.0f", idx, idv, model.c_str(), ox, oy, oz, ax, ay, az);
+		NXRP_PrintConsoleToPlayer(cl, "%d: id=%d model=%s position=%.0f,%.0f,%.0f angles=%.0f,%.0f,%.0f", idx, idv, model.c_str(), ox, oy, oz, ax, ay, az);
 		idx++;
 	}
 	if (!any) NXRP_PrintConsoleToPlayer(cl, "No saved spawns for this map");

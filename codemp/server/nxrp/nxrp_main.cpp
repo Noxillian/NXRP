@@ -40,6 +40,10 @@ enum NXRP_SubCmd {
 	NXRP_SUB_GIVEALL,
 	NXRP_SUB_BOSS,
 	NXRP_SUB_NOCLIP,
+	NXRP_SUB_SPEED,
+	NXRP_SUB_ARMOR,
+	NXRP_SUB_SABERSIZE,
+	NXRP_SUB_SETSIZE,
 	NXRP_SUB_REGISTER,
 	NXRP_SUB_LOGIN,
 	NXRP_SUB_POS,
@@ -57,6 +61,10 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "account" ) )	return NXRP_SUB_ACCOUNT;
 	if ( !Q_stricmp( s, "giveall" ) )	return NXRP_SUB_GIVEALL;
 	if ( !Q_stricmp( s, "noclip" ) )	return NXRP_SUB_NOCLIP;
+	if ( !Q_stricmp( s, "speed" ) )		return NXRP_SUB_SPEED;
+	if ( !Q_stricmp( s, "armor" ) )		return NXRP_SUB_ARMOR;
+	if ( !Q_stricmp( s, "sabersize" ) )	return NXRP_SUB_SABERSIZE;
+	if ( !Q_stricmp( s, "setsize" ) )	return NXRP_SUB_SETSIZE;
 	if ( !Q_stricmp( s, "register" ) )	return NXRP_SUB_REGISTER;
 	if ( !Q_stricmp( s, "login" ) )		return NXRP_SUB_LOGIN;
 	if ( !Q_stricmp( s, "skill" ) )		return NXRP_SUB_SKILL;
@@ -217,6 +225,14 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 		return NXRP_cmdAdmin_giveall( cl, dispatchCursor );
 	case NXRP_SUB_NOCLIP:
 		return NXRP_cmdAdmin_noclip( cl, dispatchCursor );
+	case NXRP_SUB_SPEED:
+		return NXRP_cmdAdmin_speed( cl, dispatchCursor );
+	case NXRP_SUB_ARMOR:
+		return NXRP_cmdAdmin_armor( cl, dispatchCursor );
+	case NXRP_SUB_SABERSIZE:
+		return NXRP_cmdAdmin_sabersize( cl, dispatchCursor );
+	case NXRP_SUB_SETSIZE:
+		return NXRP_cmdAdmin_setsize( cl, dispatchCursor );
 	case NXRP_SUB_REGISTER:
 		return NXRP_cmd_register( cl, dispatchCursor );
 	case NXRP_SUB_LOGIN:
