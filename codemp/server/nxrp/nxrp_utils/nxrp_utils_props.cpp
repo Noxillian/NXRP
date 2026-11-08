@@ -193,6 +193,7 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 	std::string modelPath;
 	float ox = 0.0f, oy = 0.0f, oz = 0.0f;
 	float ax = 0.0f, ay = 0.0f, az = 0.0f;
+	float scalePercent = 100.0f;
 
 	const char* m = strstr(s, "\"model\"");
 	if (m) { m = strchr(m, ':'); if (m) m++; while (m && *m && isspace((unsigned char)*m)) m++; if (m && *m == '"') { m++; const char* me = strchr(m, '"'); if (me && me > m) modelPath.assign(m, me - m); } }
@@ -200,6 +201,10 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 	if (o) { o = strchr(o, '['); if (o) { o++; sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz); } }
 	const char* a = strstr(s, "\"angles\"");
 	if (a) { a = strchr(a, '['); if (a) { a++; sscanf(a, "%f %*[, ] %f %*[, ] %f", &ax, &ay, &az); } }
+	const char* sc = strstr(s, "\"scale\"");
+	if (sc) { sc = strchr(sc, ':'); if (sc) sscanf(sc + 1, "%f", &scalePercent); }
+	if (scalePercent <= 0.0f) scalePercent = 100.0f;
+	if (scalePercent > 1023.0f) scalePercent = 1023.0f;
 
 	if (modelPath.empty()) { NXRP_PrintConsole(cl, "Saved entry missing model path"); return false; }
 
@@ -227,7 +232,7 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 	newFloor[2] = roundf(newFloor[2]);
 
 	float yaw = ay;
-	int newEnt = NXRP_PlaceModel(modelPath.c_str(), newFloor, yaw);
+	int newEnt = NXRP_PlaceModel(modelPath.c_str(), newFloor, yaw, scalePercent);
 	if (newEnt < 0) {
 		NXRP_PrintConsole(cl, "Failed to respawn model at new location");
 		return false;
@@ -235,8 +240,8 @@ bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args) {
 
 	NXRP_RegisterSpawn(newEnt);
 	char buf[1024];
-	snprintf(buf, sizeof(buf), "{ \"id\": %d, \"index\": %d, \"model\": \"%s\", \"position\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f] }",
-		newEnt, index, modelPath.c_str(), newFloor[0], newFloor[1], newFloor[2], ax, yaw, az);
+	snprintf(buf, sizeof(buf), "{ \"id\": %d, \"index\": %d, \"model\": \"%s\", \"position\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f], \"scale\": %.0f }",
+		newEnt, index, modelPath.c_str(), newFloor[0], newFloor[1], newFloor[2], ax, yaw, az, scalePercent);
 	lines[index] = std::string(buf);
 
 	FILE* f = fopen(filename.c_str(), "w");
