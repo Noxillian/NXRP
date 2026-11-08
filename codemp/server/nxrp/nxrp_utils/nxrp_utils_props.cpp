@@ -541,14 +541,12 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 	std::string filename;
 	NXRP_GetPerMapFilePath("nxrp_props", filename);
 
-	std::ifstream ifs(filename);
-	if (!ifs.is_open()) {
-		return 0;
-	}
+	std::vector<std::string> lines;
+	if (!NXRP_ReadNonEmptyLinesFromFile(filename, lines)) return 0;
 
-	std::string line;
 	int spawned = 0;
-	while (std::getline(ifs, line)) {
+	for (size_t lineIndex = 0; lineIndex < lines.size(); ++lineIndex) {
+		std::string& line = lines[lineIndex];
 		if (line.empty()) continue;
 		const char* s = line.c_str();
 		std::string modelPath;
@@ -582,13 +580,27 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 		int ent = NXRP_PlaceModel(modelPath.c_str(), savedPosition, yaw, scalePercent);
 		if (ent >= 0) {
 			NXRP_RegisterSpawn(ent);
+			char idText[32];
+			snprintf(idText, sizeof(idText), "\"id\": %d", ent);
+			size_t idStart = line.find("\"id\"");
+			if (idStart != std::string::npos) {
+				size_t colon = line.find(':', idStart);
+				if (colon != std::string::npos) {
+					size_t valueStart = colon + 1;
+					while (valueStart < line.size() && isspace((unsigned char)line[valueStart])) valueStart++;
+					size_t valueEnd = valueStart;
+					if (valueEnd < line.size() && line[valueEnd] == '-') valueEnd++;
+					while (valueEnd < line.size() && isdigit((unsigned char)line[valueEnd])) valueEnd++;
+					line.replace(idStart, valueEnd - idStart, idText);
+				}
+			}
 			spawned++;
 			if (cl) NXRP_PrintConsole(cl, va("NXRP: spawned entity %d for model %s", ent, modelPath.c_str()));
 		} else {
 			if (cl) NXRP_PrintConsole(cl, va("NXRP: failed to spawn model %s", modelPath.c_str()));
 		}
 	}
-	ifs.close();
+	if (spawned > 0) NXRP_WriteLinesToFile(filename, lines);
 	return spawned;
 }
 
