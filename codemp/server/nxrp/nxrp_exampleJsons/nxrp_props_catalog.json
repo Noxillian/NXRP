@@ -98,5 +98,70 @@
     "collidersize": [ 30.0, 30.0, 30.0 ],
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0
+  },
+  "models/map_objects/dotf/ThroneChair.md3": {
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/dotf/ThroneDesk.md3": {
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/dotf/ThroneRoomChair1.md3": {
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/dotf/ThroneRoomChair1_1.md3": {
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/bespin/cc_bench.md3": {
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/bespin/cc_chair1.md3": { // small white square chair with small lean
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/bespin/cc_chair2.md3": { // small white round chair
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/bespin/lamp.md3": { // long white lamp
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/cairn/controlpanel.md3": { // Good default button console
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/rocky_ruins/floor_grate.md3": { // small floor grate
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/rocky_ruins/floor_grate_side.md3": { // small wall grate
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/rocky_ruins/monitor.md3": { // deko wall monitor. also fits a small fence
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/rocky_ruins/portcullis.md3": { // wall fence big! good one
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
   }
 }

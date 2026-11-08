@@ -295,6 +295,57 @@ bool NXRP_RotateSavedSpawnByIndex(client_t* cl, int index, float deltaYaw) {
 	return true;
 }
 
+bool NXRP_SetSavedSpawnAnglesByIndex(client_t* cl, int index, float angleX, float angleY, float angleZ) {
+	std::string filename;
+	std::vector<std::string> lines;
+	if (!NXRP_ReadPerMapLines("nxrp_props", lines, filename)) { NXRP_PrintConsole(cl, "No saved spawns for this map"); return false; }
+	if (index < 0 || index >= (int)lines.size()) { NXRP_PrintConsole(cl, "Invalid saved spawn index"); return false; }
+
+	std::string target = lines[index];
+	const char* s = target.c_str();
+	std::string modelPath;
+	float ox = 0.0f, oy = 0.0f, oz = 0.0f;
+	const char* m = strstr(s, "\"model\"");
+	if (m) { m = strchr(m, ':'); if (m) m++; while (m && *m && isspace((unsigned char)*m)) m++; if (m && *m == '"') { m++; const char* me = strchr(m, '"'); if (me && me > m) modelPath.assign(m, me - m); } }
+	const char* o = strstr(s, "\"position\"");
+	if (o) { o = strchr(o, '['); if (o) { o++; sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz); } }
+	if (modelPath.empty()) { NXRP_PrintConsole(cl, "Saved entry missing model path"); return false; }
+
+	int idToFree = NXRP_ExtractIntField(target, "\"id\"", -1);
+	if (idToFree >= 0 && idToFree < sv.num_entities) {
+		sharedEntity_t* oldEnt = SV_GentityNum(idToFree);
+		if (oldEnt) {
+			NXRP_FreeEntity((void*)oldEnt);
+			NXRP_RegisterSpawn(-1);
+		}
+	}
+
+	vec3_t pos = { ox, oy, oz };
+	int newEnt = NXRP_PlaceModel(modelPath.c_str(), pos, angleY);
+	if (newEnt < 0) return false;
+	sharedEntity_t* ent = SV_GentityNum(newEnt);
+	if (ent) {
+		VectorSet(ent->s.apos.trBase, angleX, angleY, angleZ);
+		VectorCopy(ent->s.apos.trBase, ent->s.angles);
+		VectorCopy(ent->s.apos.trBase, ent->r.currentAngles);
+		SV_LinkEntity(ent);
+	}
+	NXRP_RegisterSpawn(newEnt);
+
+	char buf[1024];
+	snprintf(buf, sizeof(buf), "{ \"id\": %d, \"index\": %d, \"model\": \"%s\", \"position\": [%.0f, %.0f, %.0f], \"angles\": [%.2f, %.2f, %.2f] }",
+		newEnt, index, modelPath.c_str(), ox, oy, oz, angleX, angleY, angleZ);
+	lines[index] = std::string(buf);
+
+	FILE* f = fopen(filename.c_str(), "w");
+	if (!f) return false;
+	for (const auto& ll : lines) { fputs(ll.c_str(), f); fputc('\n', f); }
+	fclose(f);
+
+	NXRP_PrintConsole(cl, va("Set saved spawn %d angles to %.2f %.2f %.2f", index, angleX, angleY, angleZ));
+	return true;
+}
+
 bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor) {
 	if (!chatCursor) return false;
 

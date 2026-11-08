@@ -76,6 +76,8 @@ bool NXRP_uJson_CreateAccountFile(
 bool NXRP_MoveSavedSpawnByIndex(client_t* cl, int index, const char* args);
 // Rotate a saved spawn (by index) by a yaw delta in degrees.
 bool NXRP_RotateSavedSpawnByIndex(client_t* cl, int index, float deltaYaw);
+// Set a saved spawn's absolute angles in degrees.
+bool NXRP_SetSavedSpawnAnglesByIndex(client_t* cl, int index, float angleX, float angleY, float angleZ);
 
 // Look up a prop definition by name from a per-module catalog file and return
 // model path, extents (mins/maxs), origin and yaw angle when found.

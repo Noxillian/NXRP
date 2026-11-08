@@ -157,27 +157,42 @@ qboolean NXRP_cmdAdmin_speed(client_t *cl, const char *chatCursor) {
 qboolean NXRP_cmdAdmin_armor(client_t *cl, const char *chatCursor) {
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
-	char command[32] = { 0 };
+	char command[32] = {0};
+	char targetText[32] = {0};
 	char valueText[32] = { 0 };
-	if (!chatCursor || sscanf(chatCursor, "%31s %31s", command, valueText) < 2) {
-		NXRP_PrintConsole(cl, "Usage: !setsize <number>");
+	const int parts = chatCursor ? sscanf(chatCursor, "%31s %31s %31s", command, targetText, valueText) : 0;
+	if (parts < 2 || (parts >= 3 && !valueText[0])) {
+		NXRP_PrintConsole(cl, "Usage: !armor <number> | !armor <clientindex> <number>");
 		return qtrue;
+	}
+
+	client_t* target = cl;
+	const char* armorText = targetText;
+	if (parts >= 3) {
+		char* targetEnd = NULL;
+		const long targetIndex = strtol(targetText, &targetEnd, 10);
+		if (targetEnd == targetText || *targetEnd != '\0' || targetIndex < 0 || targetIndex >= sv_maxclients->integer) {
+			NXRP_PrintConsole(cl, "Invalid client index");
+			return qtrue;
+		}
+		target = &svs.clients[targetIndex];
+		armorText = valueText;
 	}
 
 	char* end = NULL;
-	const long value = strtol(valueText, &end, 10);
-	if (end == valueText || *end != '\0') {
-		NXRP_PrintConsole(cl, "Usage: !setsize <number>");
+	const long value = strtol(armorText, &end, 10);
+	if (end == armorText || *end != '\0') {
+		NXRP_PrintConsole(cl, "Usage: !armor <number> | !armor <clientindex> <number>");
 		return qtrue;
 	}
 
-	if (!cl || !cl->gentity || !cl->gentity->playerState) {
-		NXRP_PrintConsole(cl, "Unable to set player size");
+	if (!target->gentity || !target->gentity->playerState) {
+		NXRP_PrintConsole(cl, "Unable to set player armor");
 		return qtrue;
 	}
 
-	cl->gentity->playerState->stats[STAT_ARMOR] = (int)value;
-	NXRP_PrintConsole(cl, va("Set player armor to %d", (int)value));
+	target->gentity->playerState->stats[STAT_ARMOR] = (int)value;
+	NXRP_PrintConsole(cl, va("Set player %d armor to %d", (int)(target - svs.clients), (int)value));
 	return qtrue;
 }
 
@@ -215,26 +230,41 @@ qboolean NXRP_cmdAdmin_setsize(client_t *cl, const char *chatCursor) {
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
 	char command[32] = {0};
+	char targetText[32] = {0};
 	char valueText[32] = {0};
-	if (!chatCursor || sscanf(chatCursor, "%31s %31s", command, valueText) < 2) {
-		NXRP_PrintConsole(cl, "Usage: !setsize <number>");
+	const int parts = chatCursor ? sscanf(chatCursor, "%31s %31s %31s", command, targetText, valueText) : 0;
+	if (parts < 2 || (parts >= 3 && !valueText[0])) {
+		NXRP_PrintConsole(cl, "Usage: !setsize <number> | !setsize <clientindex> <number>");
 		return qtrue;
+	}
+
+	client_t* target = cl;
+	const char* sizeText = targetText;
+	if (parts >= 3) {
+		char* targetEnd = NULL;
+		const long targetIndex = strtol(targetText, &targetEnd, 10);
+		if (targetEnd == targetText || *targetEnd != '\0' || targetIndex < 0 || targetIndex >= sv_maxclients->integer) {
+			NXRP_PrintConsole(cl, "Invalid client index");
+			return qtrue;
+		}
+		target = &svs.clients[targetIndex];
+		sizeText = valueText;
 	}
 
 	char* end = NULL;
-	const long value = strtol(valueText, &end, 10);
-	if (end == valueText || *end != '\0') {
-		NXRP_PrintConsole(cl, "Usage: !setsize <number>");
+	const long value = strtol(sizeText, &end, 10);
+	if (end == sizeText || *end != '\0') {
+		NXRP_PrintConsole(cl, "Usage: !setsize <number> | !setsize <clientindex> <number>");
 		return qtrue;
 	}
 
-	if (!cl || !cl->gentity || !cl->gentity->playerState) {
+	if (!target->gentity || !target->gentity->playerState) {
 		NXRP_PrintConsole(cl, "Unable to set player size");
 		return qtrue;
 	}
 
-	cl->gentity->playerState->iModelScale = (int)value;
-	NXRP_PrintConsole(cl, va("Set player size to %d", (int)value));
+	target->gentity->playerState->iModelScale = (int)value;
+	NXRP_PrintConsole(cl, va("Set player %d size to %d", (int)(target - svs.clients), (int)value));
 	return qtrue;
 }
 
@@ -248,18 +278,30 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args ) {
 	return qtrue;
 }
 
-// Rotate a saved prop by index: !prop a <index> <deltaYaw>
+// Rotate a saved prop by index: !prop a <index> <deltaYaw> or !prop a <index> <angleX> <angleY> <angleZ>
 qboolean NXRP_cmdAdmin_prop_a( client_t *cl, const char *chatCursor ) {
 	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
 	int idx = -1;
-	float deltaYaw = 0.0f;
-	if (!chatCursor || sscanf(chatCursor, "%*s %d %f", &idx, &deltaYaw) != 2) {
-		if (!chatCursor || sscanf(chatCursor, "%d %f", &idx, &deltaYaw) != 2) {
-			NXRP_PrintConsole(cl, "Usage: !prop a <index> <deltaYaw>");
-			return qtrue;
+	float angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f;
+	char command[32] = {0};
+	int parts = chatCursor ? sscanf(chatCursor, "%d %f %f %f", &idx, &angleX, &angleY, &angleZ) : 0;
+	if (parts == 0) {
+		parts = chatCursor ? sscanf(chatCursor, "%31s %d %f %f %f", command, &idx, &angleX, &angleY, &angleZ) - 1 : 0;
+	}
+	if (parts == 4) {
+		if (NXRP_SetSavedSpawnAnglesByIndex(cl, idx, angleX, angleY, angleZ)) {
+			NXRP_PrintConsole(cl, va("Set saved spawn %d angles to %.2f %.2f %.2f", idx, angleX, angleY, angleZ));
+		} else {
+			NXRP_PrintConsole(cl, va("Failed to set saved spawn %d angles", idx));
 		}
+		return qtrue;
+	}
+
+	if (parts != 2) {
+		NXRP_PrintConsole(cl, "Usage: !prop a <index> <angle> | !prop a <index> <angleX> <angleY> <angleZ>");
+		return qtrue;
 	}
 
 	if (idx < 0) {
@@ -267,8 +309,8 @@ qboolean NXRP_cmdAdmin_prop_a( client_t *cl, const char *chatCursor ) {
 		return qtrue;
 	}
 
-	if (NXRP_RotateSavedSpawnByIndex(cl, idx, deltaYaw)) {
-		NXRP_PrintConsole(cl, va("Rotated saved spawn %d by %.2f", idx, deltaYaw));
+	if (NXRP_RotateSavedSpawnByIndex(cl, idx, angleX)) {
+		NXRP_PrintConsole(cl, va("Rotated saved spawn %d by %.2f", idx, angleX));
 	} else {
 		NXRP_PrintConsole(cl, va("Failed to rotate saved spawn %d", idx));
 	}
