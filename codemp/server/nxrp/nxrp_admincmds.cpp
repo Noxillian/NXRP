@@ -317,6 +317,21 @@ qboolean NXRP_cmdAdmin_prop_a( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
+qboolean NXRP_cmdAdmin_prop_scale( client_t *cl, const char *chatCursor ) {
+	if (!NXRP_EnsureLoggedIn(cl)) return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
+
+	int index = -1;
+	float scale = 0.0f;
+	if (!chatCursor || sscanf(chatCursor, "%d %f", &index, &scale) != 2) {
+		NXRP_PrintConsole(cl, "Usage: !prop scale <propindex> <number>");
+		return qtrue;
+	}
+
+	NXRP_SetSavedSpawnScaleByIndex(cl, index, scale);
+	return qtrue;
+}
+
 // Admin-only: load saved prop spawns for the current map: !prop load
 qboolean NXRP_cmdAdmin_prop_load( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;

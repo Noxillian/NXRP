@@ -346,6 +346,26 @@ bool NXRP_SetSavedSpawnAnglesByIndex(client_t* cl, int index, float angleX, floa
 	return true;
 }
 
+bool NXRP_SetSavedSpawnScaleByIndex(client_t* cl, int index, float scalePercent) {
+	std::string filename;
+	std::vector<std::string> lines;
+	if (!NXRP_ReadPerMapLines("nxrp_props", lines, filename)) { NXRP_PrintConsole(cl, "No saved spawns for this map"); return false; }
+	if (index < 0 || index >= (int)lines.size()) { NXRP_PrintConsole(cl, "Invalid saved spawn index"); return false; }
+	if (scalePercent <= 0.0f) { NXRP_PrintConsole(cl, "Scale must be greater than 0"); return false; }
+
+	const int entnum = NXRP_ExtractIntField(lines[index], "\"id\"", -1);
+	if (entnum < 0 || entnum >= sv.num_entities) { NXRP_PrintConsole(cl, "Saved prop entity is not available"); return false; }
+
+	sharedEntity_t* ent = SV_GentityNum(entnum);
+	if (!ent || ent->s.number != entnum) { NXRP_PrintConsole(cl, "Saved prop entity is not available"); return false; }
+
+	const float scale = scalePercent / 100.0f;
+	VectorSet(ent->s.modelScale, scale, scale, scale);
+	SV_LinkEntity(ent);
+	NXRP_PrintConsole(cl, va("Set saved prop %d visual scale to %.2f%%", index, scalePercent));
+	return true;
+}
+
 bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor) {
 	if (!chatCursor) return false;
 

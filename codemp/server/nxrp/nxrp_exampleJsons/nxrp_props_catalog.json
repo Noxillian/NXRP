@@ -124,42 +124,67 @@
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0
   },
-  "models/map_objects/bespin/cc_chair1.md3": { // small white square chair with small lean
+  "models/map_objects/bespin/cc_chair1.md3": {
     "collidersize": [ 30.0, 30.0, 30.0 ],
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0
   },
-  "models/map_objects/bespin/cc_chair2.md3": { // small white round chair
+  "models/map_objects/bespin/cc_chair2.md3": {
     "collidersize": [ 30.0, 30.0, 30.0 ],
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0
   },
-  "models/map_objects/bespin/lamp.md3": { // long white lamp
+  "models/map_objects/bespin/lamp.md3": {
     "collidersize": [ 30.0, 30.0, 30.0 ],
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0
   },
-  "models/map_objects/cairn/controlpanel.md3": { // Good default button console
+  "models/map_objects/cairn/controlpanel.md3": {
     "collidersize": [ 30.0, 30.0, 30.0 ],
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0
   },
-  "models/map_objects/rocky_ruins/floor_grate.md3": { // small floor grate
+  "models/map_objects/rocky_ruins/floor_grate.md3": {
     "collidersize": [ 30.0, 30.0, 30.0 ],
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0
   },
-  "models/map_objects/rocky_ruins/floor_grate_side.md3": { // small wall grate
+  "models/map_objects/rocky_ruins/floor_grate_side.md3": {
     "collidersize": [ 30.0, 30.0, 30.0 ],
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0
   },
-  "models/map_objects/rocky_ruins/monitor.md3": { // deko wall monitor. also fits a small fence
+  "models/map_objects/rocky_ruins/monitor.md3": {
     "collidersize": [ 30.0, 30.0, 30.0 ],
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0
   },
-  "models/map_objects/rocky_ruins/portcullis.md3": { // wall fence big! good one
+  "models/map_objects/rocky_ruins/portcullis.md3": {
+    "collidersize": [ 5.0, 60.0, 130.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/desert/t_pilar_new_25.md3": {
+    "collidersize": [ 45.0, 65.0, 340.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/desert/rock.md3": {
+    "collidersize": [ 45.0, 70.0, 47.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/desert/evaporator.md3": {
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/desert/cave_pillar.md3": {
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/rift/crystal_wall.md3": {
     "collidersize": [ 30.0, 30.0, 30.0 ],
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0
