@@ -12,9 +12,12 @@
 #include <cmath>
 #include <cstring>
 
-int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
+int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle, float scalePercent)
 {
 	if (!modelPath || !modelPath[0]) return -1;
+	if (scalePercent <= 0.0f) scalePercent = 100.0f;
+	if (scalePercent > 1023.0f) scalePercent = 1023.0f;
+	const float scale = scalePercent / 100.0f;
 
 	std::string resolvedModel = modelPath;
 	vec3_t propMins = { -24.0f, -24.0f, -8.0f };
@@ -34,6 +37,8 @@ int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
 	}
 
 	for (int i = 0; i < 3; ++i) {
+		propMins[i] *= scale;
+		propMaxs[i] *= scale;
 		if (propMins[i] > propMaxs[i]) {
 			const float t = propMins[i];
 			propMins[i] = propMaxs[i];
@@ -62,6 +67,7 @@ int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle)
 	org[0] = roundf(org[0]); org[1] = roundf(org[1]); org[2] = roundf(org[2]);
 	e->s.eType = ET_GENERAL;
 	e->s.modelindex = model;
+	e->s.iModelScale = (int)scalePercent;
 	VectorCopy(org, e->s.pos.trBase);
 	VectorCopy(org, e->s.origin);
 	VectorCopy(org, e->r.currentOrigin);
@@ -353,15 +359,44 @@ bool NXRP_SetSavedSpawnScaleByIndex(client_t* cl, int index, float scalePercent)
 	if (index < 0 || index >= (int)lines.size()) { NXRP_PrintConsole(cl, "Invalid saved spawn index"); return false; }
 	if (scalePercent <= 0.0f) { NXRP_PrintConsole(cl, "Scale must be greater than 0"); return false; }
 
-	const int entnum = NXRP_ExtractIntField(lines[index], "\"id\"", -1);
-	if (entnum < 0 || entnum >= sv.num_entities) { NXRP_PrintConsole(cl, "Saved prop entity is not available"); return false; }
-
-	sharedEntity_t* ent = SV_GentityNum(entnum);
-	if (!ent || ent->s.number != entnum) { NXRP_PrintConsole(cl, "Saved prop entity is not available"); return false; }
-
 	if (scalePercent > 1023.0f) scalePercent = 1023.0f;
-	ent->s.iModelScale = (int)scalePercent;
-	SV_LinkEntity(ent);
+	std::string modelPath;
+	float ox = 0.0f, oy = 0.0f, oz = 0.0f;
+	float ax = 0.0f, ay = 0.0f, az = 0.0f;
+	const char* s = lines[index].c_str();
+	const char* modelStart = strstr(s, "\"model\"");
+	if (modelStart) { modelStart = strchr(modelStart, ':'); if (modelStart) { modelStart++; while (*modelStart && isspace((unsigned char)*modelStart)) modelStart++; if (*modelStart == '"') { modelStart++; const char* modelEnd = strchr(modelStart, '"'); if (modelEnd) modelPath.assign(modelStart, modelEnd - modelStart); } } }
+	const char* positionStart = strstr(s, "\"position\"");
+	if (positionStart) { positionStart = strchr(positionStart, '['); if (positionStart) { positionStart++; sscanf(positionStart, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz); } }
+	const char* anglesStart = strstr(s, "\"angles\"");
+	if (anglesStart) { anglesStart = strchr(anglesStart, '['); if (anglesStart) { anglesStart++; sscanf(anglesStart, "%f %*[, ] %f %*[, ] %f", &ax, &ay, &az); } }
+	if (modelPath.empty()) { NXRP_PrintConsole(cl, "Saved entry missing model path"); return false; }
+
+	const int oldEntnum = NXRP_ExtractIntField(lines[index], "\"id\"", -1);
+	if (oldEntnum < 0 || oldEntnum >= sv.num_entities) { NXRP_PrintConsole(cl, "Saved prop entity is not available"); return false; }
+	sharedEntity_t* oldEnt = SV_GentityNum(oldEntnum);
+	if (!oldEnt || oldEnt->s.number != oldEntnum) { NXRP_PrintConsole(cl, "Saved prop entity is not available"); return false; }
+	NXRP_FreeEntity((void*)oldEnt);
+	NXRP_RegisterSpawn(-1);
+
+	vec3_t position = { ox, oy, oz };
+	int entnum = NXRP_PlaceModel(modelPath.c_str(), position, ay, scalePercent);
+	if (entnum < 0) return false;
+	sharedEntity_t* ent = SV_GentityNum(entnum);
+	if (ent) {
+		VectorSet(ent->s.apos.trBase, ax, ay, az);
+		VectorCopy(ent->s.apos.trBase, ent->s.angles);
+		VectorCopy(ent->s.apos.trBase, ent->r.currentAngles);
+		SV_LinkEntity(ent);
+	}
+	NXRP_RegisterSpawn(entnum);
+
+	char buf[1024];
+	snprintf(buf, sizeof(buf), "{ \"id\": %d, \"index\": %d, \"model\": \"%s\", \"position\": [%.0f, %.0f, %.0f], \"angles\": [%.2f, %.2f, %.2f], \"scale\": %.2f }",
+		entnum, index, modelPath.c_str(),
+		ox, oy, oz, ax, ay, az, scalePercent);
+	lines[index] = std::string(buf);
+	if (!NXRP_WriteLinesToFile(filename, lines)) return false;
 	NXRP_PrintConsole(cl, va("Set saved prop %d visual scale to %.2f%%", index, scalePercent));
 	return true;
 }
@@ -404,7 +439,7 @@ bool NXRP_AdminSpawnProp(client_t* cl, const char* chatCursor) {
 		vec3_t zeroMins = {0.0f, 0.0f, 0.0f};
 		vec3_t zeroMaxs = {0.0f, 0.0f, 0.0f};
 		vec3_t zeroOffset = {0.0f, 0.0f, 0.0f};
-		NXRP_SaveSpawnToMap(ent, path, zeroMins, zeroMaxs, zeroOffset, angle);
+		NXRP_SaveSpawnToMap(ent, path, zeroMins, zeroMaxs, zeroOffset, angle, 100.0f);
 		return true;
 	}
 	NXRP_PrintConsole(cl, "Failed to spawn model.");
@@ -469,12 +504,13 @@ bool NXRP_RemoveSavedSpawnByIndex(int index) {
 // Persist a spawn to a per-map JSON file in the fs_homepath/nxrp_props directory.
 // Accept explicit collider extents, collider offset and yaw so loading can
 // recreate the same collision box as when spawned via !prop s.
-void NXRP_SaveSpawnToMap(int entnum, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, const vec3_t colliderOffset, float yaw) {
+void NXRP_SaveSpawnToMap(int entnum, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, const vec3_t colliderOffset, float yaw, float scalePercent) {
 	if (entnum < 0 || !modelPath) return;
 	(void)propMins;
 	(void)propMaxs;
 	(void)colliderOffset;
 	(void)yaw;
+	if (scalePercent <= 0.0f) scalePercent = 100.0f;
 
 	sharedEntity_t* e = SV_GentityNum(entnum);
 	if (!e) return;
@@ -490,10 +526,10 @@ void NXRP_SaveSpawnToMap(int entnum, const char* modelPath, const vec3_t propMin
 	FILE* f = fopen(filename.c_str(), "a");
 	if (!f) return;
 
-	snprintf(buf, sizeof(buf), "{ \"id\": %d, \"index\": %d, \"model\": \"%s\", \"position\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f] }\n",
+	snprintf(buf, sizeof(buf), "{ \"id\": %d, \"index\": %d, \"model\": \"%s\", \"position\": [%.0f, %.0f, %.0f], \"angles\": [%.0f, %.0f, %.0f], \"scale\": %.0f }\n",
 		entnum, nextIndex, modelPath,
 		e->s.pos.trBase[0], e->s.pos.trBase[1], e->s.pos.trBase[2],
-		e->s.apos.trBase[0], e->s.apos.trBase[1], e->s.apos.trBase[2]);
+		e->s.apos.trBase[0], e->s.apos.trBase[1], e->s.apos.trBase[2], scalePercent);
 	fputs(buf, f);
 	fclose(f);
 }
@@ -518,15 +554,21 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 		std::string modelPath;
 		float ox=0, oy=0, oz=0;
 		float ax=0, ay=0, az=0;
+		float scalePercent = 100.0f;
 		const char* modelKey = "\"model\"";
 		const char* originKey = "\"position\"";
 		const char* anglesKey = "\"angles\"";
+		const char* scaleKey = "\"scale\"";
 		const char* m = strstr(s, modelKey);
 		if (m) { m = strchr(m, ':'); if (m) m++; while (m && *m && isspace((unsigned char)*m)) m++; if (m && *m == '"') { m++; const char* me = strchr(m, '"'); if (me && me > m) modelPath.assign(m, me - m); } }
 		const char* o = strstr(s, originKey);
 		if (o) { o = strchr(o, '['); if (o) { o++; sscanf(o, "%f %*[, ] %f %*[, ] %f", &ox, &oy, &oz); } }
 		const char* a = strstr(s, anglesKey);
 		if (a) { a = strchr(a, '['); if (a) { a++; sscanf(a, "%f %*[, ] %f %*[, ] %f", &ax, &ay, &az); } }
+		const char* sc = strstr(s, scaleKey);
+		if (sc) { sc = strchr(sc, ':'); if (sc) sscanf(sc + 1, "%f", &scalePercent); }
+		if (scalePercent <= 0.0f) scalePercent = 100.0f;
+		if (scalePercent > 1023.0f) scalePercent = 1023.0f;
 
 		if (modelPath.empty()) continue;
 
@@ -537,7 +579,7 @@ int NXRP_LoadSavedSpawnsForMap(client_t* cl) {
 				modelPath.c_str(), ox, oy, oz,
 				yaw));
 		}
-		int ent = NXRP_PlaceModel(modelPath.c_str(), savedPosition, yaw);
+		int ent = NXRP_PlaceModel(modelPath.c_str(), savedPosition, yaw, scalePercent);
 		if (ent >= 0) {
 			NXRP_RegisterSpawn(ent);
 			spawned++;

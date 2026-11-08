@@ -21,7 +21,7 @@ bool NXRP_TeleportClientToPosition(client_t* cl, const vec3_t position, float ya
 
 // Place a model at a given position with yaw.
 // Returns the new entity number, or -1 on failure.
-int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle);
+int NXRP_PlaceModel(const char* modelPath, const vec3_t position, float angle, float scalePercent = 100.0f);
 
 // Track last NXRP-spawned entity and allow adjustments
 void NXRP_RegisterSpawn(int entnum);
@@ -54,7 +54,7 @@ bool NXRP_GetFolderPath(const char* folder, std::string& outDir);
 // Save a spawned entity's model path and location to the map's JSON file.
 // Persist a spawn to the per-map file. When available, pass the prop bounds
 // and collider offset used when placing so load can restore identical colliders.
-void NXRP_SaveSpawnToMap(int entnum, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, const vec3_t colliderOffset, float yaw);
+void NXRP_SaveSpawnToMap(int entnum, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, const vec3_t colliderOffset, float yaw, float scalePercent = 100.0f);
 // Send a player a list of saved spawns for the current map.
 void NXRP_ListSavedSpawns(client_t* cl);
 // Remove a saved spawn entry by its index in the per-map file. Returns true on success.
