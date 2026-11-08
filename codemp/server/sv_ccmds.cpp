@@ -694,7 +694,7 @@ static void SV_MapRestart_f( void ) {
 	// had been changed from their default values will generate broadcast updates
 	sv.state = SS_LOADING;
 	sv.restarting = qtrue;
-	NXRP_OnRoundRestart();
+	//NXRP_OnRoundRestart();
 
 	SV_RestartGame();
 
@@ -2567,10 +2567,6 @@ static void SV_WannaForce(client_t* cl, int fpwr) {
 	cl->gentity->playerState->fd.forcePowersKnown |= (1 << fpwr);
 	cl->gentity->playerState->fd.forcePower = 100;
 
-}
-
-void SV_WannaGiveForce(client_t* cl, int fpwr) {
-	SV_WannaForce(cl, fpwr);
 }
 
 /*

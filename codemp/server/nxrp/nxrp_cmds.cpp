@@ -128,7 +128,6 @@ qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor ) {
 		if (!Q_stricmp(s, "acmds") || !Q_stricmp(s, "admin")) {
 			NXRP_PrintConsoleToPlayer(cl, "Admin commands:");
 			NXRP_PrintConsoleToPlayer(cl, "  !prop s/t/m - spawn/manage props");
-			NXRP_PrintConsoleToPlayer(cl, "  !npc - spawn/load NPCs");
 			NXRP_PrintConsoleToPlayer(cl, "  !tp - teleport");
 			NXRP_PrintConsoleToPlayer(cl, "  !list - list entities");
 			NXRP_PrintConsoleToPlayer(cl, "  (admin only)");

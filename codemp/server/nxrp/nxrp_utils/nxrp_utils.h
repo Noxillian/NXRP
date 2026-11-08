@@ -15,10 +15,6 @@ bool NXRP_IsClientAdmin(client_t* cl);
 // Helper: read raw account JSON content
 bool NXRP_ReadAccountContentForClient(client_t* cl, std::string& outContent, std::string& outSafeUsername);
 
-// Spawn a misc model near a client using the game module's spawn helpers.
-// Returns the new entity number, or -1 on failure.
-int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath);
-
 // Teleport helpers
 bool NXRP_TeleportEntityTo(sharedEntity_t* ent, const vec3_t position, float yaw);
 bool NXRP_TeleportClientToPosition(client_t* cl, const vec3_t position, float yaw);
@@ -117,14 +113,6 @@ void NXRP_UntrackNPC(int entnum);
 // registered entnum with this name (used when spawn is asynchronous).
 void NXRP_PushPendingNPCName(const char* name);
 void NXRP_PushPendingNPCSpawnAt(const char* name, const vec3_t position, float yaw);
-// NPC persistence helpers: save/load NPCs per-map
-void NXRP_SaveNPCToMap(int entnum, const char* npcType);
-bool NXRP_SaveNPCAtClientToMap(client_t* cl, const char* npcType);
-int NXRP_LoadSavedNPCsForMap(client_t* cl);
-// Send a player a list of saved NPCs for the current map.
-void NXRP_ListSavedNPCs(client_t* cl);
-// Remove a saved NPC entry by its zero-based index. Returns true on success.
-bool NXRP_RemoveSavedNPCByIndex(int index);
 // Called by NXRP_RegisterSpawn to allow NPC module to associate a pending name
 // with the newly-registered entity number.
 void NXRP_HandlePendingNPCSpawn(int entnum);

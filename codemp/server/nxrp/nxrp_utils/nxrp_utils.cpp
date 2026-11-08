@@ -48,67 +48,6 @@ bool NXRP_TeleportClientToPosition(client_t* cl, const vec3_t position, float ya
 }
 
 // Returns the new entity number, or -1 on failure.
-int NXRP_SpawnModelAtClient(client_t* cl, const char* modelPath)
-{
-	if (!cl || !modelPath || !modelPath[0])
-		return -1;
-
-	// Get the game VM DLL.
-	void* dll = GVM_GetDllHandle();
-	if (!dll)
-		return -1;
-
-	// Resolve game module functions.
-	void* gGSpawn_f = Sys_LoadFunction(dll, "G_Spawn");
-
-	int (*gModelIndex_f)(const char*) =
-		(int (*)(const char*))Sys_LoadFunction(dll, "G_ModelIndex");
-
-	void* (*gGSpawn)() = (void* (*)())gGSpawn_f;
-
-	if (!gGSpawn || !gModelIndex_f)
-		return -1;
-
-	// Spawn the entity and register its model.
-	void* old = GVM_BeginNative();
-
-	sharedEntity_t* e = (sharedEntity_t*)gGSpawn();
-	const int model = e ? gModelIndex_f(modelPath) : 0;
-
-	GVM_EndNative(old);
-
-	if (!e || model <= 0)
-		return -1;
-
-	// Calculate spawn position in front of the client.
-	vec3_t org = { 2.0f, -5.0f, 0.0f };
-
-	if (cl->gentity)
-	{
-		VectorCopy(cl->gentity->r.currentOrigin, org);
-
-		vec3_t fwd;
-		AngleVectors(cl->gentity->s.angles, fwd, NULL, NULL);
-
-		// spawn a little further in front and a bit lower than before
-		const float forwardDist = 36.0f; // previously 24.0f
-		const float zOffset = 8.0f;      // previously 16.0f (make it lower)
-
-		org[0] += fwd[0] * forwardDist;
-		org[1] += fwd[1] * forwardDist;
-		org[2] += zOffset;
-	}
-	// finalize spawn at client using NXRP_PlaceModel
-	float yaw = 0.0f;
-	if (cl && cl->gentity) yaw = cl->gentity->s.angles[YAW];
-	int entnum = NXRP_PlaceModel(modelPath, org, yaw);
-	NXRP_PrintConsoleToPlayer(NULL, "Spawned Model at Client");
-	if (entnum >= 0) {
-		NXRP_RegisterSpawn(entnum);
-	}
-	return entnum;
-}
-
 // Spawn a prop at the client's origin using given model and prop bounds
 int NXRP_SpawnPropAtClient(client_t* cl, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, float yaw)
 {

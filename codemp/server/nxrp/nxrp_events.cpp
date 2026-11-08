@@ -4,12 +4,10 @@
 #include "sys/sys_loadlib.h"
 
 void NXRP_PrintConsoleToPlayer(client_t* cl, const char* text);
-void NXRP_OnKillsChanged(client_t *cl, int oldKills, int newKills);
 
 static int nxrp_lastScore[MAX_CLIENTS];
 static int nxrp_lastKills[MAX_CLIENTS];
 static int nxrp_roundStartTime = 0;
-static int nxrp_roundNumber = 0;
 static qboolean* nxrp_gSiegeRoundBegun = NULL;
 static qboolean nxrp_roundBegunFlag = qfalse;
 static int* nxrp_rebelCountdown = NULL;
@@ -38,9 +36,6 @@ void SV_NXRP_ScoreFrame(void) {
 		nxrp_roundBegunFlag = qfalse;
 		nxrp_prevRebelCountdown = 0;
 		nxrp_prevImperialCountdown = 0;
-	// Reset per-map round number
-	nxrp_roundNumber = 0;
-
 	} else {
 		// Not intermission: trigger round start when the first active player is seen.
 		if (nxrp_roundStartTime == 0) {
@@ -94,7 +89,6 @@ void SV_NXRP_ScoreFrame(void) {
 		int newScore = cl->gentity->playerState->persistant[PERS_SCORE];
 		int oldScore = nxrp_lastScore[i];
 		if (newScore != oldScore) {
-			//NXRP_OnScoreChanged(cl, oldScore, newScore);
 			//NXRP_PrintConsoleToPlayer(NULL, "Score Change WORKS");
 			nxrp_lastScore[i] = newScore;
 		}
@@ -104,7 +98,6 @@ void SV_NXRP_ScoreFrame(void) {
 		int oldKills = nxrp_lastKills[i];
 		if (newKills != oldKills) {
 			//NXRP_PrintConsoleToPlayer(NULL, "Kill detected");
-			//NXRP_OnKillsChanged(cl, oldKills, newKills);
 			nxrp_lastKills[i] = newKills;
 		}
 	}
@@ -122,41 +115,6 @@ void NXRP_OnPlayerConnect(int clientNum, qboolean firstTime, qboolean isBot) {
 		}
 	}
 	NXRP_PrintConsoleToPlayer(NULL, va("Player connected: %s", name));
-}
-
-// Called when a player's persistent kill counter changes (tracked by SV_NXRP_ScoreFrame)
-void NXRP_OnKillsChanged(client_t *cl, int oldKills, int newKills) {
-	const char *name = cl ? (cl->nxrp_username[0] ? cl->nxrp_username : cl->name) : "Unknown";
-	NXRP_PrintConsoleToPlayer(NULL, va("Kill archived: %s %d -> %d", name, oldKills, newKills));
-	//Com_Printf("Kill archived: %s %d -> %d\n", name, oldKills, newKills);
-
-	// Detect teamkills from the victim-side kill change and restore attacker score.
-	if (!cl || !cl->gentity || !cl->gentity->playerState) return;
-	int attackerNum = cl->gentity->playerState->persistant[PERS_ATTACKER];
-	if (attackerNum < 0 || attackerNum >= sv_maxclients->integer) return;
-
-	client_t *attacker = &svs.clients[attackerNum];
-	if (!attacker || !attacker->gentity || !attacker->gentity->playerState) return;
-
-	int victimTeam = cl->gentity->playerState->persistant[PERS_TEAM];
-	int attackerTeam = attacker->gentity->playerState->persistant[PERS_TEAM];
-	if (victimTeam != attackerTeam) return;
-
-	void *dll = GVM_GetDllHandle();
-	if (!dll) return;
-
-	typedef void (*AddScoreFn)(void *ent, float *origin, int score);
-	AddScoreFn addscore = (AddScoreFn)Sys_LoadFunction(dll, "AddScore");
-	if (!addscore) return;
-
-	float org[3];
-	org[0] = attacker->gentity->r.currentOrigin[0];
-	org[1] = attacker->gentity->r.currentOrigin[1];
-	org[2] = attacker->gentity->r.currentOrigin[2];
-
-	void *old = GVM_BeginNative();
-	addscore(attacker->gentity, org, 1);
-	GVM_EndNative(old);
 }
 
 void NXRP_OnPlayerUserinfoChanged(int clientNum) {
@@ -180,7 +138,7 @@ void NXRP_OnPlayerBegin(int clientNum) {
 			else if ( cl->name[0] ) name = cl->name;
 		}
 	}
-	//NXRP_PrintConsoleToPlayer(NULL, va("X Player spawned: %s", name));
+	NXRP_PrintConsoleToPlayer(NULL, va("X Player spawned: %s", name));
 }
 
 void NXRP_OnPlayerDisconnect(int clientNum) {
@@ -199,15 +157,6 @@ void NXRP_OnPlayerKilled(client_t *attacker, client_t *victim, int meansOfDeath)
 	const char *aName = attacker ? (attacker->nxrp_username[0] ? attacker->nxrp_username : attacker->name) : "World";
 	const char *vName = victim ? (victim->nxrp_username[0] ? victim->nxrp_username : victim->name) : "Unknown";
 	NXRP_PrintConsoleToPlayer(NULL, va("^3[NXRP-PLAYERKILL]^7 %s killed %s (mod %d)", aName, vName, meansOfDeath));
-}
-
-void NXRP_OnScoreChanged(client_t *cl, int oldScore, int newScore) {
-
-	//If the player's score increased, send them a notification
-	if ( cl && newScore > oldScore ) {
-		int delta = newScore - oldScore;
-		NXRP_PrintConsoleToPlayer(cl, va("You scored %d point%s! Total: %d", delta, (delta==1)?"":"s", newScore));
-	}
 }
 
 void NXRP_OnMapStart(void) {
@@ -242,8 +191,6 @@ void NXRP_OnRoundEnd(int winningTeam) {
 
 void NXRP_OnRoundStart(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Round started");
-	// Increment round counter and re-resolve/reapply FFA hooks at round start
-	nxrp_roundNumber++;
 	NXRP_FFA_Init();
 	NXRP_FFA_Frame();
 }
@@ -271,10 +218,6 @@ void NXRP_OnMatchStart(void) {
 
 void NXRP_OnMatchEnd(void) {
 	NXRP_PrintConsoleToPlayer(NULL, "Match end");
-}
-
-int NXRP_GetRoundNumber(void) {
-	return nxrp_roundNumber;
 }
 
 // Called when a player first enters the game

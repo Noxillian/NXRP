@@ -117,7 +117,7 @@ char *GVM_ClientConnect( int clientNum, qboolean firstTime, qboolean isBot ) {
 void GVM_ClientBegin( int clientNum ) {
 	if ( gvm->isLegacy ) {
 		VM_Call( gvm, GAME_CLIENT_BEGIN, clientNum );
-		NXRP_OnPlayerBegin(clientNum);
+		//NXRP_OnPlayerBegin(clientNum);
 		return;
 	}
 	VMSwap v( gvm );

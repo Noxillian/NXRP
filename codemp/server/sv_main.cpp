@@ -1349,7 +1349,7 @@ void SV_Frame( int msec ) {
 	// auto-spin all eligible players
 	SV_SpinFrame();
 
-	// NXRP per-frame hooks (score polling / round detection)
+	// NXRP per-frame hooks
 	SV_NXRP_ScoreFrame();
 
 	// per-frame credit/bounty award (must run once per frame)

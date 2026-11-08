@@ -1,7 +1,3 @@
-/* nxrp_main.cpp - simple NXRP chat command handler
- * Implements NXRP chat handling and helpers.
- */
-
 #include "server/nxrp/nxrp_main.h"
 #include "server/nxrp/nxrp_utils/nxrp_utils.h"
 #include "server/sv_gameapi.h"
@@ -27,11 +23,9 @@ void SV_ExecuteClientCommandDelayed_h(client_t* cl, std::string cmd, int delay);
 // Forward declarations for command handlers used across the module
 qboolean NXRP_cmdAdmin_noclip( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmd_info( client_t *cl, const char *chatCursor );
-int SV_SpawnModelAtClient(client_t* cl, const char* modelPath);
 
 enum NXRP_SubCmd {
 	NXRP_SUB_UNKNOWN = 0,
-	NXRP_SUB_NPC,
 	NXRP_SUB_SPAWN,
 	NXRP_SUB_SKILLS,
 	NXRP_SUB_SKILL,
@@ -59,7 +53,7 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !s || !s[0] )					return NXRP_SUB_UNKNOWN;
 	if ( !Q_stricmp( s, "spawn" ) )		return NXRP_SUB_SPAWN;
 	if ( !Q_stricmp( s, "info" ) )		return NXRP_SUB_INFO;
-	if ( !Q_stricmp( s, "skills" ) )		return NXRP_SUB_SKILLS;
+	if ( !Q_stricmp( s, "skills" ) )	return NXRP_SUB_SKILLS;
 	if ( !Q_stricmp( s, "account" ) )	return NXRP_SUB_ACCOUNT;
 	if ( !Q_stricmp( s, "giveall" ) )	return NXRP_SUB_GIVEALL;
 	if ( !Q_stricmp( s, "noclip" ) )	return NXRP_SUB_NOCLIP;
@@ -70,92 +64,22 @@ static NXRP_SubCmd NXRP_ParseSubcmd( const char *s ) {
 	if ( !Q_stricmp( s, "pos" ) )		return NXRP_SUB_POS;
 	if ( !Q_stricmp( s, "tp" ) )		return NXRP_SUB_TP;
 	if ( !Q_stricmp( s, "prop" ) )		return NXRP_SUB_MODEL;
-	if ( !Q_stricmp( s, "npc" ) )		return NXRP_SUB_NPC;
 	if ( !Q_stricmp( s, "boss" ) )		return NXRP_SUB_BOSS;
 	if ( !Q_stricmp( s, "vehicle" ) )	return NXRP_SUB_VEHICLE;
-	if ( !Q_stricmp( s, "quest" ) )	return NXRP_SUB_QUEST;
-	if ( !Q_stricmp( s, "list" ) )	return NXRP_SUB_LIST;
+	if ( !Q_stricmp( s, "quest" ) )		return NXRP_SUB_QUEST;
+	if ( !Q_stricmp( s, "list" ) )		return NXRP_SUB_LIST;
 	return NXRP_SUB_UNKNOWN;
 }
 
 // Initialize FFA helpers (implemented in nxrp_ffa.cpp)
 
-// Spawn a misc model near a client using the game module's spawn helpers.
-// Returns the new entity number, or -1 on failure.
-int SV_SpawnModelAtClient(client_t* cl, const char* modelPath)
-{
-	if (!cl || !modelPath || !modelPath[0]) return -1;
-
-	// Ensure game VM exported helpers exist via dynamic symbol lookup like social.cpp does
-	void* dll = GVM_GetDllHandle();
-	if (!dll) return -1;
-
-	// Resolve required symbols
-	void* gGSpawn_f = Sys_LoadFunction(dll, "G_Spawn");
-	int (*gModelIndex_f)(const char*) = (int (*)(const char*))Sys_LoadFunction(dll, "G_ModelIndex");
-	void* (*gGSpawn)() = (void* (*)())gGSpawn_f;
-	if (!gGSpawn || !gModelIndex_f) return -1;
-
-	// Call G_Spawn() through the native bridge
-	void* old = GVM_BeginNative();
-	sharedEntity_t* e = (sharedEntity_t*)gGSpawn();
-	const int model = e ? gModelIndex_f(modelPath) : 0;
-	GVM_EndNative(old);
-	if (!e) return -1;
-
-	// Position it a short distance in front of the player's current origin if available
-	vec3_t org = { 0.0f, 0.0f, 0.0f };
-	if (cl->gentity) {
-		VectorCopy(cl->gentity->r.currentOrigin, org);
-		// forward offset
-		vec3_t fwd; AngleVectors(cl->gentity->s.angles, fwd, NULL, NULL);
-		org[0] += fwd[0] * 24.0f;
-		org[1] += fwd[1] * 24.0f;
-		org[2] += 16.0f;
-	}
-
-	e->s.eType = ET_GENERAL;
-	e->s.modelindex = model;
-	// Ask the game VM to set the model's proper collision bounds if available.
-	if (dll) {
-		void (*G_SetModelBoundsForEntity_f)(sharedEntity_t*) = (void(*)(sharedEntity_t*))Sys_LoadFunction(dll, "G_SetModelBoundsForEntity");
-		if (G_SetModelBoundsForEntity_f) {
-			void* old2 = GVM_BeginNative();
-			G_SetModelBoundsForEntity_f(e);
-			GVM_EndNative(old2);
-		}
-	}
-	VectorCopy(org, e->s.pos.trBase);
-	VectorCopy(org, e->s.origin);
-	VectorCopy(org, e->r.currentOrigin);
-	e->s.pos.trType = TR_STATIONARY;
-	VectorSet(e->s.apos.trBase, 0.0f, cl->gentity ? cl->gentity->s.angles[YAW] : 0.0f, 0.0f);
-	VectorCopy(e->s.apos.trBase, e->s.angles);
-	VectorCopy(e->s.apos.trBase, e->r.currentAngles);
-	e->s.apos.trType = TR_STATIONARY;
-
-	// default box
-	e->r.mins[0] = -16.0f; e->r.mins[1] = -16.0f; e->r.mins[2] = -8.0f;
-	e->r.maxs[0] = 16.0f; e->r.maxs[1] = 16.0f; e->r.maxs[2] = 16.0f;
-	e->r.contents = CONTENTS_SOLID;
-	e->r.svFlags = 0;
-	SV_LinkEntity(e);
-	NXRP_PrintConsoleToPlayer(NULL, "sv spawn model at client");
-	return e->s.number;
-}
-
 qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const char *chatCursor ) {
 	if ( !commandName ) return qfalse;
-	// Legacy "!nx" prefix is no longer supported — ignore commands using it
-	if ( !Q_stricmp( commandName, "nx" ) ) {
-		return qtrue;
-	}
 
 	char subcmd[MAX_TOKEN_CHARS] = {0};
 	char normalizedCursor[1024] = {0};
 	const char *dispatchCursor = chatCursor ? chatCursor : "";
 
-	// For direct commands (no legacy "nx" prefix), the commandName is the subcommand
 	Q_strncpyz( subcmd, commandName, sizeof(subcmd) );
 	Com_sprintf(
 		normalizedCursor,
@@ -169,11 +93,7 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 
 	NXRP_SubCmd sc = NXRP_ParseSubcmd( subcmd );
 
-	// Direct literal check for addlevel command removed
-
 	// Special handling for prop subcommands: support syntax
-	//   !nx prop s <modelpath>
-	//   !nx prop r <index>
 	//   !prop s <modelpath>
 	//   !prop r <index>
 	if (!Q_stricmp(subcmd, "prop")) {
@@ -247,17 +167,12 @@ qboolean NXRP_HandleChatCommands( client_t *cl, const char *commandName, const c
 	case NXRP_SUB_SPAWN:
 		return NXRP_cmdAdmin_spawn(cl, dispatchCursor);
 
-	case NXRP_SUB_NPC:
-		return NXRP_cmdAdmin_npc(cl, dispatchCursor);
-
 	case NXRP_SUB_QUEST:
 		return NXRP_cmdAdmin_quest(cl, dispatchCursor);
 
 	case NXRP_SUB_MODEL:
-		// Keep MODEL routing on prop_s.
 		return NXRP_cmdAdmin_prop_s(cl, dispatchCursor);
 
-	// allow shorthand prop subcommands: support "t" to create prop with explicit extents
 	case NXRP_SUB_UNKNOWN:
 	{
 		char firstTok[MAX_TOKEN_CHARS] = {0};

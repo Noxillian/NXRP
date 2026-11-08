@@ -37,7 +37,6 @@ qboolean NXRP_cmdAdmin_prop_dir( client_t *cl, int index, const char *args );
 qboolean NXRP_cmdAdmin_prop_a( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_prop_dir_chat( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_spawn( client_t *cl, const char *chatCursor );
-qboolean NXRP_cmdAdmin_npc( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_quest( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_tp( client_t *cl, const char *chatCursor );
 qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor );
@@ -110,7 +109,6 @@ void NXRP_OnPlayerUserinfoChanged(int clientNum);
 void NXRP_OnPlayerBegin(int clientNum);
 void NXRP_OnPlayerDisconnect(int clientNum);
 void NXRP_OnPlayerKilled(client_t *attacker, client_t *victim, int meansOfDeath);
-void NXRP_OnScoreChanged(client_t *cl, int oldScore, int newScore);
 void NXRP_OnNPCSpawned(const char *npcName);
 void NXRP_OnMapStart(void);
 void NXRP_OnRoundStart(void);
@@ -118,10 +116,6 @@ void NXRP_OnRoundEnd(int winningTeam);
 void NXRP_OnRoundRestart(void);
 void NXRP_OnMatchStart(void);
 void NXRP_OnMatchEnd(void);
-
-// Round index helper (1-based within the current map). Returns 0 before
-// the first round has started.
-int NXRP_GetRoundNumber(void);
 
 // Server-side NXRP helpers
 void SV_NXRP_ScoreInit(void);
@@ -136,8 +130,5 @@ void NXRP_FFA_Frame(void);
 // FFA helpers are optional; commented out while disabled
 //void NXRP_FFA_SetEnabled(qboolean enable);
 //qboolean NXRP_FFA_IsEnabled(void);
-
-// helper to spawn a misc model near a client (implemented in social.cpp)
-int SV_SpawnModelAtClient(client_t* cl, const char* modelPath);
 
 #endif // NXRP_MAIN_H
