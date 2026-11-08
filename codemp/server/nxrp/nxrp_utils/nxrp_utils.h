@@ -105,10 +105,12 @@ inline int NXRP_ExtractIntField(const std::string& s, const char* key, int def) 
 // Wrapper for game VM's G_FreeEntity that allows NXRP to observe freed entities
 // and detect when tracked NPCs are removed. Replace direct G_FreeEntity calls
 // in server-side modules with NXRP_FreeEntity to ensure NXRP receives events.
+
 void NXRP_FreeEntity(void* ent);
 // Track/untrack NPCs spawned by NXRP so the wrapper can identify them
 void NXRP_TrackNPC(int entnum, const char* name);
 void NXRP_UntrackNPC(int entnum);
+
 // Push a pending NPC name so the next NXRP_RegisterSpawn will associate the
 // registered entnum with this name (used when spawn is asynchronous).
 void NXRP_PushPendingNPCName(const char* name);
