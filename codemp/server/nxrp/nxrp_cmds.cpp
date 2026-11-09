@@ -261,6 +261,83 @@ static std::string NXRP_JsonEscapeString(const std::string& value) {
 	return NXRP_JsonEscape(value.c_str());
 }
 
+static std::string NXRP_TrimClassValue(const std::string& value) {
+	size_t first = value.find_first_not_of(" \t\r\n\"");
+	size_t last = value.find_last_not_of(" \t\r\n\"");
+	return first == std::string::npos ? std::string() : value.substr(first, last - first + 1);
+}
+
+static bool NXRP_FindClassFileValue(const std::string& text, const char* className, const char* key, std::string& value) {
+	const size_t classInfo = text.find("ClassInfo");
+	if (classInfo == std::string::npos) return false;
+	const size_t open = text.find('{', classInfo);
+	const size_t close = open == std::string::npos ? std::string::npos : text.find('}', open);
+	if (open == std::string::npos || close == std::string::npos) return false;
+
+	const std::string block = text.substr(open + 1, close - open - 1);
+	const std::string keyText = std::string(key) + " ";
+	size_t position = block.find(keyText);
+	if (position == std::string::npos) return false;
+	position += keyText.size();
+	const size_t lineEnd = block.find_first_of("\r\n", position);
+	const std::string candidate = block.substr(position, lineEnd == std::string::npos ? std::string::npos : lineEnd - position);
+	value = NXRP_TrimClassValue(candidate);
+	return !value.empty();
+}
+
+static bool NXRP_LoadMB2ClassValues(const char* className, std::vector<std::pair<std::string, std::string> >& values) {
+	values.clear();
+	if (!className || !*className) return false;
+
+	char filename[MAX_QPATH];
+	char fileList[8192];
+	Com_sprintf(filename, sizeof(filename), "ext_data/Siege/Classes/%s.scl", className);
+	int length = 0;
+	fileHandle_t handle;
+	length = FS_FOpenFileRead(filename, &handle, qfalse);
+	if (length <= 0 || !handle) {
+		int count = FS_GetFileList("ext_data/Siege/Classes", ".scl", fileList, sizeof(fileList));
+		char* entry = fileList;
+		for (int i = 0; i < count && entry && *entry; ++i) {
+			char candidate[MAX_QPATH];
+			Com_sprintf(candidate, sizeof(candidate), "ext_data/Siege/Classes/%s", entry);
+			int candidateLength = FS_FOpenFileRead(candidate, &handle, qfalse);
+			if (candidateLength > 0 && handle) {
+				char* buffer = (char*)Z_Malloc(candidateLength + 1, TAG_TEMP_WORKSPACE);
+				FS_Read(buffer, candidateLength, handle);
+				FS_FCloseFile(handle);
+				buffer[candidateLength] = '\0';
+				std::string text(buffer);
+				Z_Free(buffer);
+				std::string name;
+				if (NXRP_FindClassFileValue(text, className, "name", name) && !Q_stricmp(name.c_str(), className)) {
+					for (const char* key : {"name", "forcepowers", "maxhealth", "starthealth", "maxarmor", "startarmor", "speed", "weapons", "saber1", "saber2", "saberstyle", "sabercolor", "saber2color", "classflags"}) {
+						std::string value;
+						if (NXRP_FindClassFileValue(text, className, key, value)) values.push_back(std::make_pair(key, value));
+					}
+					return true;
+				}
+			}
+			entry += strlen(entry) + 1;
+		}
+		return false;
+	}
+
+	char* buffer = (char*)Z_Malloc(length + 1, TAG_TEMP_WORKSPACE);
+	FS_Read(buffer, length, handle);
+	FS_FCloseFile(handle);
+	buffer[length] = '\0';
+	std::string text(buffer);
+	Z_Free(buffer);
+	std::string name;
+	if (!NXRP_FindClassFileValue(text, className, "name", name) || Q_stricmp(name.c_str(), className)) return false;
+	for (const char* key : {"name", "forcepowers", "maxhealth", "starthealth", "maxarmor", "startarmor", "speed", "weapons", "saber1", "saber2", "saberstyle", "sabercolor", "saber2color", "classflags"}) {
+		std::string value;
+		if (NXRP_FindClassFileValue(text, className, key, value)) values.push_back(std::make_pair(key, value));
+	}
+	return true;
+}
+
 static qboolean NXRP_DumpMB2Client(client_t* cl, playerState_t* ps) {
 	std::string directory;
 	if (!NXRP_GetFolderPath("nxrp_accounts", directory)) {
@@ -385,7 +462,7 @@ qboolean NXRP_cmd_check( client_t *cl, const char *chatCursor ) {
 			}
 			if (!Q_stricmp(firstToken, "mb2")) {
 				if (!Q_stricmp(subcommand, "dump")) {
-					NXRP_DumpMB2Client(cl, ps);
+					//NXRP_DumpMB2Client(cl, ps);
 					return qtrue;
 				}
 				NXRP_CheckMB2(cl, ps);
