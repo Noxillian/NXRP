@@ -92,16 +92,7 @@ static void NXRP_CheckPlayerState(client_t* cl, playerState_t* ps) {
 	NXRP_PrintConsole(cl, "playerState.eFlags: %d", ps->eFlags);
 	NXRP_PrintConsole(cl, "playerState.eFlags2: %d", ps->eFlags2);
 	NXRP_PrintConsole(cl, "playerState.weapon: %d", ps->weapon);
-	NXRP_PrintConsole(cl, "playerState.weaponstate: %d", ps->weaponstate);
 	//NXRP_PrintConsole(cl, "playerState.viewheight: %d", ps->viewheight);
-	NXRP_PrintConsole(cl, "playerState.eventSequence: %d", ps->eventSequence);
-	for (int i = 0; i < MAX_PS_EVENTS; ++i) {
-		NXRP_PrintConsole(cl, "playerState.events[%d]: %d", i, ps->events[i]);
-		NXRP_PrintConsole(cl, "playerState.eventParms[%d]: %d", i, ps->eventParms[i]);
-	}
-	NXRP_PrintConsole(cl, "playerState.externalEvent: %d", ps->externalEvent);
-	NXRP_PrintConsole(cl, "playerState.externalEventParm: %d", ps->externalEventParm);
-	NXRP_PrintConsole(cl, "playerState.externalEventTime: %d", ps->externalEventTime);
 	for (int i = 0; i < MAX_STATS; ++i) NXRP_PrintConsole(cl, "playerState.stats[%d]: %d", i, ps->stats[i]);
 	NXRP_PrintConsole(cl, "playerState.stats.armor: %d", ps->stats[STAT_ARMOR]);
 	NXRP_PrintConsole(cl, "playerState.stats.maxHealth: %d", ps->stats[STAT_MAX_HEALTH]);
@@ -110,55 +101,26 @@ static void NXRP_CheckPlayerState(client_t* cl, playerState_t* ps) {
 	NXRP_PrintConsole(cl, "playerState.persistant.team: %d", ps->persistant[PERS_TEAM]);
 	NXRP_PrintConsole(cl, "playerState.persistant.rank: %d", ps->persistant[PERS_RANK]);
 	NXRP_PrintConsole(cl, "playerState.persistant.killed: %d", ps->persistant[PERS_KILLED]);
-	NXRP_PrintConsole(cl, "playerState.generic1: %d", ps->generic1);
-	NXRP_PrintConsole(cl, "playerState.jumppad_ent: %d", ps->jumppad_ent);
-	for (int i = 0; i < MAX_POWERUPS; ++i) NXRP_PrintConsole(cl, "playerState.powerups[%d]: %d", i, ps->powerups[i]);
-	for (int i = 0; i < MAX_AMMO; ++i) NXRP_PrintConsole(cl, "playerState.ammo[%d]: %d", i, ps->ammo[i]);
-	for (int i = 0; i < MAX_PERSISTANT; ++i) NXRP_PrintConsole(cl, "playerState.persistant[%d]: %d", i, ps->persistant[i]);
-	NXRP_PrintConsole(cl, "playerState.ping: %d", ps->ping);
+	//for (int i = 0; i < MAX_POWERUPS; ++i) NXRP_PrintConsole(cl, "playerState.powerups[%d]: %d", i, ps->powerups[i]);
+	//for (int i = 0; i < MAX_AMMO; ++i) NXRP_PrintConsole(cl, "playerState.ammo[%d]: %d", i, ps->ammo[i]);
+	//for (int i = 0; i < MAX_PERSISTANT; ++i) NXRP_PrintConsole(cl, "playerState.persistant[%d]: %d", i, ps->persistant[i]);
+	//NXRP_PrintConsole(cl, "playerState.ping: %d", ps->ping);
 	NXRP_PrintConsole(cl, "playerState.saberMove: %d", ps->saberMove);
 	NXRP_PrintConsole(cl, "playerState.saberEntityNum: %d", ps->saberEntityNum);
 	NXRP_PrintConsole(cl, "playerState.activeForcePass: %d", ps->activeForcePass);
 	NXRP_PrintConsole(cl, "playerState.jetpackFuel: %d", ps->jetpackFuel);
 	NXRP_PrintConsole(cl, "playerState.cloakFuel: %d", ps->cloakFuel);
 	NXRP_PrintConsole(cl, "playerState.heldByClient: %d", ps->heldByClient);
-	NXRP_PrintConsole(cl, "playerState.ragAttach: %d", ps->ragAttach);
 	NXRP_PrintConsole(cl, "playerState.iModelScale: %d", ps->iModelScale);
 	NXRP_PrintConsole(cl, "playerState.customRGBA: %d %d %d %d", ps->customRGBA[0], ps->customRGBA[1], ps->customRGBA[2], ps->customRGBA[3]);
 	for (int i = 0; i < MAX_PERSISTANT; ++i) NXRP_PrintConsole(cl, "playerState.persistant[%d]: %d", i, ps->persistant[i]);
-	NXRP_PrintConsole(cl, "playerState.ping: %d", ps->ping);
-	NXRP_PrintConsole(cl, "playerState.lastOnGround: %d", ps->lastOnGround);
-	NXRP_PrintConsole(cl, "playerState.saberInFlight: %d", ps->saberInFlight);
-	NXRP_PrintConsole(cl, "playerState.saberMove: %d", ps->saberMove);
-	NXRP_PrintConsole(cl, "playerState.saberBlocking: %d", ps->saberBlocking);
-	NXRP_PrintConsole(cl, "playerState.saberBlocked: %d", ps->saberBlocked);
-	NXRP_PrintConsole(cl, "playerState.saberEntityNum: %d", ps->saberEntityNum);
-	NXRP_PrintConsole(cl, "playerState.rocketLockIndex: %d", ps->rocketLockIndex);
-	NXRP_PrintConsole(cl, "playerState.emplacedIndex: %d", ps->emplacedIndex);
-	NXRP_PrintConsole(cl, "playerState.activeForcePass: %d", ps->activeForcePass);
-	NXRP_PrintConsole(cl, "playerState.holocronBits: %d", ps->holocronBits);
-	NXRP_PrintConsole(cl, "playerState.forceHandExtend: %d", ps->forceHandExtend);
-	NXRP_PrintConsole(cl, "playerState.forceHandExtendTime: %d", ps->forceHandExtendTime);
-	NXRP_PrintConsole(cl, "playerState.duelIndex: %d", ps->duelIndex);
-	NXRP_PrintConsole(cl, "playerState.duelTime: %d", ps->duelTime);
-	NXRP_PrintConsole(cl, "playerState.jetpackFuel: %d", ps->jetpackFuel);
-	NXRP_PrintConsole(cl, "playerState.cloakFuel: %d", ps->cloakFuel);
-	NXRP_PrintConsole(cl, "playerState.heldByClient: %d", ps->heldByClient);
-	NXRP_PrintConsole(cl, "playerState.ragAttach: %d", ps->ragAttach);
-	NXRP_PrintConsole(cl, "playerState.iModelScale: %d", ps->iModelScale);
-	NXRP_PrintConsole(cl, "playerState.brokenLimbs: %d", ps->brokenLimbs);
-	NXRP_PrintConsole(cl, "playerState.customRGBA: %d %d %d %d", ps->customRGBA[0], ps->customRGBA[1], ps->customRGBA[2], ps->customRGBA[3]);
-	NXRP_PrintConsole(cl, "playerState.m_iVehicleNum: %d", ps->m_iVehicleNum);
-	NXRP_PrintConsole(cl, "playerState.vehOrientation: %.2f %.2f %.2f", ps->vehOrientation[0], ps->vehOrientation[1], ps->vehOrientation[2]);
-	NXRP_PrintConsole(cl, "playerState.userInt: %d %d %d", ps->userInt1, ps->userInt2, ps->userInt3);
-	NXRP_PrintConsole(cl, "playerState.userFloat: %.2f %.2f %.2f", ps->userFloat1, ps->userFloat2, ps->userFloat3);
-	NXRP_PrintConsole(cl, "playerState.userVec1: %.2f %.2f %.2f", ps->userVec1[0], ps->userVec1[1], ps->userVec1[2]);
-	NXRP_PrintConsole(cl, "playerState.userVec2: %.2f %.2f %.2f", ps->userVec2[0], ps->userVec2[1], ps->userVec2[2]);
 	NXRP_PrintConsole(cl, "playerState.fd.forcePowersKnown: %d", ps->fd.forcePowersKnown);
 	NXRP_PrintConsole(cl, "playerState.fd.forcePower: %d", ps->fd.forcePower);
 	NXRP_PrintConsole(cl, "playerState.fd.forcePowerMax: %d", ps->fd.forcePowerMax);
 	NXRP_PrintConsole(cl, "playerState.fd.saberAnimLevel: %d", ps->fd.saberAnimLevel);
 	NXRP_PrintConsole(cl, "playerState.fd.saberAnimLevelBase: %d", ps->fd.saberAnimLevelBase);
+	NXRP_PrintConsole(cl, "playerState.fd.forceSide: %d", ps->fd.forceSide);
+	NXRP_PrintConsole(cl, "playerState.fd.forceRank: %d", ps->fd.forceRank);
 }
 
 // Minimal skills listing handler
