@@ -110,7 +110,7 @@
     "colliderangle": 0.0
   },
   "models/map_objects/dotf/ThroneRoomChair1.md3": {
-    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collidersize": [ 30.0, 30.0, 40.0 ],
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0
   },
@@ -130,7 +130,7 @@
     "colliderangle": 0.0
   },
   "models/map_objects/bespin/cc_chair2.md3": {
-    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collidersize": [ 12.0, 12.0, 22.0 ],
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0
   },
@@ -170,7 +170,7 @@
     "colliderangle": 0.0
   },
   "models/map_objects/desert/rock.md3": {
-    "collidersize": [ 45.0, 70.0, 47.0 ],
+    "collidersize": [ 45, 70, 47 ],
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0
   },
@@ -185,6 +185,21 @@
     "colliderangle": 0.0
   },
   "models/map_objects/rift/crystal_wall.md3": {
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/yavin/rock_b.md3": {
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/yavin/y_bank_b.md3": {
+    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collideroffset": [ 0.0, 0.0, 0.0 ],
+    "colliderangle": 0.0
+  },
+  "models/map_objects/chunks/rock/rock1_1.md3": {
     "collidersize": [ 30.0, 30.0, 30.0 ],
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0

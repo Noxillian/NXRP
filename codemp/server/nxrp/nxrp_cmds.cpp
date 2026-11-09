@@ -18,6 +18,55 @@
 #include <algorithm>
 #include "qcommon/md5.h"
 
+static void NXRP_CheckGentity(client_t* cl, sharedEntity_t* ent) {
+	NXRP_PrintConsole(cl, "gentity.s.number: %d", ent->s.number);
+	NXRP_PrintConsole(cl, "gentity.s.eType: %d", ent->s.eType);
+	NXRP_PrintConsole(cl, "gentity.s.eFlags: %d", ent->s.eFlags);
+	NXRP_PrintConsole(cl, "gentity.s.modelindex: %d", ent->s.modelindex);
+	NXRP_PrintConsole(cl, "gentity.s.modelindex2: %d", ent->s.modelindex2);
+	NXRP_PrintConsole(cl, "gentity.s.weapon: %d", ent->s.weapon);
+	NXRP_PrintConsole(cl, "gentity.s.clientNum: %d", ent->s.clientNum);
+	NXRP_PrintConsole(cl, "gentity.s.iModelScale: %d", ent->s.iModelScale);
+	NXRP_PrintConsole(cl, "gentity.s.origin: %.2f %.2f %.2f", ent->s.origin[0], ent->s.origin[1], ent->s.origin[2]);
+	NXRP_PrintConsole(cl, "gentity.s.angles: %.2f %.2f %.2f", ent->s.angles[0], ent->s.angles[1], ent->s.angles[2]);
+	NXRP_PrintConsole(cl, "gentity.r.currentOrigin: %.2f %.2f %.2f", ent->r.currentOrigin[0], ent->r.currentOrigin[1], ent->r.currentOrigin[2]);
+	NXRP_PrintConsole(cl, "gentity.r.currentAngles: %.2f %.2f %.2f", ent->r.currentAngles[0], ent->r.currentAngles[1], ent->r.currentAngles[2]);
+	NXRP_PrintConsole(cl, "gentity.r.mins: %.2f %.2f %.2f", ent->r.mins[0], ent->r.mins[1], ent->r.mins[2]);
+	NXRP_PrintConsole(cl, "gentity.r.maxs: %.2f %.2f %.2f", ent->r.maxs[0], ent->r.maxs[1], ent->r.maxs[2]);
+	NXRP_PrintConsole(cl, "gentity.r.contents: %d", ent->r.contents);
+	NXRP_PrintConsole(cl, "gentity.r.svFlags: %d", ent->r.svFlags);
+	NXRP_PrintConsole(cl, "gentity.health: %d", ent->health);
+	NXRP_PrintConsole(cl, "gentity.client: %s", ent->client ? "yes" : "no");
+}
+
+static void NXRP_CheckPlayerState(client_t* cl, playerState_t* ps) {
+	NXRP_PrintConsole(cl, "playerState.clientNum: %d", ps->clientNum);
+	NXRP_PrintConsole(cl, "playerState.commandTime: %d", ps->commandTime);
+	NXRP_PrintConsole(cl, "playerState.origin: %.2f %.2f %.2f", ps->origin[0], ps->origin[1], ps->origin[2]);
+	NXRP_PrintConsole(cl, "playerState.velocity: %.2f %.2f %.2f", ps->velocity[0], ps->velocity[1], ps->velocity[2]);
+	NXRP_PrintConsole(cl, "playerState.viewangles: %.2f %.2f %.2f", ps->viewangles[0], ps->viewangles[1], ps->viewangles[2]);
+	NXRP_PrintConsole(cl, "playerState.viewheight: %d", ps->viewheight);
+	NXRP_PrintConsole(cl, "playerState.pm_type: %d", ps->pm_type);
+	NXRP_PrintConsole(cl, "playerState.pm_flags: %d", ps->pm_flags);
+	NXRP_PrintConsole(cl, "playerState.pm_time: %d", ps->pm_time);
+	NXRP_PrintConsole(cl, "playerState.weapon: %d", ps->weapon);
+	NXRP_PrintConsole(cl, "playerState.weaponTime: %d", ps->weaponTime);
+	NXRP_PrintConsole(cl, "playerState.weaponstate: %d", ps->weaponstate);
+	NXRP_PrintConsole(cl, "playerState.stats.health: %d", ps->stats[STAT_HEALTH]);
+	NXRP_PrintConsole(cl, "playerState.stats.armor: %d", ps->stats[STAT_ARMOR]);
+	NXRP_PrintConsole(cl, "playerState.stats.maxHealth: %d", ps->stats[STAT_MAX_HEALTH]);
+	NXRP_PrintConsole(cl, "playerState.stats.weapons: %d", ps->stats[STAT_WEAPONS]);
+	NXRP_PrintConsole(cl, "playerState.persistant.score: %d", ps->persistant[PERS_SCORE]);
+	NXRP_PrintConsole(cl, "playerState.persistant.team: %d", ps->persistant[PERS_TEAM]);
+	NXRP_PrintConsole(cl, "playerState.persistant.rank: %d", ps->persistant[PERS_RANK]);
+	NXRP_PrintConsole(cl, "playerState.persistant.killed: %d", ps->persistant[PERS_KILLED]);
+	NXRP_PrintConsole(cl, "playerState.fd.forcePowersKnown: %d", ps->fd.forcePowersKnown);
+	NXRP_PrintConsole(cl, "playerState.fd.forcePower: %d", ps->fd.forcePower);
+	NXRP_PrintConsole(cl, "playerState.fd.forcePowerMax: %d", ps->fd.forcePowerMax);
+	NXRP_PrintConsole(cl, "playerState.fd.saberAnimLevel: %d", ps->fd.saberAnimLevel);
+	NXRP_PrintConsole(cl, "playerState.fd.saberAnimLevelBase: %d", ps->fd.saberAnimLevelBase);
+}
+
 // Minimal skills listing handler
 qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
@@ -29,13 +78,27 @@ qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
 }
 
 qboolean NXRP_cmd_check( client_t *cl, const char *chatCursor ) {
-	(void)chatCursor;
 	if (!cl || cl->state != CS_ACTIVE || !cl->gentity || !cl->gentity->playerState) {
 		NXRP_PrintConsole(cl, "You must be an active player to use this command");
 		return qtrue;
 	}
 
 	playerState_t* ps = cl->gentity->playerState;
+	if (chatCursor && *chatCursor) {
+		char subcommand[32] = {0};
+		if (sscanf(chatCursor, "%31s", subcommand) == 1) {
+			if (!Q_stricmp(subcommand, "gentity")) {
+				NXRP_CheckGentity(cl, cl->gentity);
+				return qtrue;
+			}
+			if (!Q_stricmp(subcommand, "playerstate")) {
+				NXRP_CheckPlayerState(cl, ps);
+				return qtrue;
+			}
+			NXRP_PrintConsole(cl, "Usage: !check | !check gentity | !check playerstate");
+			return qtrue;
+		}
+	}
 	static const char* kForceNames[NUM_FORCE_POWERS] = {
 		"heal",
 		"levitation",

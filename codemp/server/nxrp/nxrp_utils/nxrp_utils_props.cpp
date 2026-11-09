@@ -467,7 +467,7 @@ bool NXRP_RemoveSavedSpawnByIndex(int index) {
 	// attempt to free the entity for the removed entry if available.
 	std::string targetLine = lines[index];
 	int entToFree = -1;
-	size_t entPos = targetLine.find("\"ent\"");
+	size_t entPos = targetLine.find("\"id\"");
 	if (entPos != std::string::npos) {
 		size_t colon = targetLine.find(':', entPos);
 		if (colon != std::string::npos) {

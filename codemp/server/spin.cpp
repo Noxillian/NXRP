@@ -294,16 +294,16 @@ void Spin_GiveWeaponAmmo(client_t* cl, weapon_t weapon)
 		// AMMO_PISTOL (max 60) — Bryar Pistol, Heavy Pistol
 		case WP_BRYAR_PISTOL:
 		case WP_HEAVY_PISTOL:
-			mb2ammo[AMMO_PISTOL] = 60; break;
+			mb2ammo[AMMO_PISTOL] = 300; break;
 
 		// AMMO_WESTAR (max 175) — Mando Pistol, Classic Bryar
 		case WP_MANDO_PISTOL:
 		case WP_BRYAR_OLD:
-			mb2ammo[AMMO_WESTAR] = 175; break;
+			mb2ammo[AMMO_WESTAR] = 300; break;
 
 		// AMMO_CLONEPISTOL (max 175)
 		case WP_CLONE_PISTOL:
-			mb2ammo[AMMO_CLONEPISTOL] = 175; break;
+			mb2ammo[AMMO_CLONEPISTOL] = 300; break;
 
 		// AMMO_EE3 (max 150)
 		case WP_EE3:

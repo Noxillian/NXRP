@@ -686,11 +686,13 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 			cl->gentity->client->ps.fd.forcePowerBaseLevel[fp] = lvl;
 		};
 
+		cl->gentity->health = 300;
+
 		grantForceLevel(FP_SABER_OFFENSE, 2);
 		grantForceLevel(FP_SABER_DEFENSE, 2);
 		grantForceLevel(FP_SABERTHROW, 2);
 		grantForceLevel(FP_LEVITATION, 3);
-		grantForceLevel(FP_LIGHTNING, 0);
+		grantForceLevel(FP_LIGHTNING, 5);
 		grantForceLevel(FP_PULL, 2);
 		grantForceLevel(FP_SPEED, 2);
 		grantForceLevel(FP_PROTECT, 1);
@@ -708,23 +710,24 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 			GVM_EndNative(old);
 		}
 
-		SV_WannaGiveWeapon(target, WP_CLONE_PISTOL);
+		//SV_WannaGiveWeapon(target, WP_CLONE_PISTOL);
 		SV_WannaGiveWeapon(target, WP_SABER);
 
+
 		// Give a broader set of weapons
-		SV_WannaGiveWeapon(target, WP_BRYAR_PISTOL);
-		SV_WannaGiveWeapon(target, WP_MANDO_PISTOL);
-		SV_WannaGiveWeapon(target, WP_HEAVY_PISTOL);
-		SV_WannaGiveWeapon(target, WP_BLASTER);
-		SV_WannaGiveWeapon(target, WP_DISRUPTOR);
-		SV_WannaGiveWeapon(target, WP_BOWCASTER);
-		SV_WannaGiveWeapon(target, WP_REPEATER);
-		SV_WannaGiveWeapon(target, WP_CLONE_RIFLE);
-		SV_WannaGiveWeapon(target, WP_A280);
-		SV_WannaGiveWeapon(target, WP_DLT19);
-		SV_WannaGiveWeapon(target, WP_SHOTGUN);
-		SV_WannaGiveWeapon(target, WP_MINIGUN);
-		SV_WannaGiveWeapon(target, WP_ROCKET_LAUNCHER);
+		//SV_WannaGiveWeapon(target, WP_BRYAR_PISTOL);
+		//SV_WannaGiveWeapon(target, WP_MANDO_PISTOL);
+		//SV_WannaGiveWeapon(target, WP_HEAVY_PISTOL);
+		//SV_WannaGiveWeapon(target, WP_BLASTER);
+		//SV_WannaGiveWeapon(target, WP_DISRUPTOR);
+		//SV_WannaGiveWeapon(target, WP_BOWCASTER);
+		//SV_WannaGiveWeapon(target, WP_REPEATER);
+		//SV_WannaGiveWeapon(target, WP_CLONE_RIFLE);
+		//SV_WannaGiveWeapon(target, WP_A280);
+		//SV_WannaGiveWeapon(target, WP_DLT19);
+		//SV_WannaGiveWeapon(target, WP_SHOTGUN);
+		//SV_WannaGiveWeapon(target, WP_MINIGUN);
+		//SV_WannaGiveWeapon(target, WP_ROCKET_LAUNCHER);
 
 		// Give ammo for the weapons we provided so they can be used immediately
 		Spin_GiveWeaponAmmo(target, WP_CLONE_PISTOL);
