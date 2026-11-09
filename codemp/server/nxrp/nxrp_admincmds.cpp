@@ -672,6 +672,8 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePower = 300;
 		ps->fd.forcePowerRegenDebounceTime = sv.time;
 
+		cl->gentity->client->MBClass
+
 		auto grantForceLevel = [&](int fp, int lvl) {
 			ps->fd.forcePowersKnown |= (1 << fp);
 			ps->fd.forcePowerLevel[fp] = lvl;
@@ -687,6 +689,10 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		};
 
 		cl->gentity->health = 300;
+		cl->gentity->playerState->basespeed = 350;
+		cl->gentity->playerState->speed = 350;
+		cl->gentity->playerState->gravity = 500;
+
 
 		grantForceLevel(FP_SABER_OFFENSE, 2);
 		grantForceLevel(FP_SABER_DEFENSE, 2);
@@ -699,6 +705,8 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		grantForceLevel(MB_FP_DRAIN, 3);
 		grantForceLevel(MB_FORCE_HEAL, 1);
 		ps->fd.forcePowerSelected = FP_LIGHTNING;
+
+		
 
 		//cl->gentity->client->sess.saberLevel;
 
