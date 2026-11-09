@@ -672,8 +672,6 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->fd.forcePower = 300;
 		ps->fd.forcePowerRegenDebounceTime = sv.time;
 
-		cl->gentity->client->MBClass
-
 		auto grantForceLevel = [&](int fp, int lvl) {
 			ps->fd.forcePowersKnown |= (1 << fp);
 			ps->fd.forcePowerLevel[fp] = lvl;
