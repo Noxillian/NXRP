@@ -10,9 +10,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
-#include <fstream>
 #include <cstdint>
-#include <cstdio>
 #include <sys/stat.h>
 #if defined(_WIN32)
 	#include <direct.h>
@@ -218,6 +216,29 @@ static std::string NXRP_JsonEscape(const char* value) {
 	return escaped;
 }
 
+static std::vector<std::pair<std::string, std::string> > NXRP_ParseInfoString(const char* info) {
+	std::vector<std::pair<std::string, std::string> > fields;
+	if (!info) return fields;
+
+	const char* cursor = info;
+	while (*cursor) {
+		if (*cursor == '\\') ++cursor;
+		const char* keyStart = cursor;
+		while (*cursor && *cursor != '\\') ++cursor;
+		if (!*cursor) break;
+		std::string key(keyStart, cursor - keyStart);
+		++cursor;
+		const char* valueStart = cursor;
+		while (*cursor && *cursor != '\\') ++cursor;
+		fields.push_back(std::make_pair(key, std::string(valueStart, cursor - valueStart)));
+	}
+	return fields;
+}
+
+static std::string NXRP_JsonEscapeString(const std::string& value) {
+	return NXRP_JsonEscape(value.c_str());
+}
+
 static qboolean NXRP_DumpMB2Client(client_t* cl, playerState_t* ps) {
 	std::string directory;
 	if (!NXRP_GetFolderPath("nxrp", directory)) {
@@ -228,14 +249,10 @@ static qboolean NXRP_DumpMB2Client(client_t* cl, playerState_t* ps) {
 	char filename[64];
 	Com_sprintf(filename, sizeof(filename), "mb2_client_%d.json", ps->clientNum);
 	const std::string path = directory + "/" + filename;
-	std::ofstream output(path.c_str(), std::ios::trunc);
-	if (!output.is_open()) {
-		NXRP_PrintConsole(cl, "Could not write %s", path.c_str());
-		return qfalse;
-	}
 
 	char playerConfig[MAX_STRING_CHARS] = {0};
 	SV_GetConfigstring(MB2_CS_PLAYERS + ps->clientNum, playerConfig, sizeof(playerConfig));
+	const std::vector<std::pair<std::string, std::string> > configFields = NXRP_ParseInfoString(playerConfig);
 	const int gameClientSize = sv.gameClientSize;
 	const size_t sharedSize = sizeof(playerState_t);
 	const size_t maxRawTail = 65536;
@@ -244,6 +261,7 @@ static qboolean NXRP_DumpMB2Client(client_t* cl, playerState_t* ps) {
 		rawTailSize = (size_t)gameClientSize - sharedSize;
 	}
 
+	std::ostringstream output;
 	output << "{\n";
 	output << "  \"clientNum\": " << ps->clientNum << ",\n";
 	output << "  \"serverGameClientSize\": " << gameClientSize << ",\n";
@@ -251,6 +269,13 @@ static qboolean NXRP_DumpMB2Client(client_t* cl, playerState_t* ps) {
 	output << "  \"unknownGameClientTailSize\": " << rawTailSize << ",\n";
 	output << "  \"userinfo\": \"" << NXRP_JsonEscape(cl->userinfo) << "\",\n";
 	output << "  \"playerConfigstring\": \"" << NXRP_JsonEscape(playerConfig) << "\",\n";
+	output << "  \"playerConfigFields\": {\n";
+	for (size_t i = 0; i < configFields.size(); ++i) {
+		output << "    \"" << NXRP_JsonEscapeString(configFields[i].first) << "\": \""
+			<< NXRP_JsonEscapeString(configFields[i].second) << "\""
+			<< (i + 1 < configFields.size() ? "," : "") << "\n";
+	}
+	output << "  },\n";
 	output << "  \"playerState\": {\n";
 	output << "    \"weapon\": " << ps->weapon << ",\n";
 	output << "    \"weaponstate\": " << ps->weaponstate << ",\n";
@@ -283,7 +308,11 @@ static qboolean NXRP_DumpMB2Client(client_t* cl, playerState_t* ps) {
 		output << line;
 	}
 	output << "  ]\n}\n";
-	output.close();
+	const std::string content = output.str();
+	if (!NXRP_WriteStringToFile(path.c_str(), content)) {
+		NXRP_PrintConsole(cl, "Could not write %s", path.c_str());
+		return qfalse;
+	}
 	NXRP_PrintConsole(cl, "Wrote MB2 client diagnostics to %s", path.c_str());
 	return qtrue;
 }

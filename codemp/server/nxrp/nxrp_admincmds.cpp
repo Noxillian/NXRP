@@ -691,6 +691,8 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		cl->gentity->playerState->speed = 350;
 		cl->gentity->playerState->gravity = 500;
 
+		cl->gentity->
+
 
 		grantForceLevel(FP_SABER_OFFENSE, 2);
 		grantForceLevel(FP_SABER_DEFENSE, 2);
