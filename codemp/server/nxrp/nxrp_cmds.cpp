@@ -250,6 +250,7 @@ static qboolean NXRP_DumpMB2Client(client_t* cl, playerState_t* ps) {
 	char filename[64];
 	Com_sprintf(filename, sizeof(filename), "_mb2_diagnostic_client_%d.json", ps->clientNum);
 	const std::string path = directory + "/" + filename;
+	NXRP_PrintConsole(cl, "Writing MB2 diagnostic file: %s", path.c_str());
 
 	char playerConfig[MAX_STRING_CHARS] = {0};
 	SV_GetConfigstring(MB2_CS_PLAYERS + ps->clientNum, playerConfig, sizeof(playerConfig));
@@ -297,21 +298,30 @@ static qboolean NXRP_DumpMB2Client(client_t* cl, playerState_t* ps) {
 	output << "  },\n";
 	output << "  \"unknownGameClientTail\": [\n";
 
-	const unsigned char* clientBytes = (const unsigned char*)cl->gentity->client;
-	for (size_t offset = 0; offset < rawTailSize; offset += sizeof(uint32_t)) {
-		uint32_t word = 0;
-		const size_t bytes = (rawTailSize - offset < sizeof(word)) ? rawTailSize - offset : sizeof(word);
-		memcpy(&word, clientBytes + sharedSize + offset, bytes);
-		char line[96];
-		Com_sprintf(line, sizeof(line), "    { \"offset\": %u, \"hex\": \"0x%08x\", \"signed\": %d, \"unsigned\": %u }%s\n",
-			(unsigned)(sharedSize + offset), (unsigned)word, (int32_t)word, (unsigned)word,
-			offset + sizeof(word) < rawTailSize ? "," : "");
-		output << line;
+	if (rawTailSize > 0) {
+		const unsigned char* clientBytes = (const unsigned char*)cl->gentity->client;
+		for (size_t offset = 0; offset < rawTailSize; offset += sizeof(uint32_t)) {
+			uint32_t word = 0;
+			const size_t bytes = (rawTailSize - offset < sizeof(word)) ? rawTailSize - offset : sizeof(word);
+			memcpy(&word, clientBytes + sharedSize + offset, bytes);
+			char line[96];
+			Com_sprintf(line, sizeof(line), "    { \"offset\": %u, \"hex\": \"0x%08x\", \"signed\": %d, \"unsigned\": %u }%s\n",
+				(unsigned)(sharedSize + offset), (unsigned)word, (int32_t)word, (unsigned)word,
+				offset + sizeof(word) < rawTailSize ? "," : "");
+			output << line;
+		}
 	}
 	output << "  ]\n}\n";
 	const std::string content = output.str();
-	if (!NXRP_WriteStringToFile(path.c_str(), content)) {
+	std::ofstream file(path.c_str(), std::ios::trunc);
+	if (!file.is_open()) {
 		NXRP_PrintConsole(cl, "Could not write %s", path.c_str());
+		return qfalse;
+	}
+	file << content;
+	file.close();
+	if (file.fail()) {
+		NXRP_PrintConsole(cl, "Write failed for %s", path.c_str());
 		return qfalse;
 	}
 	NXRP_PrintConsole(cl, "Wrote MB2 client diagnostics to %s", path.c_str());
@@ -338,9 +348,11 @@ qboolean NXRP_cmd_check( client_t *cl, const char *chatCursor ) {
 	if (chatCursor && *chatCursor) {
 		char firstToken[32] = {0};
 		char subcommand[32] = {0};
-		if (sscanf(chatCursor, "%31s %31s", firstToken, subcommand) >= 1) {
+		char thirdToken[32] = {0};
+		if (sscanf(chatCursor, "%31s %31s %31s", firstToken, subcommand, thirdToken) >= 1) {
 			if (!Q_stricmp(firstToken, "check") && subcommand[0]) {
 				Q_strncpyz(firstToken, subcommand, sizeof(firstToken));
+				Q_strncpyz(subcommand, thirdToken, sizeof(subcommand));
 			}
 			if (!Q_stricmp(firstToken, "gentity")) {
 				NXRP_CheckGentity(cl, cl->gentity);
