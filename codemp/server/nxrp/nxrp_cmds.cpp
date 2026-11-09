@@ -163,6 +163,8 @@ static void NXRP_CheckMB2(client_t* cl, playerState_t* ps) {
 		SV_GetConfigstring(MB2_CS_PLAYERS + ps->clientNum, mb, sizeof(mb));
 		SV_GetConfigstring(MB2_CS_PLAYERS + ps->clientNum, mb2, sizeof(mb2));
 		SV_GetConfigstring(MB2_CS_PLAYERS + ps->clientNum, ClassInfo, sizeof(ClassInfo));
+		SV_GetConfigstring(MB2_CS_PLAYERS + ps->clientNum, userinfo, sizeof(userinfo));
+		SV_GetConfigstring(MB2_CS_PLAYERS + ps->clientNum, forcepowers, sizeof(forcepowers));
 
 		Q_strncpyz(name, Info_ValueForKey(playerConfig, "n"), sizeof(name));
 		Q_strncpyz(modelValue, Info_ValueForKey(playerConfig, "m"), sizeof(modelValue));
@@ -386,6 +388,33 @@ static qboolean NXRP_DumpMB2Client(client_t* cl, playerState_t* ps) {
 			<< (i + 1 < configFields.size() ? "," : "") << "\n";
 	}
 	output << "  },\n";
+	output << "  \"nonEmptyConfigstrings\": [\n";
+	bool firstConfigstring = true;
+	for (int index = 0; index < MAX_CONFIGSTRINGS; ++index) {
+		char configstring[MAX_STRING_CHARS] = {0};
+		SV_GetConfigstring(index, configstring, sizeof(configstring));
+		if (!configstring[0]) continue;
+
+		if (!firstConfigstring) output << ",\n";
+		firstConfigstring = false;
+		output << "    {\n";
+		output << "      \"index\": " << index << ",\n";
+		output << "      \"isMB2PlayerRange\": " << (index >= MB2_CS_PLAYERS && index < MB2_CS_PLAYERS + MAX_CLIENTS ? "true" : "false") << ",\n";
+		output << "      \"value\": \"" << NXRP_JsonEscape(configstring) << "\",\n";
+		output << "      \"fields\": {";
+		const std::vector<std::pair<std::string, std::string> > fields = NXRP_ParseInfoString(configstring);
+		for (size_t field = 0; field < fields.size(); ++field) {
+			if (field == 0) output << "\n";
+			else output << ",\n";
+			output << "        \"" << NXRP_JsonEscapeString(fields[field].first) << "\": \""
+				<< NXRP_JsonEscapeString(fields[field].second) << "\"";
+		}
+		if (!fields.empty()) output << "\n      ";
+		output << "}\n";
+		output << "    }";
+	}
+	if (!firstConfigstring) output << "\n";
+	output << "  ],\n";
 	output << "  \"playerState\": {\n";
 	output << "    \"weapon\": " << ps->weapon << ",\n";
 	output << "    \"weaponstate\": " << ps->weaponstate << ",\n";
@@ -472,7 +501,7 @@ qboolean NXRP_cmd_check( client_t *cl, const char *chatCursor ) {
 			}
 			if (!Q_stricmp(firstToken, "mb2")) {
 				if (!Q_stricmp(subcommand, "dump")) {
-					//NXRP_DumpMB2Client(cl, ps);
+					NXRP_DumpMB2Client(cl, ps);
 					return qtrue;
 				}
 				NXRP_CheckMB2(cl, ps);

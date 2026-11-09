@@ -654,6 +654,14 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 
 	if (target && target->gentity && target->gentity->playerState) {
 		playerState_t* ps = target->gentity->playerState;
+		char playerConfig[MAX_STRING_CHARS] = {0};
+		SV_GetConfigstring(MB2_CS_PLAYERS + targetIdx, playerConfig, sizeof(playerConfig));
+		Info_SetValueForKey(playerConfig, "mbc", "6");
+		SV_SetConfigstring(MB2_CS_PLAYERS + targetIdx, playerConfig);
+		if (target->gentity->client) {
+			target->gentity->client->MBClass = MB_CLASS_JEDI;
+		}
+		NXRP_PrintConsole(cl, "Set client %d MB2 mbc class value to 6", targetIdx);
 		//ps->fd.forceUsingAdded = 0;
 		ps->stats[STAT_WEAPONS] |= (1 << WP_SABER);
 		ps->weapon = WP_SABER;
