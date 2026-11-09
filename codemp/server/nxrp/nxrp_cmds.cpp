@@ -242,13 +242,13 @@ static std::string NXRP_JsonEscapeString(const std::string& value) {
 
 static qboolean NXRP_DumpMB2Client(client_t* cl, playerState_t* ps) {
 	std::string directory;
-	if (!NXRP_GetFolderPath("nxrp", directory)) {
-		NXRP_PrintConsole(cl, "Could not create the NXRP homepath directory");
+	if (!NXRP_GetFolderPath("nxrp_accounts", directory)) {
+		NXRP_PrintConsole(cl, "Could not create the NXRP accounts directory");
 		return qfalse;
 	}
 
 	char filename[64];
-	Com_sprintf(filename, sizeof(filename), "mb2_client_%d.json", ps->clientNum);
+	Com_sprintf(filename, sizeof(filename), "_mb2_diagnostic_client_%d.json", ps->clientNum);
 	const std::string path = directory + "/" + filename;
 
 	char playerConfig[MAX_STRING_CHARS] = {0};
