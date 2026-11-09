@@ -10,6 +10,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <fstream>
 #include <cstdint>
 #include <sys/stat.h>
 #if defined(_WIN32)
