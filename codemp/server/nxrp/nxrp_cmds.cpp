@@ -11,6 +11,8 @@
 #include <sstream>
 #include <vector>
 #include <fstream>
+#include <cstdint>
+#include <cstdio>
 #include <sys/stat.h>
 #if defined(_WIN32)
 	#include <direct.h>
@@ -142,6 +144,8 @@ static void NXRP_CheckMB2(client_t* cl, playerState_t* ps) {
 		char modelValue[128] = {0};
 		char classValue[128] = {0};
 		char mbClassValue[128] = {0};
+
+
 		SV_GetConfigstring(MB2_CS_PLAYERS + ps->clientNum, playerConfig, sizeof(playerConfig));
 		Q_strncpyz(name, Info_ValueForKey(playerConfig, "n"), sizeof(name));
 		Q_strncpyz(modelValue, Info_ValueForKey(playerConfig, "m"), sizeof(modelValue));
@@ -153,7 +157,8 @@ static void NXRP_CheckMB2(client_t* cl, playerState_t* ps) {
 		NXRP_PrintConsole(cl, "MB2 config siege class: %s", classValue[0] ? classValue : "<none>");
 		NXRP_PrintConsole(cl, "MB2 config class id: %s", mbClassValue[0] ? mbClassValue : "<none>");
 	}
-	NXRP_PrintConsole(cl, "MB2 searching live reliable commands for class/attribute data...");
+
+	/*NXRP_PrintConsole(cl, "MB2 searching live reliable commands for class/attribute data...");
 
 	int foundClassCommand = 0;
 	for (int i = 0; i < MAX_RELIABLE_COMMANDS; ++i) {
@@ -169,7 +174,7 @@ static void NXRP_CheckMB2(client_t* cl, playerState_t* ps) {
 	}
 	if (!foundClassCommand) {
 		NXRP_PrintConsole(cl, "MB2 no class or attribute data found in reliable commands");
-	}
+	}*/
 
 	NXRP_PrintConsole(cl, "MB2 forcePowersKnown: %d", ps->fd.forcePowersKnown);
 	NXRP_PrintConsole(cl, "MB2 forcePowersActive: %d", ps->fd.forcePowersActive);
@@ -192,6 +197,95 @@ static void NXRP_CheckMB2(client_t* cl, playerState_t* ps) {
 	NXRP_PrintConsole(cl, "MB2 cloakFuel: %d", ps->cloakFuel);
 	NXRP_PrintConsole(cl, "MB2 custom userInt: %d %d %d", ps->userInt1, ps->userInt2, ps->userInt3);
 	NXRP_PrintConsole(cl, "MB2 custom userFloat: %.2f %.2f %.2f", ps->userFloat1, ps->userFloat2, ps->userFloat3);
+}
+
+static std::string NXRP_JsonEscape(const char* value) {
+	std::string escaped;
+	if (!value) return escaped;
+	for (const unsigned char* p = (const unsigned char*)value; *p; ++p) {
+		switch (*p) {
+		case '\\': escaped += "\\\\"; break;
+		case '"': escaped += "\\\""; break;
+		case '\n': escaped += "\\n"; break;
+		case '\r': escaped += "\\r"; break;
+		case '\t': escaped += "\\t"; break;
+		default:
+			if (*p < 0x20) escaped += '?';
+			else escaped += (char)*p;
+			break;
+		}
+	}
+	return escaped;
+}
+
+static qboolean NXRP_DumpMB2Client(client_t* cl, playerState_t* ps) {
+	std::string directory;
+	if (!NXRP_GetFolderPath("nxrp", directory)) {
+		NXRP_PrintConsole(cl, "Could not create the NXRP homepath directory");
+		return qfalse;
+	}
+
+	char filename[64];
+	Com_sprintf(filename, sizeof(filename), "mb2_client_%d.json", ps->clientNum);
+	const std::string path = directory + "/" + filename;
+	std::ofstream output(path.c_str(), std::ios::trunc);
+	if (!output.is_open()) {
+		NXRP_PrintConsole(cl, "Could not write %s", path.c_str());
+		return qfalse;
+	}
+
+	char playerConfig[MAX_STRING_CHARS] = {0};
+	SV_GetConfigstring(MB2_CS_PLAYERS + ps->clientNum, playerConfig, sizeof(playerConfig));
+	const int gameClientSize = sv.gameClientSize;
+	const size_t sharedSize = sizeof(playerState_t);
+	const size_t maxRawTail = 65536;
+	size_t rawTailSize = 0;
+	if (gameClientSize > (int)sharedSize && gameClientSize - (int)sharedSize <= (int)maxRawTail) {
+		rawTailSize = (size_t)gameClientSize - sharedSize;
+	}
+
+	output << "{\n";
+	output << "  \"clientNum\": " << ps->clientNum << ",\n";
+	output << "  \"serverGameClientSize\": " << gameClientSize << ",\n";
+	output << "  \"knownPlayerStateSize\": " << sharedSize << ",\n";
+	output << "  \"unknownGameClientTailSize\": " << rawTailSize << ",\n";
+	output << "  \"userinfo\": \"" << NXRP_JsonEscape(cl->userinfo) << "\",\n";
+	output << "  \"playerConfigstring\": \"" << NXRP_JsonEscape(playerConfig) << "\",\n";
+	output << "  \"playerState\": {\n";
+	output << "    \"weapon\": " << ps->weapon << ",\n";
+	output << "    \"weaponstate\": " << ps->weaponstate << ",\n";
+	output << "    \"health\": " << ps->stats[STAT_HEALTH] << ",\n";
+	output << "    \"maxHealth\": " << ps->stats[STAT_MAX_HEALTH] << ",\n";
+	output << "    \"armor\": " << ps->stats[STAT_ARMOR] << ",\n";
+	output << "    \"forcePowersKnown\": " << ps->fd.forcePowersKnown << ",\n";
+	output << "    \"forcePowersActive\": " << ps->fd.forcePowersActive << ",\n";
+	output << "    \"forcePower\": " << ps->fd.forcePower << ",\n";
+	output << "    \"forcePowerMax\": " << ps->fd.forcePowerMax << ",\n";
+	output << "    \"saberAnimLevel\": " << ps->fd.saberAnimLevel << ",\n";
+	output << "    \"saberAnimLevelBase\": " << ps->fd.saberAnimLevelBase << ",\n";
+	output << "    \"jetpackFuel\": " << ps->jetpackFuel << ",\n";
+	output << "    \"cloakFuel\": " << ps->cloakFuel << ",\n";
+	output << "    \"userInt1\": " << ps->userInt1 << ",\n";
+	output << "    \"userInt2\": " << ps->userInt2 << ",\n";
+	output << "    \"userInt3\": " << ps->userInt3 << "\n";
+	output << "  },\n";
+	output << "  \"unknownGameClientTail\": [\n";
+
+	const unsigned char* clientBytes = (const unsigned char*)cl->gentity->client;
+	for (size_t offset = 0; offset < rawTailSize; offset += sizeof(uint32_t)) {
+		uint32_t word = 0;
+		const size_t bytes = (rawTailSize - offset < sizeof(word)) ? rawTailSize - offset : sizeof(word);
+		memcpy(&word, clientBytes + sharedSize + offset, bytes);
+		char line[96];
+		Com_sprintf(line, sizeof(line), "    { \"offset\": %u, \"hex\": \"0x%08x\", \"signed\": %d, \"unsigned\": %u }%s\n",
+			(unsigned)(sharedSize + offset), (unsigned)word, (int32_t)word, (unsigned)word,
+			offset + sizeof(word) < rawTailSize ? "," : "");
+		output << line;
+	}
+	output << "  ]\n}\n";
+	output.close();
+	NXRP_PrintConsole(cl, "Wrote MB2 client diagnostics to %s", path.c_str());
+	return qtrue;
 }
 
 // Minimal skills listing handler
@@ -227,10 +321,14 @@ qboolean NXRP_cmd_check( client_t *cl, const char *chatCursor ) {
 				return qtrue;
 			}
 			if (!Q_stricmp(firstToken, "mb2")) {
+				if (!Q_stricmp(subcommand, "dump")) {
+					NXRP_DumpMB2Client(cl, ps);
+					return qtrue;
+				}
 				NXRP_CheckMB2(cl, ps);
 				return qtrue;
 			}
-			NXRP_PrintConsole(cl, "Usage: !check | !check gentity | !check playerstate | !check mb2");
+			NXRP_PrintConsole(cl, "Usage: !check | !check gentity | !check playerstate | !check mb2 [dump]");
 			return qtrue;
 		}
 	}
