@@ -123,6 +123,59 @@ static void NXRP_CheckPlayerState(client_t* cl, playerState_t* ps) {
 	NXRP_PrintConsole(cl, "playerState.fd.forceRank: %d", ps->fd.forceRank);
 }
 
+static void NXRP_CheckMB2(client_t* cl, playerState_t* ps) {
+	NXRP_PrintConsole(cl, "MB2 diagnostics for client %d", ps->clientNum);
+	static const char* classNames[] = {
+		"NONE", "STORMTROOPER", "SOLDER", "COMMANDER", "ELITE_SOLDER",
+		"SITH", "JEDI", "BOUNTY_HUNTER", "HERO", "SBD", "WOOKIE", "DEKA",
+		"CLONE", "MANDO", "ARC"
+	};
+	const int mbClass = cl->gentity->client ? (int)cl->gentity->client->MBClass : 0;
+	const char* className = (mbClass >= 0 && mbClass < (int)(sizeof(classNames) / sizeof(classNames[0]))) ? classNames[mbClass] : "UNKNOWN";
+	const char* model = Info_ValueForKey(cl->userinfo, "model");
+	NXRP_PrintConsole(cl, "MB2 class: %d (%s)", mbClass, className);
+	NXRP_PrintConsole(cl, "MB2 model: %s", model && *model ? model : "<none>");
+	NXRP_PrintConsole(cl, "MB2 attribute storage in shared player data: not present");
+	NXRP_PrintConsole(cl, "MB2 searching live reliable commands for class/attribute data...");
+
+	int foundClassCommand = 0;
+	for (int i = 0; i < MAX_RELIABLE_COMMANDS; ++i) {
+		const char* command = cl->reliableCommands[i];
+		if (!command || !*command) {
+			continue;
+		}
+		if (strstr(command, "mbc") || strstr(command, "MB_ATT_") || strstr(command, "attributes")) {
+			NXRP_PrintConsole(cl, "MB2 reliable[%d]: %s", i, command);
+			foundClassCommand = 1;
+		}
+	}
+	if (!foundClassCommand) {
+		NXRP_PrintConsole(cl, "MB2 no class or attribute data found in reliable commands");
+	}
+
+	NXRP_PrintConsole(cl, "MB2 forcePowersKnown: %d", ps->fd.forcePowersKnown);
+	NXRP_PrintConsole(cl, "MB2 forcePowersActive: %d", ps->fd.forcePowersActive);
+	NXRP_PrintConsole(cl, "MB2 forceSide: %d", ps->fd.forceSide);
+	NXRP_PrintConsole(cl, "MB2 forceRank: %d", ps->fd.forceRank);
+	for (int i = 0; i < NUM_FORCE_POWERS; ++i) {
+		if (ps->fd.forcePowersKnown & (1 << i)) {
+			NXRP_PrintConsole(cl, "MB2 force[%d]: level %d", i, ps->fd.forcePowerLevel[i]);
+		}
+	}
+	NXRP_PrintConsole(cl, "MB2 saberAnimLevel: %d", ps->fd.saberAnimLevel);
+	NXRP_PrintConsole(cl, "MB2 saberAnimLevelBase: %d", ps->fd.saberAnimLevelBase);
+	NXRP_PrintConsole(cl, "MB2 weapon: %d", ps->weapon);
+	NXRP_PrintConsole(cl, "MB2 weaponstate: %d", ps->weaponstate);
+	NXRP_PrintConsole(cl, "MB2 health: %d", ps->stats[STAT_HEALTH]);
+	NXRP_PrintConsole(cl, "MB2 maxHealth: %d", ps->stats[STAT_MAX_HEALTH]);
+	NXRP_PrintConsole(cl, "MB2 armor: %d", ps->stats[STAT_ARMOR]);
+	NXRP_PrintConsole(cl, "MB2 vehicleNum: %d", ps->m_iVehicleNum);
+	NXRP_PrintConsole(cl, "MB2 jetpackFuel: %d", ps->jetpackFuel);
+	NXRP_PrintConsole(cl, "MB2 cloakFuel: %d", ps->cloakFuel);
+	NXRP_PrintConsole(cl, "MB2 custom userInt: %d %d %d", ps->userInt1, ps->userInt2, ps->userInt3);
+	NXRP_PrintConsole(cl, "MB2 custom userFloat: %.2f %.2f %.2f", ps->userFloat1, ps->userFloat2, ps->userFloat3);
+}
+
 // Minimal skills listing handler
 qboolean NXRP_cmd_skills( client_t *cl, const char *chatCursor ) {
 	(void)chatCursor;
@@ -155,7 +208,11 @@ qboolean NXRP_cmd_check( client_t *cl, const char *chatCursor ) {
 				NXRP_CheckPlayerState(cl, ps);
 				return qtrue;
 			}
-			NXRP_PrintConsole(cl, "Usage: !check | !check gentity | !check playerstate");
+			if (!Q_stricmp(firstToken, "mb2")) {
+				NXRP_CheckMB2(cl, ps);
+				return qtrue;
+			}
+			NXRP_PrintConsole(cl, "Usage: !check | !check gentity | !check playerstate | !check mb2");
 			return qtrue;
 		}
 	}
