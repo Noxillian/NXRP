@@ -145,7 +145,7 @@
     "colliderangle": 0.0
   },
   "models/map_objects/rocky_ruins/floor_grate.md3": {
-    "collidersize": [ 30.0, 30.0, 30.0 ],
+    "collidersize": [ 10.0, 10.0, 1.0 ],
     "collideroffset": [ 0.0, 0.0, 0.0 ],
     "colliderangle": 0.0
   },
