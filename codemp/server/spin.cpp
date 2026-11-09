@@ -294,29 +294,29 @@ void Spin_GiveWeaponAmmo(client_t* cl, weapon_t weapon)
 		// AMMO_PISTOL (max 60) — Bryar Pistol, Heavy Pistol
 		case WP_BRYAR_PISTOL:
 		case WP_HEAVY_PISTOL:
-			mb2ammo[AMMO_PISTOL] = 300; break;
+			mb2ammo[AMMO_PISTOL] = 999; break;
 
 		// AMMO_WESTAR (max 175) — Mando Pistol, Classic Bryar
 		case WP_MANDO_PISTOL:
 		case WP_BRYAR_OLD:
-			mb2ammo[AMMO_WESTAR] = 300; break;
+			mb2ammo[AMMO_WESTAR] = 999; break;
 
 		// AMMO_CLONEPISTOL (max 175)
 		case WP_CLONE_PISTOL:
-			mb2ammo[AMMO_CLONEPISTOL] = 300; break;
+			mb2ammo[AMMO_CLONEPISTOL] = 999; break;
 
 		// AMMO_EE3 (max 150)
 		case WP_EE3:
-			mb2ammo[AMMO_EE3] = 150; break;
+			mb2ammo[AMMO_EE3] = 999; break;
 
 		// AMMO_BLASTER (max 120) — E-11, DC-15 Carbine
 		case WP_BLASTER:
 		case WP_DC_CARBINE:
-			mb2ammo[AMMO_BLASTER] = 120; break;
+			mb2ammo[AMMO_BLASTER] = 999; break;
 
 		// AMMO_CR2 (max 150)
 		case WP_CR2:
-			mb2ammo[AMMO_CR2] = 150; break;
+			mb2ammo[AMMO_CR2] = 999; break;
 
 		// AMMO_E22 (max 150)
 		case WP_E_22:
@@ -426,7 +426,7 @@ void Spin_GiveWeaponAmmo(client_t* cl, weapon_t weapon)
 
 		// AMMO_CRYO_NADE (max 1)
 		case WP_CRYO_NADE:
-			mb2ammo[AMMO_CRYO_NADE] = 1; break;
+			mb2ammo[AMMO_CRYO_NADE] = 99; break;
 
 		// AMMO_CONC_NADE (max 1)
 		case WP_CONC_NADE:

@@ -688,10 +688,6 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 			cl->gentity->playerState->fd.forcePowersKnown |= (1 << fp);
 			cl->gentity->playerState->fd.forcePowerLevel[fp] = lvl;
 			cl->gentity->playerState->fd.forcePowerBaseLevel[fp] = lvl;
-
-			cl->gentity->client->ps.fd.forcePowersKnown |= (1 << fp);
-			cl->gentity->client->ps.fd.forcePowerLevel[fp] = lvl;
-			cl->gentity->client->ps.fd.forcePowerBaseLevel[fp] = lvl;
 		};
 
 		cl->gentity->health = 300;
@@ -699,8 +695,7 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		cl->gentity->playerState->speed = 350;
 		cl->gentity->playerState->gravity = 500;
 
-
-		grantForceLevel(FP_SABER_OFFENSE, 2);
+		/*grantForceLevel(FP_SABER_OFFENSE, 2);
 		grantForceLevel(FP_SABER_DEFENSE, 2);
 		grantForceLevel(FP_SABERTHROW, 2);
 		grantForceLevel(FP_LEVITATION, 3);
@@ -710,7 +705,17 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		grantForceLevel(FP_PROTECT, 1);
 		grantForceLevel(MB_FP_DRAIN, 3);
 		grantForceLevel(MB_FORCE_HEAL, 1);
-		ps->fd.forcePowerSelected = FP_LIGHTNING;
+		ps->fd.forcePowerSelected = FP_LIGHTNING;*/
+
+		grantForceLevel(10, 0);
+		grantForceLevel(11, 0);
+		grantForceLevel(12, 0);
+		grantForceLevel(13, 0);
+		grantForceLevel(14, 0);
+		grantForceLevel(15, 0);
+		grantForceLevel(16, 0);
+		grantForceLevel(17, 0);
+		grantForceLevel(18, 0);
 
 		
 
@@ -742,6 +747,10 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		//SV_WannaGiveWeapon(target, WP_SHOTGUN);
 		//SV_WannaGiveWeapon(target, WP_MINIGUN);
 		//SV_WannaGiveWeapon(target, WP_ROCKET_LAUNCHER);
+
+		SV_WannaGiveWeapon(target, WP_STUN_BATON);
+		SV_WannaGiveWeapon(target, WP_THERMAL);
+		SV_WannaGiveWeapon(target, WP_CRYO_NADE);
 
 		// Give ammo for the weapons we provided so they can be used immediately
 		Spin_GiveWeaponAmmo(target, WP_CLONE_PISTOL);
