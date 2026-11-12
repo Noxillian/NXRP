@@ -414,8 +414,8 @@ qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 			Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
 			Info_SetValueForKey(userinfo, "color1", "red");
 		// Set player model to Tavion
-		Info_SetValueForKey(userinfo, "model", "tavion");
-		Info_SetValueForKey(userinfo, "pmodel", "tavion");
+		//Info_SetValueForKey(userinfo, "model", "tavion");
+		//Info_SetValueForKey(userinfo, "pmodel", "tavion");
 
 		SV_SetUserinfo(cl - svs.clients, userinfo);
 		// Ensure server-side parsing of the new userinfo occurs so the
@@ -667,7 +667,7 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		char playerConfig[MAX_STRING_CHARS] = {0};
 		SV_GetConfigstring(MB2_CS_PLAYERS + targetIdx, playerConfig, sizeof(playerConfig));
 
-		SV_SetConfigstring(MB2_CS_PLAYERS + targetIdx, playerConfig);
+		//SV_SetConfigstring(MB2_CS_PLAYERS + targetIdx, playerConfig);
 		if (target->gentity->client) {
 			target->gentity->client->MBClass = MB_CLASS_JEDI;
 		}
@@ -695,28 +695,37 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 			ps->fd.forcePowerLevel[fp] = lvl;
 			ps->fd.forcePowerBaseLevel[fp] = lvl;
 
-			cl->gentity->playerState->fd.forcePowersKnown |= (1 << fp);
-			cl->gentity->playerState->fd.forcePowerLevel[fp] = lvl;
-			cl->gentity->playerState->fd.forcePowerBaseLevel[fp] = lvl;
+			//cl->gentity->playerState->fd.forcePowersKnown |= (1 << fp);
+			//cl->gentity->playerState->fd.forcePowerLevel[fp] = lvl;
+			//cl->gentity->playerState->fd.forcePowerBaseLevel[fp] = lvl;
 		};
 
 		cl->gentity->health = 300;
 		cl->gentity->playerState->basespeed = 350;
 		cl->gentity->playerState->speed = 350;
-		cl->gentity->playerState->gravity = 900;
+		//cl->gentity->playerState->gravity = 900;
 
-		grantForceLevel(FP_SABER_OFFENSE, 11);
-		grantForceLevel(FP_SABER_DEFENSE, 12);
-		grantForceLevel(FP_SABERTHROW, 13);
-		grantForceLevel(FP_LEVITATION, 3);
-		grantForceLevel(FP_LIGHTNING, 15);
-		grantForceLevel(FP_PULL, 16);
-		grantForceLevel(FP_SPEED, 17);
-		grantForceLevel(FP_PROTECT, 18);
-		grantForceLevel(MB_FP_DRAIN, 19);
-		grantForceLevel(MB_FORCE_HEAL, 20);
-		grantForceLevel(MB_FORCE_HEAL, 20);
-		grantForceLevel(20, 20);
+		//grantForceLevel(FP_SABER_OFFENSE, 11);
+		//grantForceLevel(FP_SABER_DEFENSE, 12);
+		//grantForceLevel(FP_SABERTHROW, 13);
+		//grantForceLevel(FP_LEVITATION, 3);
+		//grantForceLevel(FP_LIGHTNING, 15);
+		//grantForceLevel(FP_PULL, 16);
+		//grantForceLevel(FP_SPEED, 17);
+		//grantForceLevel(FP_PROTECT, 18);
+		//grantForceLevel(MB_FP_DRAIN, 19);
+		//grantForceLevel(MB_FORCE_HEAL, 20);
+		//grantForceLevel(MB_FORCE_HEAL, 20);
+		grantForceLevel(14, 1);
+		grantForceLevel(15, 1);
+		grantForceLevel(16, 1);
+		grantForceLevel(17, 1);
+		grantForceLevel(18, 1);
+		grantForceLevel(19, 1);
+		grantForceLevel(20, 1);
+		grantForceLevel(21, 1);
+		grantForceLevel(31, 1);
+		grantForceLevel(41, 1);
 		ps->fd.forcePowerSelected = FP_LIGHTNING;
 
 		/*grantForceLevel(10, 0);
@@ -790,11 +799,52 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 			Info_SetValueForKey(playerConfig, "mbc", "6");
 			Info_SetValueForKey(playerConfig, "sc", "0");
 			Info_SetValueForKey(playerConfig, "c1", "0");
-
 			SV_SetConfigstring(MB2_CS_PLAYERS + targetIdx, playerConfig);
-			//Info_SetValueForKey(userinfo, "c1", "0");
-		//SV_SetUserinfo(targetIdx, userinfo);
+			Info_SetValueForKey(userinfo, "c1", "0");
+
+			NXRP_PrintConsole(cl, va(
+				"Before: %s",
+				playerConfig
+			));
+
+			Info_SetValueForKey(playerConfig, "c1", "0");
+
+			NXRP_PrintConsole(cl, va(
+				"After: %s",
+				playerConfig
+			));
+
+
+		SV_SetUserinfo(targetIdx, userinfo);
 		GVM_ClientUserinfoChanged(targetIdx);
+
+		NXRP_PrintConsole(cl, va(
+			"Before: %s",
+			playerConfig
+		));
+
+		Info_SetValueForKey(playerConfig, "c1", "0");
+
+		NXRP_PrintConsole(cl, va(
+			"After: %s",
+			playerConfig
+		));
+
+
+		int16_t mb2force = static_cast<int16_t>(
+			ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING)
+			);
+		int16_t mb2force = static_cast<int16_t>(
+			ps->fd.forcePowerLevel[FP_LIGHTNING] = 2
+			);
+		int16_t mb2force = static_cast<int16_t>(
+			ps->fd.forcePowerBaseLevel[FP_LIGHTNING] = 2
+			);
+
+		ps->fd.forcePowerLevel[FP_PULL] =
+			static_cast<int16_t>(2);
+		ps->fd.forcePowerBaseLevel[FP_PULL] =
+			static_cast<int16_t>(2);
 
 		// Give the player an immediate force jump boost
 		//SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force jump 3"), 1);
