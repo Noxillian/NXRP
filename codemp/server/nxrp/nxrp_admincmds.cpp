@@ -831,7 +831,7 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		));
 
 
-		int16_t mb2force = static_cast<int16_t>(
+		/*int16_t mb2force = static_cast<int16_t>(
 			ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING)
 			);
 		int16_t mb2force = static_cast<int16_t>(
@@ -839,7 +839,7 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 			);
 		int16_t mb2force = static_cast<int16_t>(
 			ps->fd.forcePowerBaseLevel[FP_LIGHTNING] = 2
-			);
+			);*/
 
 		ps->fd.forcePowerLevel[FP_PULL] =
 			static_cast<int16_t>(2);
