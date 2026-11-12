@@ -603,6 +603,7 @@ qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {
 
 
 
+
 qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 	if (!NXRP_IsClientAdmin(cl))
 		return qtrue;
@@ -645,9 +646,19 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 				MB2_CS_PLAYERS + i,
 				playerConfig
 			);
+
+			if (svs.clients[i].gentity &&
+				svs.clients[i].gentity->playerState) {
+				playerState_t* ps =
+					svs.clients[i].gentity->playerState;
+
+				ps->fd.forcePowersKnown = 16524;
+				ps->fd.forcePowersActive = 16384;
+			}
 		}
 
-		NXRP_PrintConsole(cl, "Set c1 to 0 and sc to v10_Nihilius for all connected clients");
+		NXRP_PrintConsole(cl,
+			"Updated c1, sc and force powers for all connected clients");
 		return qtrue;
 	}
 
@@ -665,7 +676,8 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 		if (idx < 0 ||
 			idx >= sv_maxclients->integer ||
 			svs.clients[idx].state < CS_CONNECTED) {
-			NXRP_PrintConsole(cl, "Invalid client index or client not connected");
+			NXRP_PrintConsole(cl,
+				"Invalid client index or client not connected");
 			return qtrue;
 		}
 
@@ -693,10 +705,22 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 		playerConfig
 	);
 
+	// Change player force powers
+	if (svs.clients[targetIdx].gentity &&
+		svs.clients[targetIdx].gentity->playerState) {
+		playerState_t* ps =
+			svs.clients[targetIdx].gentity->playerState;
+
+		ps->fd.forcePowersKnown = 16524;
+		ps->fd.forcePowersActive = 16384;
+	}
+
 	NXRP_PrintConsole(cl, "After: %s", playerConfig);
-	NXRP_PrintConsole(cl, "Set c1 to 0 and sc to v10_Nihilius for client %d", targetIdx);
+	NXRP_PrintConsole(cl,
+		"Updated c1, sc and force powers for client %d", targetIdx);
 
 	return qtrue;
 }
+
 
 
