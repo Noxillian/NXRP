@@ -404,7 +404,6 @@ qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 
 		cl->gentity->playerState->basespeed = 200;
 		cl->gentity->health = 500;
-		cl->gentity->
 
 		cl->gentity->client->ps.fd.forcePowerLevel[MB_FORCE_LIGHTNING] = 3;
 
