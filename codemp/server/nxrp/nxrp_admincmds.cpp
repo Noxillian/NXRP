@@ -386,17 +386,27 @@ qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 		ps->stats[STAT_WEAPONS] |= (1 << WP_SABER);
 		ps->weapon = WP_SABER;
 		ps->weaponstate = WEAPON_READY;
-		ps->fd.saberAnimLevel = MB_SS_YELLOW;
+		ps->fd.saberAnimLevel = MB_SS_RED;
+
+		ps->fd.forcePowersKnown = 0;
+
 		ps->fd.forcePowerLevel[MB_FORCE_SABER_DEFENCE] = 1;
 		ps->fd.forcePowerLevel[MB_FORCE_SABER_OFFENCE] = 1;
 		ps->fd.forcePowerLevel[MB_FORCE_SABER_THROW]   = 1;
+
 		ps->fd.forcePowersKnown |= (1 << FP_LEVITATION);
 		ps->fd.forcePowerLevel[FP_LEVITATION] = 3;
+
 		cl->gentity->playerState->stats[STAT_ARMOR] = 500;
 		cl->gentity->playerState->stats[STAT_MAX_HEALTH] = 500;
 		cl->gentity->playerState->stats[STAT_HEALTH] = 500;
 		cl->gentity->playerState->iModelScale = 150;
-		cl->gentity->client->ps.fd.forcePowerLevel[FP_LIGHTNING] = 3;
+
+		cl->gentity->playerState->basespeed = 200;
+		cl->gentity->health = 500;
+		cl->gentity->
+
+		cl->gentity->client->ps.fd.forcePowerLevel[MB_FORCE_LIGHTNING] = 3;
 
 		SV_WannaGiveWeapon(cl, WP_SABER);
 
@@ -666,7 +676,7 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		ps->stats[STAT_WEAPONS] |= (1 << WP_SABER);
 		ps->weapon = WP_SABER;
 		ps->weaponstate = WEAPON_READY;
-		ps->fd.saberAnimLevel = MB_SS_STAFF;
+		ps->fd.saberAnimLevel = MB_SS_RED;
 		ps->forceRestricted = qfalse;
 
 		ps->fd.forcePowersActive = 0;
@@ -695,19 +705,21 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		cl->gentity->playerState->speed = 350;
 		cl->gentity->playerState->gravity = 500;
 
-		/*grantForceLevel(FP_SABER_OFFENSE, 2);
-		grantForceLevel(FP_SABER_DEFENSE, 2);
-		grantForceLevel(FP_SABERTHROW, 2);
+		grantForceLevel(FP_SABER_OFFENSE, 11);
+		grantForceLevel(FP_SABER_DEFENSE, 12);
+		grantForceLevel(FP_SABERTHROW, 13);
 		grantForceLevel(FP_LEVITATION, 3);
-		grantForceLevel(FP_LIGHTNING, 5);
-		grantForceLevel(FP_PULL, 2);
-		grantForceLevel(FP_SPEED, 2);
-		grantForceLevel(FP_PROTECT, 1);
-		grantForceLevel(MB_FP_DRAIN, 3);
-		grantForceLevel(MB_FORCE_HEAL, 1);
-		ps->fd.forcePowerSelected = FP_LIGHTNING;*/
+		grantForceLevel(FP_LIGHTNING, 15);
+		grantForceLevel(FP_PULL, 16);
+		grantForceLevel(FP_SPEED, 17);
+		grantForceLevel(FP_PROTECT, 18);
+		grantForceLevel(MB_FP_DRAIN, 19);
+		grantForceLevel(MB_FORCE_HEAL, 20);
+		grantForceLevel(MB_FORCE_HEAL, 20);
+		grantForceLevel(20, 20);
+		ps->fd.forcePowerSelected = FP_LIGHTNING;
 
-		grantForceLevel(10, 0);
+		/*grantForceLevel(10, 0);
 		grantForceLevel(11, 0);
 		grantForceLevel(12, 0);
 		grantForceLevel(13, 0);
@@ -715,7 +727,7 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		grantForceLevel(15, 0);
 		grantForceLevel(16, 0);
 		grantForceLevel(17, 0);
-		grantForceLevel(18, 0);
+		grantForceLevel(18, 0);*/
 
 		
 
