@@ -666,7 +666,6 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		playerState_t* ps = target->gentity->playerState;
 		char playerConfig[MAX_STRING_CHARS] = {0};
 		SV_GetConfigstring(MB2_CS_PLAYERS + targetIdx, playerConfig, sizeof(playerConfig));
-		Info_SetValueForKey(playerConfig, "mbc", "6");
 		SV_SetConfigstring(MB2_CS_PLAYERS + targetIdx, playerConfig);
 		if (target->gentity->client) {
 			target->gentity->client->MBClass = MB_CLASS_JEDI;
@@ -786,7 +785,9 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 			Info_SetValueForKey(userinfo, "color1", "red");
 			// Persist a dark-side force profile so force re-init paths keep usable powers.
 			Info_SetValueForKey(userinfo, "forcepowers", "0");
-			Info_SetValueForKey(userinfo, "c1", "0");
+			Info_SetValueForKey(playerConfig, "mbc", "6");
+			Info_SetValueForKey(playerConfig, "c1", "0");
+			//Info_SetValueForKey(userinfo, "c1", "0");
 		SV_SetUserinfo(targetIdx, userinfo);
 		GVM_ClientUserinfoChanged(targetIdx);
 

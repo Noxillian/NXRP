@@ -144,13 +144,6 @@ static void NXRP_CheckMB2(client_t* cl, playerState_t* ps) {
 		char classValue[128] = {0};
 		char mbClassValue[128] = { 0 };
 
-		char attributes[MAX_STRING_CHARS] = { 0 };
-		char mb[MAX_STRING_CHARS] = { 0 };
-		char mb2[MAX_STRING_CHARS] = { 0 };
-		char ClassInfo[MAX_STRING_CHARS] = { 0 };
-		char userinfo[MAX_STRING_CHARS] = { 0 };
-		char forcepowers[MAX_STRING_CHARS] = { 0 };
-
 		//char attributes[128] = { 0 };				none
 		//char attributesValue[128] = { 0 };		none
 		//char mbforcepowers[128] = { 0 };			none
@@ -158,13 +151,6 @@ static void NXRP_CheckMB2(client_t* cl, playerState_t* ps) {
 
 
 		SV_GetConfigstring(MB2_CS_PLAYERS + ps->clientNum, playerConfig, sizeof(playerConfig));
-
-		SV_GetConfigstring(MB2_CS_PLAYERS + ps->clientNum, attributes, sizeof(attributes));
-		SV_GetConfigstring(MB2_CS_PLAYERS + ps->clientNum, mb, sizeof(mb));
-		SV_GetConfigstring(MB2_CS_PLAYERS + ps->clientNum, mb2, sizeof(mb2));
-		SV_GetConfigstring(MB2_CS_PLAYERS + ps->clientNum, ClassInfo, sizeof(ClassInfo));
-		SV_GetConfigstring(MB2_CS_PLAYERS + ps->clientNum, userinfo, sizeof(userinfo));
-		SV_GetConfigstring(MB2_CS_PLAYERS + ps->clientNum, forcepowers, sizeof(forcepowers));
 
 		Q_strncpyz(name, Info_ValueForKey(playerConfig, "n"), sizeof(name));
 		Q_strncpyz(modelValue, Info_ValueForKey(playerConfig, "m"), sizeof(modelValue));
@@ -181,13 +167,6 @@ static void NXRP_CheckMB2(client_t* cl, playerState_t* ps) {
 		NXRP_PrintConsole(cl, "MB2 config model: %s", modelValue[0] ? modelValue : "<none>");
 		NXRP_PrintConsole(cl, "MB2 config siege class: %s", classValue[0] ? classValue : "<none>");
 		NXRP_PrintConsole(cl, "MB2 config class id: %s", mbClassValue[0] ? mbClassValue : "<none>");
-
-		NXRP_PrintConsole(cl, "MB2 config attributesString: %s", attributes[0] ? attributes : "<none>");
-		NXRP_PrintConsole(cl, "MB2 config mbString: %s", mb[0] ? mb : "<none>");
-		NXRP_PrintConsole(cl, "MB2 config mb2String: %s", mb2[0] ? mb2 : "<none>");
-		NXRP_PrintConsole(cl, "MB2 config ClassInfoString: %s", ClassInfo[0] ? ClassInfo : "<none>");
-		NXRP_PrintConsole(cl, "MB2 config userinfoString: %s", userinfo[0] ? userinfo : "<none>");
-		NXRP_PrintConsole(cl, "MB2 config forcepowersString: %s", forcepowers[0] ? forcepowers : "<none>");
 	}
 
 	/*NXRP_PrintConsole(cl, "MB2 searching live reliable commands for class/attribute data...");
