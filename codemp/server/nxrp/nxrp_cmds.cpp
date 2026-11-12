@@ -143,6 +143,7 @@ static void NXRP_CheckMB2(client_t* cl, playerState_t* ps) {
 		char modelValue[128] = {0};
 		char classValue[128] = {0};
 		char mbClassValue[128] = { 0 };
+		char mbForceValue[128] = { 0 };
 
 		//char attributes[128] = { 0 };				none
 		//char attributesValue[128] = { 0 };		none
@@ -156,6 +157,7 @@ static void NXRP_CheckMB2(client_t* cl, playerState_t* ps) {
 		Q_strncpyz(modelValue, Info_ValueForKey(playerConfig, "m"), sizeof(modelValue));
 		Q_strncpyz(classValue, Info_ValueForKey(playerConfig, "sc"), sizeof(classValue));
 		Q_strncpyz(mbClassValue, Info_ValueForKey(playerConfig, "mbc"), sizeof(mbClassValue));
+		Q_strncpyz(mbForceValue, Info_ValueForKey(playerConfig, "c1"), sizeof(mbForceValue));
 
 		//Q_strncpyz(mbClassAttributes, Info_ValueForKey(playerConfig, "attributes"), sizeof(mbClassAttributes));
 		//Q_strncpyz(mbAttributes, Info_ValueForKey(playerConfig, "attributesValue"), sizeof(mbAttributes));
@@ -167,6 +169,7 @@ static void NXRP_CheckMB2(client_t* cl, playerState_t* ps) {
 		NXRP_PrintConsole(cl, "MB2 config model: %s", modelValue[0] ? modelValue : "<none>");
 		NXRP_PrintConsole(cl, "MB2 config siege class: %s", classValue[0] ? classValue : "<none>");
 		NXRP_PrintConsole(cl, "MB2 config class id: %s", mbClassValue[0] ? mbClassValue : "<none>");
+		NXRP_PrintConsole(cl, "MB2 config force powers: %s", mbForceValue[0] ? mbForceValue : "<none>");
 	}
 
 	/*NXRP_PrintConsole(cl, "MB2 searching live reliable commands for class/attribute data...");

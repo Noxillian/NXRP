@@ -601,262 +601,110 @@ qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {
 	return qtrue;
 }
 
-// Handler: !giveall
-// Optional numeric argument: target client slot index (as shown by rcon status)
-// Usage: !giveall [clientIndex]
-qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
-	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
-	char giveallTarget[32] = {0};
-	const int giveallParts = chatCursor ? sscanf(chatCursor, "%*31s %31s", giveallTarget) : 0;
-	if (giveallParts == 1 && !Q_stricmp(giveallTarget, "all")) {
+// Handler: !setc1
+// Usage: !setc1 [clientIndex]
+qboolean NXRP_cmdAdmin_setc1(client_t* cl, const char* chatCursor) {
+	if (!NXRP_IsClientAdmin(cl))
+		return qtrue;
+
+	// Determine target client (default: invoking admin)
+	client_t* target = cl;
+	int targetIdx = (int)(cl - svs.clients);
+
+	char firstTok[32] = { 0 };
+	char secondTok[32] = { 0 };
+
+	int parts = chatCursor
+		? sscanf(chatCursor, "%31s %31s", firstTok, secondTok)
+		: 0;
+
+	const char* tok = NULL;
+
+	if (parts == 1) {
+		tok = firstTok;
+	}
+	else if (parts >= 2) {
+		tok = !Q_stricmp(firstTok, "setc1")
+			? secondTok
+			: firstTok;
+	}
+
+	// Handle all connected clients
+	if (tok && !Q_stricmp(tok, "all")) {
 		for (int i = 0; i < sv_maxclients->integer; ++i) {
 			if (svs.clients[i].state >= CS_CONNECTED) {
-				NXRP_cmdAdmin_giveall(cl, va("giveall %d", i));
+				char config[MAX_STRING_CHARS] = { 0 };
+
+				SV_GetConfigstring(
+					MB2_CS_PLAYERS + i,
+					config,
+					sizeof(config)
+				);
+
+				Info_SetValueForKey(config, "c1", "0");
+
+				SV_SetConfigstring(
+					MB2_CS_PLAYERS + i,
+					config
+				);
 			}
 		}
-		NXRP_PrintConsole(cl, "Applied giveall to all connected clients");
+
+		NXRP_PrintConsole(cl, "Set c1 to 0 for all connected clients");
 		return qtrue;
 	}
 
-	// Some give commands are gated behind sv_cheats. Temporarily enable
-	// sv_cheats like other modules do (see social.cpp's Holo_CheatCommand)
-	const qboolean cheats = Cvar_VariableIntegerValue("sv_cheats") ? qtrue : qfalse;
-	if (!cheats) {
-		Cvar_Set("sv_cheats", "1");
-		GVM_RunFrame(sv.time);
-	}
+	// Validate optional client index
+	if (tok && tok[0]) {
+		bool allDigits = true;
 
-	// Determine target client (default: the invoking admin)
-	client_t* target = cl;
-	int targetIdx = (int)(cl - svs.clients);
-	if (chatCursor && *chatCursor) {
-		char firstTok[32] = {0};
-		char secondTok[32] = {0};
-		int parts = sscanf(chatCursor, "%31s %31s", firstTok, secondTok);
-		const char* tok = NULL;
-		if (parts == 1) {
-			tok = firstTok;
-		} else if (parts >= 2) {
-			// If the chatCursor begins with the subcommand name (e.g., "giveall <idx>"), prefer the second token.
-			if (!Q_stricmp(firstTok, "giveall")) tok = secondTok;
-			else tok = firstTok;
-		}
-		if (tok && tok[0]) {
-			// token must be all digits to be considered a client index
-			bool allDigits = true;
-			for (size_t i = 0; tok[i]; ++i) { if (!isdigit((unsigned char)tok[i])) { allDigits = false; break; } }
-			if (allDigits) {
-				int idx = atoi(tok);
-				if (idx >= 0 && idx < sv_maxclients->integer && svs.clients[idx].state >= CS_CONNECTED) {
-					target = &svs.clients[idx];
-					targetIdx = idx;
-					NXRP_PrintConsole(cl, va("Applied giveall to client %d", idx));
-				} else {
-					NXRP_PrintConsole(cl, "Invalid client index or client not connected");
-					return qtrue;
-				}
+		for (size_t i = 0; tok[i]; ++i) {
+			if (!isdigit((unsigned char)tok[i])) {
+				allDigits = false;
+				break;
 			}
 		}
-	}
-	//NXRP_PrintConsoleToPlayer(target, "You have been given a Lightsaber");
 
-
-	if (target && target->gentity && target->gentity->playerState) {
-		playerState_t* ps = target->gentity->playerState;
-		char playerConfig[MAX_STRING_CHARS] = {0};
-		SV_GetConfigstring(MB2_CS_PLAYERS + targetIdx, playerConfig, sizeof(playerConfig));
-
-		//SV_SetConfigstring(MB2_CS_PLAYERS + targetIdx, playerConfig);
-		if (target->gentity->client) {
-			target->gentity->client->MBClass = MB_CLASS_JEDI;
-		}
-		NXRP_PrintConsole(cl, "Set client %d MB2 mbc class value to 6", targetIdx);
-		//ps->fd.forceUsingAdded = 0;
-		ps->stats[STAT_WEAPONS] |= (1 << WP_SABER);
-		ps->weapon = WP_SABER;
-		ps->weaponstate = WEAPON_READY;
-		ps->fd.saberAnimLevel = MB_SS_RED;
-		ps->forceRestricted = qfalse;
-
-		ps->fd.forcePowersActive = 0;
-		ps->fd.forceDeactivateAll = 0;
-		for (int i = 0; i < NUM_FORCE_POWERS; ++i) {
-			ps->fd.forcePowerDebounce[i] = 0;
-			ps->fd.forcePowerDuration[i] = 0;
+		if (!allDigits) {
+			NXRP_PrintConsole(cl, "Invalid client index");
+			return qtrue;
 		}
 
-		ps->fd.forcePowerMax = 300;
-		ps->fd.forcePower = 300;
-		ps->fd.forcePowerRegenDebounceTime = sv.time;
+		int idx = atoi(tok);
 
-		auto grantForceLevel = [&](int fp, int lvl) {
-			ps->fd.forcePowersKnown |= (1 << fp);
-			ps->fd.forcePowerLevel[fp] = lvl;
-			ps->fd.forcePowerBaseLevel[fp] = lvl;
-
-			//cl->gentity->playerState->fd.forcePowersKnown |= (1 << fp);
-			//cl->gentity->playerState->fd.forcePowerLevel[fp] = lvl;
-			//cl->gentity->playerState->fd.forcePowerBaseLevel[fp] = lvl;
-		};
-
-		cl->gentity->health = 300;
-		cl->gentity->playerState->basespeed = 350;
-		cl->gentity->playerState->speed = 350;
-		//cl->gentity->playerState->gravity = 900;
-
-		//grantForceLevel(FP_SABER_OFFENSE, 11);
-		//grantForceLevel(FP_SABER_DEFENSE, 12);
-		//grantForceLevel(FP_SABERTHROW, 13);
-		//grantForceLevel(FP_LEVITATION, 3);
-		//grantForceLevel(FP_LIGHTNING, 15);
-		//grantForceLevel(FP_PULL, 16);
-		//grantForceLevel(FP_SPEED, 17);
-		//grantForceLevel(FP_PROTECT, 18);
-		//grantForceLevel(MB_FP_DRAIN, 19);
-		//grantForceLevel(MB_FORCE_HEAL, 20);
-		//grantForceLevel(MB_FORCE_HEAL, 20);
-		grantForceLevel(14, 1);
-		grantForceLevel(15, 1);
-		grantForceLevel(16, 1);
-		grantForceLevel(17, 1);
-		grantForceLevel(18, 1);
-		grantForceLevel(19, 1);
-		grantForceLevel(20, 1);
-		grantForceLevel(21, 1);
-		grantForceLevel(31, 1);
-		grantForceLevel(41, 1);
-		ps->fd.forcePowerSelected = FP_LIGHTNING;
-
-		/*grantForceLevel(10, 0);
-		grantForceLevel(11, 0);
-		grantForceLevel(12, 0);
-		grantForceLevel(13, 0);
-		grantForceLevel(14, 0);
-		grantForceLevel(15, 0);
-		grantForceLevel(16, 0);
-		grantForceLevel(17, 0);
-		grantForceLevel(18, 0);*/
-
-		
-
-		//cl->gentity->client->sess.saberLevel;
-
-		void (*setClientSessionForGiveAll)(int, int, int) =
-			(void (*)(int, int, int))Sys_LoadFunction(GVM_GetDllHandle(), "NXRP_SetClientSessionForGiveAll");
-		if (setClientSessionForGiveAll) {
-			void* old = GVM_BeginNative();
-			setClientSessionForGiveAll(targetIdx, FP_LIGHTNING, ps->fd.saberAnimLevel);
-			GVM_EndNative(old);
+		if (idx < 0 || idx >= sv_maxclients->integer ||
+			svs.clients[idx].state < CS_CONNECTED) {
+			NXRP_PrintConsole(cl, "Invalid client index or client not connected");
+			return qtrue;
 		}
 
-		//SV_WannaGiveWeapon(target, WP_CLONE_PISTOL);
-		SV_WannaGiveWeapon(target, WP_SABER);
-
-
-		// Give a broader set of weapons
-		//SV_WannaGiveWeapon(target, WP_BRYAR_PISTOL);
-		//SV_WannaGiveWeapon(target, WP_MANDO_PISTOL);
-		//SV_WannaGiveWeapon(target, WP_HEAVY_PISTOL);
-		//SV_WannaGiveWeapon(target, WP_BLASTER);
-		//SV_WannaGiveWeapon(target, WP_DISRUPTOR);
-		//SV_WannaGiveWeapon(target, WP_BOWCASTER);
-		//SV_WannaGiveWeapon(target, WP_REPEATER);
-		//SV_WannaGiveWeapon(target, WP_CLONE_RIFLE);
-		//SV_WannaGiveWeapon(target, WP_A280);
-		//SV_WannaGiveWeapon(target, WP_DLT19);
-		//SV_WannaGiveWeapon(target, WP_SHOTGUN);
-		//SV_WannaGiveWeapon(target, WP_MINIGUN);
-		//SV_WannaGiveWeapon(target, WP_ROCKET_LAUNCHER);
-
-		SV_WannaGiveWeapon(target, WP_STUN_BATON);
-		SV_WannaGiveWeapon(target, WP_THERMAL);
-		SV_WannaGiveWeapon(target, WP_CRYO_NADE);
-
-		// Give ammo for the weapons we provided so they can be used immediately
-		Spin_GiveWeaponAmmo(target, WP_CLONE_PISTOL);
-		Spin_GiveWeaponAmmo(target, WP_BRYAR_PISTOL);
-		Spin_GiveWeaponAmmo(target, WP_MANDO_PISTOL);
-		Spin_GiveWeaponAmmo(target, WP_HEAVY_PISTOL);
-		Spin_GiveWeaponAmmo(target, WP_BLASTER);
-		Spin_GiveWeaponAmmo(target, WP_DISRUPTOR);
-		Spin_GiveWeaponAmmo(target, WP_BOWCASTER);
-		Spin_GiveWeaponAmmo(target, WP_REPEATER);
-		Spin_GiveWeaponAmmo(target, WP_CLONE_RIFLE);
-		Spin_GiveWeaponAmmo(target, WP_A280);
-		Spin_GiveWeaponAmmo(target, WP_DLT19);
-		Spin_GiveWeaponAmmo(target, WP_SHOTGUN);
-		Spin_GiveWeaponAmmo(target, WP_MINIGUN);
-		Spin_GiveWeaponAmmo(target, WP_ROCKET_LAUNCHER);
-
-		char userinfo[MAX_INFO_STRING];
-		SV_GetUserinfo(targetIdx, userinfo, sizeof(userinfo));
-			Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
-			Info_SetValueForKey(userinfo, "color1", "red");
-			Info_SetValueForKey(playerConfig, "sc", "0");
-			// Persist a dark-side force profile so force re-init paths keep usable powers.
-			Info_SetValueForKey(userinfo, "forcepowers", "0");
-			Info_SetValueForKey(playerConfig, "mbc", "6");
-			Info_SetValueForKey(playerConfig, "sc", "0");
-			Info_SetValueForKey(playerConfig, "c1", "0");
-			SV_SetConfigstring(MB2_CS_PLAYERS + targetIdx, playerConfig);
-			Info_SetValueForKey(userinfo, "c1", "0");
-
-			NXRP_PrintConsole(cl, va(
-				"Before: %s",
-				playerConfig
-			));
-
-			Info_SetValueForKey(playerConfig, "c1", "0");
-
-			NXRP_PrintConsole(cl, va(
-				"After: %s",
-				playerConfig
-			));
-
-
-		SV_SetUserinfo(targetIdx, userinfo);
-		GVM_ClientUserinfoChanged(targetIdx);
-
-		NXRP_PrintConsole(cl, va(
-			"Before: %s",
-			playerConfig
-		));
-
-		Info_SetValueForKey(playerConfig, "c1", "0");
-
-		NXRP_PrintConsole(cl, va(
-			"After: %s",
-			playerConfig
-		));
-
-
-		/*int16_t mb2force = static_cast<int16_t>(
-			ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING)
-			);
-		int16_t mb2force = static_cast<int16_t>(
-			ps->fd.forcePowerLevel[FP_LIGHTNING] = 2
-			);
-		int16_t mb2force = static_cast<int16_t>(
-			ps->fd.forcePowerBaseLevel[FP_LIGHTNING] = 2
-			);*/
-
-		ps->fd.forcePowerLevel[FP_PULL] =
-			static_cast<int16_t>(2);
-		ps->fd.forcePowerBaseLevel[FP_PULL] =
-			static_cast<int16_t>(2);
-
-		// Give the player an immediate force jump boost
-		//SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force jump 3"), 1);
-		//SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force lightning 2"), 1);
-		//SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force pull"), 1);
-		//SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force destruct"), 1);
+		target = &svs.clients[idx];
+		targetIdx = idx;
 	}
 
-	if (!cheats) {
-		Cvar_Set("sv_cheats", "0");
-		GVM_RunFrame(sv.time);
-	}
+	// Read player configstring
+	char playerConfig[MAX_STRING_CHARS] = { 0 };
+
+	SV_GetConfigstring(
+		MB2_CS_PLAYERS + targetIdx,
+		playerConfig,
+		sizeof(playerConfig)
+	);
+
+	NXRP_PrintConsole(cl, "Before: %s", playerConfig);
+
+	// Change ONLY c1
+	Info_SetValueForKey(playerConfig, "c1", "0");
+
+	// Publish updated player configstring
+	SV_SetConfigstring(
+		MB2_CS_PLAYERS + targetIdx,
+		playerConfig
+	);
+
+	NXRP_PrintConsole(cl, "After: %s", playerConfig);
+	NXRP_PrintConsole(cl, "Set c1 to 0 for client %d", targetIdx);
 
 	return qtrue;
 }
