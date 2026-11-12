@@ -602,6 +602,7 @@ qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {
 }
 
 
+
 qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 	if (!NXRP_IsClientAdmin(cl))
 		return qtrue;
@@ -638,6 +639,7 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 			);
 
 			Info_SetValueForKey(playerConfig, "c1", "0");
+			Info_SetValueForKey(playerConfig, "sc", "v10_Nihilius");
 
 			SV_SetConfigstring(
 				MB2_CS_PLAYERS + i,
@@ -645,7 +647,7 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 			);
 		}
 
-		NXRP_PrintConsole(cl, "Set c1 to 0 for all connected clients");
+		NXRP_PrintConsole(cl, "Set c1 to 0 and sc to v10_Nihilius for all connected clients");
 		return qtrue;
 	}
 
@@ -681,17 +683,20 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 
 	NXRP_PrintConsole(cl, "Before: %s", playerConfig);
 
-	// Change only c1
+	// Change player config values
 	Info_SetValueForKey(playerConfig, "c1", "0");
+	Info_SetValueForKey(playerConfig, "sc", "v10_Nihilius");
 
+	// Publish updated configstring
 	SV_SetConfigstring(
 		MB2_CS_PLAYERS + targetIdx,
 		playerConfig
 	);
 
 	NXRP_PrintConsole(cl, "After: %s", playerConfig);
-	NXRP_PrintConsole(cl, "Set c1 to 0 for client %d", targetIdx);
+	NXRP_PrintConsole(cl, "Set c1 to 0 and sc to v10_Nihilius for client %d", targetIdx);
 
 	return qtrue;
 }
+
 
