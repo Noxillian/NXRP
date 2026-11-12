@@ -602,14 +602,11 @@ qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {
 }
 
 
-// Handler: !setc1
-// Usage: !setc1 [clientIndex]
-qboolean NXRP_cmdAdmin_setc1(client_t* cl, const char* chatCursor) {
+qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 	if (!NXRP_IsClientAdmin(cl))
 		return qtrue;
 
 	// Determine target client (default: invoking admin)
-	client_t* target = cl;
 	int targetIdx = (int)(cl - svs.clients);
 
 	char firstTok[32] = { 0 };
@@ -621,34 +618,31 @@ qboolean NXRP_cmdAdmin_setc1(client_t* cl, const char* chatCursor) {
 
 	const char* tok = NULL;
 
-	if (parts == 1) {
+	if (parts == 1)
 		tok = firstTok;
-	}
-	else if (parts >= 2) {
-		tok = !Q_stricmp(firstTok, "setc1")
-			? secondTok
-			: firstTok;
-	}
+	else if (parts >= 2)
+		tok = !Q_stricmp(firstTok, "giveall") ? secondTok : firstTok;
 
-	// Handle all connected clients
+	// Apply to all connected clients
 	if (tok && !Q_stricmp(tok, "all")) {
 		for (int i = 0; i < sv_maxclients->integer; ++i) {
-			if (svs.clients[i].state >= CS_CONNECTED) {
-				char config[MAX_STRING_CHARS] = { 0 };
+			if (svs.clients[i].state < CS_CONNECTED)
+				continue;
 
-				SV_GetConfigstring(
-					MB2_CS_PLAYERS + i,
-					config,
-					sizeof(config)
-				);
+			char playerConfig[MAX_STRING_CHARS] = { 0 };
 
-				Info_SetValueForKey(config, "c1", "0");
+			SV_GetConfigstring(
+				MB2_CS_PLAYERS + i,
+				playerConfig,
+				sizeof(playerConfig)
+			);
 
-				SV_SetConfigstring(
-					MB2_CS_PLAYERS + i,
-					config
-				);
-			}
+			Info_SetValueForKey(playerConfig, "c1", "0");
+
+			SV_SetConfigstring(
+				MB2_CS_PLAYERS + i,
+				playerConfig
+			);
 		}
 
 		NXRP_PrintConsole(cl, "Set c1 to 0 for all connected clients");
@@ -657,29 +651,22 @@ qboolean NXRP_cmdAdmin_setc1(client_t* cl, const char* chatCursor) {
 
 	// Validate optional client index
 	if (tok && tok[0]) {
-		bool allDigits = true;
-
 		for (size_t i = 0; tok[i]; ++i) {
 			if (!isdigit((unsigned char)tok[i])) {
-				allDigits = false;
-				break;
+				NXRP_PrintConsole(cl, "Invalid client index");
+				return qtrue;
 			}
-		}
-
-		if (!allDigits) {
-			NXRP_PrintConsole(cl, "Invalid client index");
-			return qtrue;
 		}
 
 		int idx = atoi(tok);
 
-		if (idx < 0 || idx >= sv_maxclients->integer ||
+		if (idx < 0 ||
+			idx >= sv_maxclients->integer ||
 			svs.clients[idx].state < CS_CONNECTED) {
 			NXRP_PrintConsole(cl, "Invalid client index or client not connected");
 			return qtrue;
 		}
 
-		target = &svs.clients[idx];
 		targetIdx = idx;
 	}
 
@@ -694,10 +681,9 @@ qboolean NXRP_cmdAdmin_setc1(client_t* cl, const char* chatCursor) {
 
 	NXRP_PrintConsole(cl, "Before: %s", playerConfig);
 
-	// Change ONLY c1
+	// Change only c1
 	Info_SetValueForKey(playerConfig, "c1", "0");
 
-	// Publish updated player configstring
 	SV_SetConfigstring(
 		MB2_CS_PLAYERS + targetIdx,
 		playerConfig
@@ -708,3 +694,4 @@ qboolean NXRP_cmdAdmin_setc1(client_t* cl, const char* chatCursor) {
 
 	return qtrue;
 }
+
