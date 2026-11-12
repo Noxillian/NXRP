@@ -416,6 +416,7 @@ qboolean NXRP_cmdAdmin_boss( client_t *cl, const char *chatCursor ) {
 		// Set player model to Tavion
 		Info_SetValueForKey(userinfo, "model", "tavion");
 		Info_SetValueForKey(userinfo, "pmodel", "tavion");
+
 		SV_SetUserinfo(cl - svs.clients, userinfo);
 		// Ensure server-side parsing of the new userinfo occurs so the
 		// client's server state and derived fields update before notifying
@@ -702,7 +703,7 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 		cl->gentity->health = 300;
 		cl->gentity->playerState->basespeed = 350;
 		cl->gentity->playerState->speed = 350;
-		cl->gentity->playerState->gravity = 500;
+		cl->gentity->playerState->gravity = 900;
 
 		grantForceLevel(FP_SABER_OFFENSE, 11);
 		grantForceLevel(FP_SABER_DEFENSE, 12);
@@ -784,7 +785,8 @@ qboolean NXRP_cmdAdmin_giveall( client_t *cl, const char *chatCursor ) {
 			Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
 			Info_SetValueForKey(userinfo, "color1", "red");
 			// Persist a dark-side force profile so force re-init paths keep usable powers.
-			//Info_SetValueForKey(userinfo, "forcepowers", "7-1-333003000313003120");
+			Info_SetValueForKey(userinfo, "forcepowers", "0");
+			Info_SetValueForKey(userinfo, "c1", "0");
 		SV_SetUserinfo(targetIdx, userinfo);
 		GVM_ClientUserinfoChanged(targetIdx);
 
