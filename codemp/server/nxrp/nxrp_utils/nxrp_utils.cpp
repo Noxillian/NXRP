@@ -41,16 +41,14 @@ bool NXRP_TeleportEntityTo(sharedEntity_t* ent, const vec3_t position, float yaw
 	return true;
 }
 
-bool NXRP_TeleportClientToPosition(client_t* cl, const vec3_t position, float yaw)
-{
+bool NXRP_TeleportClientToPosition(client_t* cl, const vec3_t position, float yaw) {
 	if (!cl || !cl->gentity) return false;
 	return NXRP_TeleportEntityTo(cl->gentity, position, yaw);
 }
 
 // Returns the new entity number, or -1 on failure.
 // Spawn a prop at the client's origin using given model and prop bounds
-int NXRP_SpawnPropAtClient(client_t* cl, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, float yaw)
-{
+int NXRP_SpawnPropAtClient(client_t* cl, const char* modelPath, const vec3_t propMins, const vec3_t propMaxs, float yaw) {
 	if (!cl || !modelPath) return -1;
 	vec3_t position;
 	if (cl->gentity) VectorCopy(cl->gentity->r.currentOrigin, position);

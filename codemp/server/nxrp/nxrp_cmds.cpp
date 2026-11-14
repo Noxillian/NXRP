@@ -164,7 +164,8 @@ static void NXRP_CheckMB2(client_t* cl, playerState_t* ps) {
 		//Q_strncpyz(mbClassForcepowersValue, Info_ValueForKey(playerConfig, "mbforcepowers"), sizeof(mbClassForcepowersValue));
 		//Q_strncpyz(mbClassInfo, Info_ValueForKey(playerConfig, "mbClassInfo"), sizeof(mbClassInfo));
 
-		NXRP_PrintConsole(cl, "MB2 player configstring: %s", playerConfig[0] ? playerConfig : "<empty>");
+		NXRP_PrintConsole(cl, "MB2 player configstring1: %s", playerConfig[0] ? playerConfig : "<empty>");
+		NXRP_PrintConsole(cl, "MB2 player configstring2: %s", playerConfig[1] ? playerConfig : "<empty>");
 		NXRP_PrintConsole(cl, "MB2 config name: %s", name[0] ? name : "<none>");
 		NXRP_PrintConsole(cl, "MB2 config model: %s", modelValue[0] ? modelValue : "<none>");
 		NXRP_PrintConsole(cl, "MB2 config siege class: %s", classValue[0] ? classValue : "<none>");

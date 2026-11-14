@@ -639,6 +639,8 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 				sizeof(playerConfig)
 			);
 
+			NXRP_PrintConsole(cl, "Playerconfig String: %s", playerConfig);
+
 			Info_SetValueForKey(playerConfig, "c1", "0");
 			Info_SetValueForKey(playerConfig, "sc", "v10_Nihilius");
 
@@ -657,8 +659,7 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 			}
 		}
 
-		NXRP_PrintConsole(cl,
-			"Updated c1, sc and force powers for all connected clients");
+		NXRP_PrintConsole(cl, "Updated c1, sc and force powers for all connected clients");
 		return qtrue;
 	}
 
@@ -718,6 +719,9 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 	NXRP_PrintConsole(cl, "After: %s", playerConfig);
 	NXRP_PrintConsole(cl,
 		"Updated c1, sc and force powers for client %d", targetIdx);
+
+
+	
 
 	return qtrue;
 }
