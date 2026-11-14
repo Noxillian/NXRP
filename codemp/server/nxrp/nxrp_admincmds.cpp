@@ -605,134 +605,184 @@ qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {
 
 
 qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
-	if (!NXRP_IsClientAdmin(cl))
-		return qtrue;
+	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
-	// Determine target client (default: invoking admin)
-	int targetIdx = (int)(cl - svs.clients);
-
-	char firstTok[32] = { 0 };
-	char secondTok[32] = { 0 };
-
-	int parts = chatCursor
-		? sscanf(chatCursor, "%31s %31s", firstTok, secondTok)
-		: 0;
-
-	const char* tok = NULL;
-
-	if (parts == 1)
-		tok = firstTok;
-	else if (parts >= 2)
-		tok = !Q_stricmp(firstTok, "giveall") ? secondTok : firstTok;
-
-	// Apply to all connected clients
-	if (tok && !Q_stricmp(tok, "all")) {
+	char giveallTarget[32] = { 0 };
+	const int giveallParts = chatCursor ? sscanf(chatCursor, "%*31s %31s", giveallTarget) : 0;
+	if (giveallParts == 1 && !Q_stricmp(giveallTarget, "all")) {
 		for (int i = 0; i < sv_maxclients->integer; ++i) {
-			if (svs.clients[i].state < CS_CONNECTED)
-				continue;
-
-			char playerConfig[MAX_STRING_CHARS] = { 0 };
-			char userinfo[MAX_STRING_CHARS] = { 0 };
-
-			SV_GetConfigstring(
-				MB2_CS_PLAYERS + i,
-				playerConfig,
-				sizeof(playerConfig)
-			);
-
-			SV_GetUserinfo(cl - svs.clients, userinfo, sizeof(userinfo)); (
-				i,
-				userinfo,
-				sizeof(userinfo)
-			);
-
-			NXRP_PrintConsole(cl, "Playerconfig String: %s", playerConfig);
-			NXRP_PrintConsole(cl, "userinfo String: %s", userinfo);
-
-			Info_SetValueForKey(playerConfig, "c1", "0");
-			Info_SetValueForKey(playerConfig, "sc", "v10_Nihilius");
-
-			SV_SetConfigstring(
-				MB2_CS_PLAYERS + i,
-				playerConfig
-			);
-
-			if (svs.clients[i].gentity &&
-				svs.clients[i].gentity->playerState) {
-				playerState_t* ps =
-					svs.clients[i].gentity->playerState;
-
-				ps->fd.forcePowersKnown = 16524;
-				ps->fd.forcePowersActive = 16384;
+			if (svs.clients[i].state >= CS_CONNECTED) {
+				NXRP_cmdAdmin_giveall(cl, va("giveall %d", i));
 			}
 		}
-
-		NXRP_PrintConsole(cl, "Updated c1, sc and force powers for all connected clients");
+		NXRP_PrintConsole(cl, "Applied giveall to all connected clients");
 		return qtrue;
 	}
 
-	// Validate optional client index
-	if (tok && tok[0]) {
-		for (size_t i = 0; tok[i]; ++i) {
-			if (!isdigit((unsigned char)tok[i])) {
-				NXRP_PrintConsole(cl, "Invalid client index");
-				return qtrue;
+	// Some give commands are gated behind sv_cheats. Temporarily enable
+	// sv_cheats like other modules do (see social.cpp's Holo_CheatCommand)
+	const qboolean cheats = Cvar_VariableIntegerValue("sv_cheats") ? qtrue : qfalse;
+	if (!cheats) {
+		Cvar_Set("sv_cheats", "1");
+		GVM_RunFrame(sv.time);
+	}
+
+	// Determine target client (default: the invoking admin)
+	client_t* target = cl;
+	int targetIdx = (int)(cl - svs.clients);
+	if (chatCursor && *chatCursor) {
+		char firstTok[32] = { 0 };
+		char secondTok[32] = { 0 };
+		int parts = sscanf(chatCursor, "%31s %31s", firstTok, secondTok);
+		const char* tok = NULL;
+		if (parts == 1) {
+			tok = firstTok;
+		}
+		else if (parts >= 2) {
+			// If the chatCursor begins with the subcommand name (e.g., "giveall <idx>"), prefer the second token.
+			if (!Q_stricmp(firstTok, "giveall")) tok = secondTok;
+			else tok = firstTok;
+		}
+		if (tok && tok[0]) {
+			// token must be all digits to be considered a client index
+			bool allDigits = true;
+			for (size_t i = 0; tok[i]; ++i) { if (!isdigit((unsigned char)tok[i])) { allDigits = false; break; } }
+			if (allDigits) {
+				int idx = atoi(tok);
+				if (idx >= 0 && idx < sv_maxclients->integer && svs.clients[idx].state >= CS_CONNECTED) {
+					target = &svs.clients[idx];
+					targetIdx = idx;
+					NXRP_PrintConsole(cl, va("Applied giveall to client %d", idx));
+				}
+				else {
+					NXRP_PrintConsole(cl, "Invalid client index or client not connected");
+					return qtrue;
+				}
 			}
 		}
+	}
+	//NXRP_PrintConsoleToPlayer(target, "You have been given a Lightsaber");
 
-		int idx = atoi(tok);
 
-		if (idx < 0 ||
-			idx >= sv_maxclients->integer ||
-			svs.clients[idx].state < CS_CONNECTED) {
-			NXRP_PrintConsole(cl,
-				"Invalid client index or client not connected");
-			return qtrue;
+	if (target && target->gentity && target->gentity->playerState) {
+		playerState_t* ps = target->gentity->playerState;
+		char playerConfig[MAX_STRING_CHARS] = { 0 };
+		SV_GetConfigstring(MB2_CS_PLAYERS + targetIdx, playerConfig, sizeof(playerConfig));
+
+		//SV_SetConfigstring(MB2_CS_PLAYERS + targetIdx, playerConfig);
+		/*if (target->gentity->client) {
+			target->gentity->client->MBClass = MB_CLASS_JEDI;
+		}*/
+		//NXRP_PrintConsole(cl, "Set client %d MB2 mbc class value to 6", targetIdx);
+		//ps->fd.forceUsingAdded = 0;
+		ps->stats[STAT_WEAPONS] |= (1 << WP_SABER);
+		ps->weapon = WP_SABER;
+		ps->weaponstate = WEAPON_READY;
+		ps->fd.saberAnimLevel = MB_SS_RED;
+		ps->forceRestricted = qfalse;
+
+		ps->fd.forcePowersActive = 0;
+		//ps->fd.forceDeactivateAll = 0;
+		/*for (int i = 0; i < NUM_FORCE_POWERS; ++i) {
+			ps->fd.forcePowerDebounce[i] = 0;
+			ps->fd.forcePowerDuration[i] = 0;
+		}*/
+
+		ps->fd.forcePowerMax = 300;
+		ps->fd.forcePower = 300;
+		ps->fd.forcePowerRegenDebounceTime = sv.time;
+
+		auto grantForceLevel = [&](int fp, int lvl) {
+			ps->fd.forcePowersKnown |= (1 << fp);
+			ps->fd.forcePowerLevel[fp] = lvl;
+			ps->fd.forcePowerBaseLevel[fp] = lvl;
+
+			//cl->gentity->playerState->fd.forcePowersKnown |= (1 << fp);
+			//cl->gentity->playerState->fd.forcePowerLevel[fp] = lvl;
+			//cl->gentity->playerState->fd.forcePowerBaseLevel[fp] = lvl;
+			};
+
+		cl->gentity->health = 300;
+		cl->gentity->playerState->basespeed = 350;
+		cl->gentity->playerState->speed = 350;
+		//cl->gentity->playerState->gravity = 900;
+		grantForceLevel(0, 1);
+		grantForceLevel(1, 1);
+		grantForceLevel(2, 1);
+		grantForceLevel(3, 1);
+		grantForceLevel(4, 1);
+		grantForceLevel(5, 1);
+		grantForceLevel(6, 1);
+		grantForceLevel(7, 1);
+		grantForceLevel(8, 1);
+		grantForceLevel(9, 1);
+		grantForceLevel(10, 1);
+		grantForceLevel(11, 1);
+		grantForceLevel(12, 1);
+		grantForceLevel(13, 1);
+		grantForceLevel(14, 1);
+		grantForceLevel(15, 1);
+		grantForceLevel(16, 1);
+		grantForceLevel(17, 1);
+		grantForceLevel(18, 1);
+		grantForceLevel(19, 1);
+		//ps->fd.forcePowerSelected = FP_LIGHTNING;
+
+		//cl->gentity->client->sess.saberLevel;
+
+		void (*setClientSessionForGiveAll)(int, int, int) =
+			(void (*)(int, int, int))Sys_LoadFunction(GVM_GetDllHandle(), "NXRP_SetClientSessionForGiveAll");
+		if (setClientSessionForGiveAll) {
+			void* old = GVM_BeginNative();
+			setClientSessionForGiveAll(targetIdx, FP_LIGHTNING, ps->fd.saberAnimLevel);
+			GVM_EndNative(old);
 		}
 
-		targetIdx = idx;
+		//SV_WannaGiveWeapon(target, WP_CLONE_PISTOL);
+		SV_WannaGiveWeapon(target, WP_SABER);
+
+		// Give a broader set of weapons
+		SV_WannaGiveWeapon(target, WP_BRYAR_PISTOL);
+
+		/*char userinfo[MAX_INFO_STRING];
+		SV_GetUserinfo(targetIdx, userinfo, sizeof(userinfo));
+		Info_SetValueForKey(userinfo, "saber1", DEFAULT_SABER);
+		Info_SetValueForKey(userinfo, "color1", "red");
+		Info_SetValueForKey(playerConfig, "sc", "0");
+		// Persist a dark-side force profile so force re-init paths keep usable powers.
+		Info_SetValueForKey(userinfo, "forcepowers", "0");
+		Info_SetValueForKey(playerConfig, "mbc", "6");
+		Info_SetValueForKey(playerConfig, "sc", "0");
+		Info_SetValueForKey(playerConfig, "c1", "0");
+		SV_SetConfigstring(MB2_CS_PLAYERS + targetIdx, playerConfig);
+		Info_SetValueForKey(userinfo, "c1", "0");*/
+
+
+		//SV_SetUserinfo(targetIdx, userinfo);
+		//GVM_ClientUserinfoChanged(targetIdx);
+
+
+		/*int16_t mb2force = static_cast<int16_t>(
+			ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING)
+			);
+		int16_t mb2force = static_cast<int16_t>(
+			ps->fd.forcePowerLevel[FP_LIGHTNING] = 2
+			);
+		int16_t mb2force = static_cast<int16_t>(
+			ps->fd.forcePowerBaseLevel[FP_LIGHTNING] = 2
+			);*/
+
+		// Give the player an immediate force jump boost
+		//SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force jump 3"), 1);
+		//SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force lightning 2"), 1);
+		//SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force pull"), 1);
+		//SV_ExecuteClientCommandDelayed_h(target, std::string("give 0 force destruct"), 1);
 	}
 
-	// Read player configstring
-	char playerConfig[MAX_STRING_CHARS] = { 0 };
-
-	SV_GetConfigstring(
-		MB2_CS_PLAYERS + targetIdx,
-		playerConfig,
-		sizeof(playerConfig)
-	);
-
-	NXRP_PrintConsole(cl, "Before: %s", playerConfig);
-
-	// Change player config values
-	Info_SetValueForKey(playerConfig, "c1", "0");
-	Info_SetValueForKey(playerConfig, "sc", "v10_Nihilius");
-
-	// Publish updated configstring
-	SV_SetConfigstring(
-		MB2_CS_PLAYERS + targetIdx,
-		playerConfig
-	);
-
-	// Change player force powers
-	if (svs.clients[targetIdx].gentity &&
-		svs.clients[targetIdx].gentity->playerState) {
-		playerState_t* ps =
-			svs.clients[targetIdx].gentity->playerState;
-
-		ps->fd.forcePowersKnown = 16524;
-		ps->fd.forcePowersActive = 16384;
+	if (!cheats) {
+		Cvar_Set("sv_cheats", "0");
+		GVM_RunFrame(sv.time);
 	}
-
-	NXRP_PrintConsole(cl, "After: %s", playerConfig);
-	NXRP_PrintConsole(cl,
-		"Updated c1, sc and force powers for client %d", targetIdx);
-
-
-	
 
 	return qtrue;
 }
-
-
-
