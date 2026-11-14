@@ -632,6 +632,7 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 				continue;
 
 			char playerConfig[MAX_STRING_CHARS] = { 0 };
+			char userinfo[MAX_STRING_CHARS] = { 0 };
 
 			SV_GetConfigstring(
 				MB2_CS_PLAYERS + i,
@@ -639,7 +640,14 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 				sizeof(playerConfig)
 			);
 
+			SV_GetUserinfo(cl - svs.clients, userinfo, sizeof(userinfo)); (
+				i,
+				userinfo,
+				sizeof(userinfo)
+			);
+
 			NXRP_PrintConsole(cl, "Playerconfig String: %s", playerConfig);
+			NXRP_PrintConsole(cl, "userinfo String: %s", userinfo);
 
 			Info_SetValueForKey(playerConfig, "c1", "0");
 			Info_SetValueForKey(playerConfig, "sc", "v10_Nihilius");

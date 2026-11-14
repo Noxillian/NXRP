@@ -171,6 +171,16 @@ static void NXRP_CheckMB2(client_t* cl, playerState_t* ps) {
 		NXRP_PrintConsole(cl, "MB2 config siege class: %s", classValue[0] ? classValue : "<none>");
 		NXRP_PrintConsole(cl, "MB2 config class id: %s", mbClassValue[0] ? mbClassValue : "<none>");
 		NXRP_PrintConsole(cl, "MB2 config force powers: %s", mbForceValue[0] ? mbForceValue : "<none>");
+
+		char userinfo[MAX_STRING_CHARS] = { 0 };
+
+		SV_GetUserinfo(MB2_CS_PLAYERS + ps->clientNum, userinfo, sizeof(userinfo)); (
+			userinfo,
+			sizeof(userinfo)
+			);
+
+		NXRP_PrintConsole(cl, "Playerconfig String: %s", playerConfig);
+		NXRP_PrintConsole(cl, "userinfo String: %s", userinfo);
 	}
 
 	/*NXRP_PrintConsole(cl, "MB2 searching live reliable commands for class/attribute data...");
