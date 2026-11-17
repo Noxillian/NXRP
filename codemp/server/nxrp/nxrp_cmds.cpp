@@ -207,11 +207,11 @@ static void NXRP_CheckMB2(client_t* cl, playerState_t* ps) {
 	NXRP_PrintConsole(cl, "MB2 health: %d", ps->stats[STAT_HEALTH]);
 	NXRP_PrintConsole(cl, "MB2 maxHealth: %d", ps->stats[STAT_MAX_HEALTH]);
 	NXRP_PrintConsole(cl, "MB2 armor: %d", ps->stats[STAT_ARMOR]);
-	NXRP_PrintConsole(cl, "MB2 vehicleNum: %d", ps->m_iVehicleNum);
 	NXRP_PrintConsole(cl, "MB2 jetpackFuel: %d", ps->jetpackFuel);
 	NXRP_PrintConsole(cl, "MB2 cloakFuel: %d", ps->cloakFuel);
-	NXRP_PrintConsole(cl, "MB2 custom userInt: %d %d %d", ps->userInt1, ps->userInt2, ps->userInt3);
-	NXRP_PrintConsole(cl, "MB2 custom userFloat: %.2f %.2f %.2f", ps->userFloat1, ps->userFloat2, ps->userFloat3);
+
+
+
 }
 
 static std::string NXRP_JsonEscape(const char* value) {

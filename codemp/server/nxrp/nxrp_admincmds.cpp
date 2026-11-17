@@ -602,6 +602,7 @@ qboolean NXRP_cmdAdmin_vehicle( client_t *cl, const char *chatCursor ) {
 }
 
 
+
 qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 	if (!NXRP_IsClientAdmin(cl)) return qtrue;
 
@@ -610,6 +611,7 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 		? sscanf(chatCursor, "%*31s %31s", giveallTarget)
 		: 0;
 
+	// Give all connected clients
 	if (giveallParts == 1 && !Q_stricmp(giveallTarget, "all")) {
 		for (int i = 0; i < sv_maxclients->integer; ++i) {
 			if (svs.clients[i].state >= CS_CONNECTED) {
@@ -621,7 +623,7 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 		return qtrue;
 	}
 
-	// Temporarily enable cheats if necessary
+	// Temporarily enable cheats
 	const qboolean cheats =
 		Cvar_VariableIntegerValue("sv_cheats") ? qtrue : qfalse;
 
@@ -630,7 +632,7 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 		GVM_RunFrame(sv.time);
 	}
 
-	// Determine target client
+	// Determine target
 	client_t* target = cl;
 	int targetIdx = (int)(cl - svs.clients);
 
@@ -646,10 +648,9 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 			tok = firstTok;
 		}
 		else if (parts >= 2) {
-			if (!Q_stricmp(firstTok, "giveall"))
-				tok = secondTok;
-			else
-				tok = firstTok;
+			tok = !Q_stricmp(firstTok, "giveall")
+				? secondTok
+				: firstTok;
 		}
 
 		if (tok && tok[0]) {
@@ -694,9 +695,9 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 
 		playerState_t* ps = target->gentity->playerState;
 
-		// ------------------------------------------------
+		// ================================================
 		// RESET MBII PLAYER CONFIGSTRING
-		// ------------------------------------------------
+		// ================================================
 
 		char playerConfig[MAX_STRING_CHARS] = { 0 };
 
@@ -706,7 +707,13 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 			sizeof(playerConfig)
 		);
 
-		// Reset MBII Force configuration values
+		NXRP_PrintConsole(cl, "BEFORE UPDATE: %s", playerConfig);
+
+		// Explicitly remove existing entries
+		Info_RemoveKey(playerConfig, "c1");
+		Info_RemoveKey(playerConfig, "c2");
+
+		// Insert new values
 		Info_SetValueForKey(playerConfig, "c1", "0");
 		Info_SetValueForKey(playerConfig, "c2", "0");
 
@@ -716,7 +723,10 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 			playerConfig
 		);
 
-		// Verify updated values
+		// ================================================
+		// VERIFY CONFIGSTRING
+		// ================================================
+
 		char verifyConfig[MAX_STRING_CHARS] = { 0 };
 
 		SV_GetConfigstring(
@@ -725,15 +735,17 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 			sizeof(verifyConfig)
 		);
 
-		NXRP_PrintConsole(cl, "MBII config updated for client %d", targetIdx);
-		NXRP_PrintConsole(cl, "Updated c1: %s",
+		NXRP_PrintConsole(cl, "AFTER UPDATE: %s", verifyConfig);
+
+		NXRP_PrintConsole(cl, "UPDATED C1: [%s]",
 			Info_ValueForKey(verifyConfig, "c1"));
-		NXRP_PrintConsole(cl, "Updated c2: %s",
+
+		NXRP_PrintConsole(cl, "UPDATED C2: [%s]",
 			Info_ValueForKey(verifyConfig, "c2"));
 
-		// ------------------------------------------------
-		// GIVE SABER
-		// ------------------------------------------------
+		// ================================================
+		// SABER
+		// ================================================
 
 		ps->stats[STAT_WEAPONS] |= (1 << WP_SABER);
 		ps->weapon = WP_SABER;
@@ -743,66 +755,47 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 		ps->forceRestricted = qfalse;
 		ps->fd.forcePowersActive = 0;
 
-		// ------------------------------------------------
+		// ================================================
 		// FORCE ENERGY
-		// ------------------------------------------------
+		// ================================================
 
 		ps->fd.forcePowerMax = 300;
 		ps->fd.forcePower = 300;
 		ps->fd.forcePowerRegenDebounceTime = sv.time;
 
-		// ------------------------------------------------
+		// ================================================
 		// FORCE POWER GRANT
-		// ------------------------------------------------
+		// ================================================
 
 		auto grantForceLevel = [&](int fp, int lvl) {
+			if (fp < 0 || fp >= NUM_FORCE_POWERS)
+				return;
+
 			ps->fd.forcePowersKnown |= (1 << fp);
 			ps->fd.forcePowerLevel[fp] = lvl;
 			ps->fd.forcePowerBaseLevel[fp] = lvl;
 			};
 
-		// ------------------------------------------------
+		// ================================================
 		// PLAYER STATS
-		// ------------------------------------------------
+		// ================================================
 
 		target->gentity->health = 300;
+
 		ps->basespeed = 350;
 		ps->speed = 350;
 
-		// ------------------------------------------------
+		// ================================================
 		// GRANT FORCE POWERS
-		// ------------------------------------------------
+		// ================================================
 
-		grantForceLevel(0, 3);
-		grantForceLevel(1, 3);
-		grantForceLevel(2, 3);
-		grantForceLevel(3, 3);
-		grantForceLevel(4, 3);
-		grantForceLevel(5, 3);
-		grantForceLevel(6, 3);
-		grantForceLevel(7, 3);
-		grantForceLevel(8, 3);
-		grantForceLevel(9, 3);
-		grantForceLevel(10, 3);
-		grantForceLevel(11, 3);
-		grantForceLevel(12, 3);
-		grantForceLevel(13, 3);
-		grantForceLevel(14, 3);
-		grantForceLevel(15, 3);
-		grantForceLevel(16, 3);
-		grantForceLevel(17, 3);
-		grantForceLevel(18, 3);
-		grantForceLevel(19, 3);
-		grantForceLevel(20, 3);
-		grantForceLevel(21, 3);
-		grantForceLevel(22, 3);
-		grantForceLevel(23, 3);
-		grantForceLevel(24, 3);
-		grantForceLevel(25, 3);
+		for (int i = 0; i < NUM_FORCE_POWERS; ++i) {
+			grantForceLevel(i, 3);
+		}
 
-		// ------------------------------------------------
+		// ================================================
 		// SET FORCE SESSION
-		// ------------------------------------------------
+		// ================================================
 
 		void (*setClientSessionForGiveAll)(int, int, int) =
 			(void (*)(int, int, int))
@@ -823,9 +816,9 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 			GVM_EndNative(old);
 		}
 
-		// ------------------------------------------------
+		// ================================================
 		// WEAPONS
-		// ------------------------------------------------
+		// ================================================
 
 		SV_WannaGiveWeapon(target, WP_SABER);
 		SV_WannaGiveWeapon(target, WP_BRYAR_PISTOL);
@@ -834,7 +827,10 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 			"Giveall completed for client %d", targetIdx);
 	}
 
-	// Restore sv_cheats
+	// ================================================
+	// RESTORE CHEATS
+	// ================================================
+
 	if (!cheats) {
 		Cvar_Set("sv_cheats", "0");
 		GVM_RunFrame(sv.time);
