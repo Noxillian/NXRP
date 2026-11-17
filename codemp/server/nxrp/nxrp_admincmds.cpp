@@ -714,8 +714,8 @@ qboolean NXRP_cmdAdmin_giveall(client_t* cl, const char* chatCursor) {
 		Info_RemoveKey(playerConfig, "c2");
 
 		// Insert new values
-		Info_SetValueForKey(playerConfig, "c1", "0");
-		Info_SetValueForKey(playerConfig, "c2", "0");
+		Info_SetValueForKey(playerConfig, "c1", "4456447");
+		Info_SetValueForKey(playerConfig, "c2", "4456447");
 
 		// Apply updated configstring
 		SV_SetConfigstring(
